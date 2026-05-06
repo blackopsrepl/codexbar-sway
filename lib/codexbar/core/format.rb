@@ -1,0 +1,217 @@
+# frozen_string_literal: true
+
+require "time"
+
+module CodexBar
+  module Core
+    module Format
+      module_function
+
+      def usage_line(window, show_used)
+        value = show_used ? window[:usedPercent].to_f : (Types.rate_window_remaining_percent(window) || 0)
+        "#{clamp(value, 0, 100).round}% #{show_used ? 'used' : 'left'}"
+      end
+
+      def reset_countdown_description(time, now = Time.now)
+        seconds = [0, (time - now).ceil].max
+        return "now" if seconds < 1
+
+        total_minutes = [1, (seconds / 60.0).ceil].max
+        days = total_minutes / (24 * 60)
+        hours = (total_minutes / 60) % 24
+        minutes = total_minutes % 60
+
+        return hours.positive? ? "in #{days}d #{hours}h" : "in #{days}d" if days.positive?
+        return minutes.positive? ? "in #{hours}h #{minutes}m" : "in #{hours}h" if hours.positive?
+
+        "in #{total_minutes}m"
+      end
+
+      def reset_description(time, now = Time.now)
+        return format_clock(time) if same_day?(time, now)
+
+        tomorrow = now + (24 * 60 * 60)
+        return "tomorrow, #{format_clock(time)}" if same_day?(time, tomorrow)
+
+        time.strftime("%b %-d %-l:%M %p").strip
+      end
+
+      def reset_line(window, style, now = Time.now)
+        if window[:resetsAt]
+          time = Time.parse(window[:resetsAt])
+          label = style == "countdown" ? reset_countdown_description(time, now) : reset_description(time, now)
+          return "Resets #{label}"
+        end
+
+        description = clean(window[:resetDescription])
+        return nil unless description
+
+        description.downcase.start_with?("resets") ? description : "Resets #{description}"
+      end
+
+      def credits_string(credits)
+        "#{format('%.2f', credits[:remaining].to_f).sub(/\.00$/, '')} left"
+      end
+
+      def spend_summary_line(label, summary)
+        return nil unless summary
+
+        parts = []
+        parts << "$#{money_string(summary[:cost].to_f)}"
+        parts << "#{summary[:requests].to_i} req"
+        parts << "#{summary[:tokens].to_i} tok" if summary[:tokens].to_i.positive?
+        [label, parts.join(" · ")].join(": ")
+      end
+
+      def spend_compact_text(spend)
+        month = spend[:month]
+        return nil unless month
+
+        if month[:cost].to_f.positive?
+          "$#{money_string(month[:cost].to_f)} mo"
+        elsif month[:tokens].to_i.positive?
+          "#{compact_count(month[:tokens].to_i)} tok"
+        else
+          "#{month[:requests].to_i} req mo"
+        end
+      end
+
+      def money_string(amount)
+        rounded = amount.to_f
+        return format("%.2f", rounded) if rounded.zero? || rounded.abs >= 1
+
+        format("%.4f", rounded).sub(/0+$/, "").sub(/\.$/, "")
+      end
+
+      def compact_count(value)
+        amount = value.to_i
+        return amount.to_s if amount < 1000
+        return format("%.1fk", amount / 1000.0).sub(".0k", "k") if amount < 1_000_000
+
+        format("%.1fM", amount / 1_000_000.0).sub(".0M", "M")
+      end
+
+      def render_provider_text(provider, snapshot, credits, show_used, reset_style)
+        metadata = Types::PROVIDER_METADATA.fetch(provider)
+        lines = []
+        primary = snapshot[:primary]
+        secondary = snapshot[:secondary]
+        tertiary = snapshot[:tertiary]
+
+        lines << "#{metadata[:label]} (#{snapshot.dig(:identity, :loginMethod) || 'active'})"
+
+        if primary
+          lines << "#{metadata[:sessionLabel]}: #{usage_line(primary, show_used)}"
+          reset = reset_line(primary, reset_style)
+          lines << reset if reset
+        end
+
+        if secondary
+          lines << "#{metadata[:weeklyLabel]}: #{usage_line(secondary, show_used)}"
+          reset = reset_line(secondary, reset_style)
+          lines << reset if reset
+          pace = Metric.pace_summary_text(secondary)
+          lines << "Pace: #{pace}" if pace
+        end
+
+        if tertiary
+          lines << "#{metadata[:tertiaryLabel] || 'Tertiary'}: #{usage_line(tertiary, show_used)}"
+          reset = reset_line(tertiary, reset_style)
+          lines << reset if reset
+        end
+
+        lines << "Credits: #{credits_string(credits)}" if credits
+        lines << "Account: #{snapshot.dig(:identity, :accountEmail)}" if snapshot.dig(:identity, :accountEmail)
+
+        if snapshot[:providerCost]
+          lines << format(
+            "Cost: %.2f / %.2f %s",
+            snapshot[:providerCost][:used].to_f,
+            snapshot[:providerCost][:limit].to_f,
+            snapshot[:providerCost][:currencyCode]
+          )
+        end
+
+        if snapshot[:spend]
+          lines << spend_summary_line("Today", snapshot[:spend][:today])
+          lines << spend_summary_line("7d", snapshot[:spend][:sevenDay])
+          lines << spend_summary_line("Month", snapshot[:spend][:month])
+        end
+
+        lines.join("\n")
+      end
+
+      def compact_status_text(provider, snapshot, show_used, display_mode, preference)
+        return "#{Types::PROVIDER_METADATA.fetch(provider)[:shortLabel]} --" unless snapshot
+
+        compact = Metric.compact_display_text(display_mode, preference, show_used)
+        compact ||= spend_compact_text(snapshot[:spend])
+        compact ? "#{Types::PROVIDER_METADATA.fetch(provider)[:shortLabel]} #{compact}" : "#{Types::PROVIDER_METADATA.fetch(provider)[:shortLabel]} --"
+      end
+
+      def progress_bar(percent_used, width = 20)
+        percent = clamp(percent_used.to_f, 0, 100)
+        filled = ((percent / 100.0) * width).round
+        empty = [0, width - filled].max
+        "[#{('#' * filled)}#{('-' * empty)}]"
+      end
+
+      def window_severity(window)
+        remaining = Types.rate_window_remaining_percent(window)
+        return nil unless remaining
+        return "critical" if remaining <= 10
+        return "warning" if remaining <= 25
+
+        "healthy"
+      end
+
+      def compact_reset_text(window, style = "countdown", now = Time.now)
+        return nil unless window
+
+        if window[:resetsAt]
+          time = Time.parse(window[:resetsAt])
+          return style == "countdown" ? reset_countdown_description(time, now) : reset_description(time, now)
+        end
+
+        clean(window[:resetDescription])
+      end
+
+      def color_for_window(window)
+        remaining = Types.rate_window_remaining_percent(window)
+        return nil unless remaining
+        return "#ff6b6b" if remaining <= 10
+        return "#ffb454" if remaining <= 25
+        return "#f4d35e" if remaining <= 50
+
+        "#9be564"
+      end
+
+      def updated_string(timestamp)
+        time = Time.parse(timestamp)
+        seconds = [0, (Time.now - time).round].max
+        return "Updated just now" if seconds < 60
+        return "Updated #{[1, seconds / 60].max}m ago" if seconds < 3600
+        return "Updated #{[1, seconds / 3600].max}h ago" if seconds < 86_400
+
+        "Updated #{format_clock(time)}"
+      end
+
+      def clean(value)
+        text = value.to_s.strip
+        text.empty? ? nil : text
+      end
+
+      def same_day?(left, right)
+        left.year == right.year && left.yday == right.yday
+      end
+
+      def format_clock(time)
+        time.strftime("%-l:%M %p").strip
+      end
+
+      def clamp(value, min, max)
+        [[value, min].max, max].min
+      end
+    end
+  end
+end

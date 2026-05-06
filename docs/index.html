@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CodexBar</title>
+    <meta name="description" content="Linux-first CodexBar, inspired by the original CodexBar by Steipete, with a Ruby backend, QuickShell panel, and Waybar quota chip for Codex, Claude, and Gemini." />
+    <meta name="theme-color" content="#0b1016" />
+    <link rel="canonical" href="https://codexbar.app/" />
+    <meta property="og:title" content="CodexBar" />
+    <meta property="og:description" content="Linux-first quota visibility for Codex, Claude, and Gemini." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://codexbar.app/" />
+    <meta property="og:image" content="https://codexbar.app/codexbar.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="./icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <link rel="stylesheet" href="./site.css?v=linux-release-1" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top" data-animate="1">
+        <span class="brand" aria-label="CodexBar">
+          <span class="name">
+            <h1 class="title">CodexBar</h1>
+          <p class="tagline">Linux-first quota visibility for Codex, Claude, and Gemini, inspired by <a href="https://github.com/steipete/CodexBar">the original CodexBar</a> by <a href="https://github.com/steipete">Steipete</a>.</p>
+          </span>
+        </span>
+        <nav class="links" aria-label="Links">
+          <a class="btn primary" href="./installation.md">Install</a>
+          <a class="btn ghost" href="./architecture.md">Architecture</a>
+        </nav>
+      </header>
+
+      <section class="hero" aria-label="Overview">
+        <div class="copy" data-animate="2">
+          <div class="badges" aria-label="Highlights">
+            <span class="badge">Linux-first</span>
+            <span class="badge">Ruby backend</span>
+            <span class="badge">QuickShell UI</span>
+            <span class="badge">Waybar-ready</span>
+          </div>
+          <div class="hero-heading">
+            <img class="hero-icon" src="./icon.png" alt="" aria-hidden="true" width="40" height="40" />
+            <div>
+              <h2>Keep quota state visible.</h2>
+              <p>
+                CodexBar caches provider usage in a daemon, renders a compact Waybar chip, and opens a QuickShell panel for provider detail and control.
+              </p>
+            </div>
+          </div>
+          <p class="requirement">Requirements: Linux, Ruby, QuickShell for the panel, and Waybar for the chip.</p>
+          <p class="brew-line">Install: <code>make install && make configure-user</code></p>
+          <p class="brew-line">Waybar render: <code>codexbar waybar render</code></p>
+          <p class="note">No native desktop bundle, updater feed, widget extension, or tap/cask package is part of this release.</p>
+          <ul class="bullets" aria-label="What it does">
+            <li>Daemon-backed cached quota state for codex, claude, and gemini.</li>
+            <li>Waybar chip with provider icon, quota percentages, and pace state.</li>
+            <li>QuickShell panel for overview, provider detail, and display/provider controls.</li>
+            <li>CLI-first config and automation surface through codexbar.</li>
+          </ul>
+        </div>
+        <figure class="shot hero-shot" data-animate="3">
+          <img src="./codexbar.png" alt="CodexBar brand artwork." />
+          <figcaption>Current independent Linux implementation branding.</figcaption>
+        </figure>
+      </section>
+
+      <section class="details" aria-label="Details" data-animate="4">
+        <div class="card">
+          <h3>Runtime</h3>
+          <p>Ruby handles config, provider fetch, normalization, snapshots, and CLI actions. QuickShell renders the panel, and Waybar reads cached JSON only.</p>
+        </div>
+        <div class="card">
+          <h3>Install</h3>
+          <p>The release installs to a stable user prefix so the development checkout can be renamed without breaking the desktop.</p>
+        </div>
+        <div class="card">
+          <h3>Release posture</h3>
+          <p>Preview validation is make check. Stable validation is make check-live on a credentialed Linux machine.</p>
+        </div>
+      </section>
+
+      <section class="links-row" aria-label="Docs links" data-animate="5">
+        <a class="link-pill" href="./installation.md">Installation</a>
+        <a class="link-pill" href="./cli.md">CLI</a>
+        <a class="link-pill" href="./runtime-contracts.md">Runtime contracts</a>
+        <a class="link-pill" href="./RELEASING.md">Releasing</a>
+      </section>
+
+      <footer class="foot" data-animate="6">
+        <p>CodexBar Linux release documentation.</p>
+      </footer>
+    </main>
+  </body>
+</html>

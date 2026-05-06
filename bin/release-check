@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TMP_CONFIG="$(mktemp -t codexbar-release-check-XXXXXX.json)"
+WITH_LIVE=0
+LIVE_CONFIG="${HOME}/.codexbar/config.json"
+
+cleanup() {
+  rm -f "$TMP_CONFIG"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: bin/release-check [--with-live] [--live-config PATH]
+
+  --with-live         Run live provider checks against a real config.
+  --live-config PATH  Config to use for live checks. Defaults to ~/.codexbar/config.json.
+EOF
+}
+
+run_step() {
+  echo
+  echo "==> $1"
+  shift
+  "$@"
+}
+
+validate_provider_json() {
+  local provider="$1"
+  ruby -rjson -e '
+    payload = JSON.parse(STDIN.read)
+    item = payload.first || {}
+    error = item["error"].to_s.strip
+    usage = item["usage"]
+    abort("provider #{ARGV[0]} returned no usage payload") if usage.nil?
+    abort("provider #{ARGV[0]} returned error: #{error}") unless error.empty?
+  ' "$provider"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --with-live)
+      WITH_LIVE=1
+      shift
+      ;;
+    --live-config)
+      [[ $# -ge 2 ]] || {
+        usage
+        exit 1
+      }
+      LIVE_CONFIG="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+trap cleanup EXIT
+
+cd "$ROOT_DIR"
+
+run_step "pre-commit" python3 -m pre_commit run --all-files
+run_step "bash syntax" bash -n bin/release-check
+run_step "ruby syntax" bash -lc 'for path in bin/codexbar $(rg --files lib test); do ruby -wc "$path"; done'
+run_step "test suite" ruby -Itest test/run.rb
+run_step "config init" bash -lc "bin/codexbar config init --config '$TMP_CONFIG' >/dev/null"
+run_step "config validate" bin/codexbar config validate --config "$TMP_CONFIG"
+run_step "waybar render" bash -lc "bin/codexbar waybar render --config '$TMP_CONFIG' >/dev/null"
+run_step "ui status" bash -lc "bin/codexbar ui status --config '$TMP_CONFIG' --format json --pretty >/dev/null"
+
+if command -v quickshell >/dev/null 2>&1; then
+  echo
+  echo "==> quickshell load"
+  set +e
+  env \
+    QT_QPA_PLATFORM=wayland \
+    CODEXBAR_BIN="$ROOT_DIR/bin/codexbar" \
+    CODEXBAR_CONFIG="$LIVE_CONFIG" \
+    CODEXBAR_STATE_DIR="${HOME}/.local/state/codexbar" \
+    timeout 8s quickshell --path "$ROOT_DIR/frontend/quickshell/shell.qml" >/dev/null
+  status=$?
+  set -e
+  if [[ "$status" -ne 0 && "$status" -ne 124 ]]; then
+    echo "QuickShell load failed with exit code $status" >&2
+    exit "$status"
+  fi
+fi
+
+if [[ "$WITH_LIVE" -eq 1 ]]; then
+  [[ -f "$LIVE_CONFIG" ]] || {
+    echo "Live config not found at $LIVE_CONFIG" >&2
+    exit 1
+  }
+
+  run_step "live config validate" bin/codexbar config validate --config "$LIVE_CONFIG"
+
+  for provider in codex claude gemini; do
+    echo
+    echo "==> live provider $provider"
+    bin/codexbar usage --provider "$provider" --format json --pretty --config "$LIVE_CONFIG" | validate_provider_json "$provider"
+    echo "$provider validated"
+  done
+fi
+
+echo
+echo "release-check passed"

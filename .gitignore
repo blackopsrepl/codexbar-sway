@@ -1,0 +1,21 @@
+# Local config and environment
+.codexbar/config.json
+*.env
+*.local
+
+# Ruby/editor state
+.bundle/
+vendor/bundle/
+.ruby-lsp/
+.vscode/
+
+# Build, cache, and generated artifacts
+.cache/
+tmp/
+*.tar.gz
+*.tgz
+*.zip
+*.dSYM*
+
+# OS/editor noise
+.DS_Store

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+config_path="${CODEXBAR_CONFIG:-$HOME/.codexbar/config.json}"
+codexbar_cmd="${CODEXBAR_BIN:-$HOME/.local/bin/codexbar}"
+
+if [[ ! -x "$codexbar_cmd" ]] && command -v codexbar &>/dev/null; then
+    codexbar_cmd="$(command -v codexbar)"
+fi
+
+if [[ ! -x "$codexbar_cmd" ]]; then
+    exit 0
+fi
+
+case "${1:-render}" in
+    render)
+        exec "$codexbar_cmd" waybar render --config "$config_path"
+        ;;
+    panel|details|open)
+        exec "$codexbar_cmd" waybar panel --config "$config_path"
+        ;;
+    refresh)
+        exec "$codexbar_cmd" refresh --config "$config_path"
+        ;;
+    *)
+        exec "$codexbar_cmd" waybar render --config "$config_path"
+        ;;
+esac

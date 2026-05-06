@@ -1,0 +1,147 @@
+# frozen_string_literal: true
+
+require "json"
+require "open3"
+
+module CodexBar
+  module Providers
+    module Codex
+      module_function
+
+      def fetch(config)
+        source = config[:source] == "oauth" ? "oauth" : "codex-cli"
+        rpc = nil
+
+        begin
+          rpc = RpcClient.new
+          rpc.initialize_client("codexbar-linux", "0.1.0")
+          limits = rpc.fetch_rate_limits
+          account = rpc.fetch_account rescue nil
+
+          usage = {
+            primary: make_window(limits.dig(:rateLimits, :primary)),
+            secondary: make_window(limits.dig(:rateLimits, :secondary)),
+            updatedAt: Time.now.utc.iso8601,
+            identity: make_identity(account)
+          }
+
+          {
+            provider: "codex",
+            source: source,
+            usage: usage,
+            credits: make_credits(limits),
+            notes: []
+          }
+        rescue StandardError => e
+          {
+            provider: "codex",
+            source: source,
+            notes: [],
+            error: e.message
+          }
+        ensure
+          rpc&.shutdown
+        end
+      end
+
+      def make_window(window)
+        return nil unless window
+
+        resets_at = window[:resetsAt] ? Time.at(window[:resetsAt].to_i).utc.iso8601 : nil
+        {
+          usedPercent: window[:usedPercent].to_f,
+          windowMinutes: window[:windowDurationMins],
+          resetsAt: resets_at,
+          resetDescription: nil
+        }
+      end
+
+      def make_credits(response)
+        balance = response.dig(:rateLimits, :credits, :balance)
+        return nil unless balance
+
+        remaining = balance.to_f
+        return nil unless remaining.finite?
+
+        {
+          remaining: remaining,
+          updatedAt: Time.now.utc.iso8601
+        }
+      end
+
+      def make_identity(account)
+        return nil unless account.dig(:account, :type).to_s.downcase == "chatgpt"
+
+        {
+          providerID: "codex",
+          accountEmail: account.dig(:account, :email),
+          loginMethod: account.dig(:account, :planType)
+        }
+      end
+
+      class RpcClient
+        def initialize
+          @stdin, @stdout, @stderr, @wait_thread = Open3.popen3("codex", "-s", "read-only", "-a", "untrusted", "app-server")
+          @stderr_thread = Thread.new { @stderr.read }
+          @next_id = 1
+        end
+
+        def initialize_client(client_name, client_version)
+          request("initialize", clientInfo: { name: client_name, version: client_version })
+          send_payload(method: "initialized", params: {})
+        end
+
+        def fetch_account
+          request("account/read")
+        end
+
+        def fetch_rate_limits
+          request("account/rateLimits/read")
+        end
+
+        def shutdown
+          @stdin.close unless @stdin.closed?
+          return unless @wait_thread.alive?
+
+          ::Process.kill("TERM", @wait_thread.pid)
+          @wait_thread.join(1)
+        rescue Errno::ESRCH, IOError
+          nil
+        ensure
+          @stdout.close unless @stdout.closed?
+          @stderr.close unless @stderr.closed?
+          @stderr_thread&.kill
+        end
+
+        def request(method, params = {})
+          id = @next_id
+          @next_id += 1
+          send_payload(id: id, method: method, params: params)
+
+          loop do
+            line = @stdout.gets
+            raise "Codex app-server closed stdout" unless line
+
+            next if line.strip.empty?
+
+            message = JSON.parse(line, symbolize_names: true)
+            next if message[:id].nil? || message[:id] != id
+            raise(message.dig(:error, :message) || "Malformed Codex RPC response for #{method}") if message[:error]
+
+            result = message[:result]
+            raise "Malformed Codex RPC response for #{method}" if result.nil?
+
+            return result
+          rescue JSON::ParserError
+            next
+          end
+        end
+
+        def send_payload(payload)
+          @stdin.write("#{JSON.generate(payload)}\n")
+          @stdin.flush
+        end
+      end
+    end
+  end
+end
