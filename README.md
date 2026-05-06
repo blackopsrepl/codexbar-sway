@@ -8,6 +8,10 @@ CodexBar is a Linux-first quota bar for Codex, Claude, and Gemini. It is an inde
 
 The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact Waybar JSON renderer, and one QuickShell panel. The supported runtime is Ruby + QuickShell + Waybar.
 
+<p align="center">
+  <img src="./codexbar.png" alt="CodexBar QuickShell panel showing Codex, Claude, and Gemini quota state" />
+</p>
+
 ## Current Contract
 
 - Runtime language: Ruby.
