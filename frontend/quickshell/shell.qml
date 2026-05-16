@@ -86,12 +86,13 @@ ShellRoot {
     }
 
     function runCodexbar(args) {
+        var command = [root.codexbarBin].concat(args).concat(["--config", root.configPath])
         if (actionRunner.running) {
-            actionRunner.signal(9)
-            actionRunner.running = false
+            actionRunner.queuedCommand = command
+            return
         }
 
-        actionRunner.command = [root.codexbarBin].concat(args).concat(["--config", root.configPath])
+        actionRunner.command = command
         actionRunner.running = true
     }
 
@@ -244,6 +245,7 @@ ShellRoot {
 
     Process {
         id: actionRunner
+        property var queuedCommand: null
         running: false
         stdout: StdioCollector {}
         stderr: StdioCollector {
@@ -251,6 +253,14 @@ ShellRoot {
                 if (text.trim().length) {
                     console.log(text.trim())
                 }
+            }
+        }
+        onRunningChanged: {
+            if (!running && queuedCommand) {
+                var nextCommand = queuedCommand
+                queuedCommand = null
+                command = nextCommand
+                running = true
             }
         }
     }
@@ -330,6 +340,7 @@ ShellRoot {
             text: control.glyph ? (control.glyph + (control.text ? "  " + control.text : "")) : control.text
             color: "#DDF7FF"
             font: control.font
+            elide: Text.ElideRight
         }
     }
 
@@ -373,17 +384,21 @@ ShellRoot {
         property color accent: "#6A6E95"
         property color foreground: "#DDF7FF"
         property int minimumWidth: 0
+        property int maximumWidth: 220
 
         radius: 8
         implicitHeight: 20
-        implicitWidth: Math.max(minimumWidth, contentRow.implicitWidth + 14)
+        implicitWidth: Math.min(maximumWidth, Math.max(minimumWidth, contentRow.implicitWidth + 14))
         color: withAlpha(accent, 0.14)
         border.width: 1
         border.color: withAlpha(accent, 0.34)
+        clip: true
 
         RowLayout {
             id: contentRow
-            anchors.centerIn: parent
+            anchors.fill: parent
+            anchors.leftMargin: 7
+            anchors.rightMargin: 7
             spacing: 4
 
             Text {
@@ -396,11 +411,13 @@ ShellRoot {
             }
 
             Label {
+                Layout.fillWidth: true
                 text: pill.text
                 color: pill.foreground
                 font.family: root.textFont
                 font.pixelSize: 10
                 font.bold: true
+                elide: Text.ElideRight
             }
         }
     }
@@ -462,6 +479,7 @@ ShellRoot {
         color: "#101527"
         border.width: 1
         border.color: withAlpha(accent, 0.28)
+        clip: true
     }
 
     component HistoryDayTile: CardFrame {
@@ -686,19 +704,26 @@ ShellRoot {
         id: panelWindow
         visible: uiAdapter.open
         screen: Quickshell.screens.length ? Quickshell.screens[0] : null
-        color: "#090D18"
+        color: "transparent"
         focusable: true
-        implicitWidth: 1080
-        implicitHeight: 760
+        aboveWindows: true
+        exclusionMode: ExclusionMode.Ignore
+        property int verticalMargin: 18
+        implicitWidth: screen ? screen.width : 960
+        implicitHeight: screen ? screen.height : 760
 
         anchors {
             top: true
+            bottom: true
+            left: true
             right: true
         }
 
         margins {
-            top: 44
-            right: 18
+            top: 0
+            bottom: 0
+            left: 0
+            right: 0
         }
 
         onVisibleChanged: {
@@ -707,17 +732,28 @@ ShellRoot {
             }
         }
 
-        FocusScope {
+        Item {
             anchors.fill: parent
-            focus: true
 
-            Keys.onEscapePressed: root.closePanel()
-
-            CardFrame {
+            Rectangle {
                 anchors.fill: parent
-                anchors.margins: 10
-                accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
-                color: "#0B0F1E"
+                color: "#050711"
+                opacity: 0.66
+            }
+
+            FocusScope {
+                id: modalFrame
+                anchors.centerIn: parent
+                width: Math.min(960, Math.max(320, panelWindow.width - 36))
+                height: Math.min(panelWindow.height - 16, Math.max(420, panelWindow.height - (panelWindow.verticalMargin * 2)))
+                focus: true
+
+                Keys.onEscapePressed: root.closePanel()
+
+                CardFrame {
+                    anchors.fill: parent
+                    accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                    color: "#0B0F1E"
 
                 Rectangle {
                     anchors.fill: parent
@@ -960,7 +996,7 @@ ShellRoot {
                                         spacing: 8
 
                                         Repeater {
-                                            model: providerViews
+                                            model: root.overviewProviders()
 
                                             delegate: CardFrame {
                                                 required property var modelData
@@ -1120,10 +1156,26 @@ ShellRoot {
                                 visible: root.activeView === "detail"
                                 accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
 
-                                ColumnLayout {
+                                ScrollView {
+                                    id: detailScroll
                                     anchors.fill: parent
-                                    anchors.margins: 14
-                                    spacing: 12
+                                    anchors.margins: 2
+                                    clip: true
+                                    contentWidth: availableWidth
+                                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                                    Item {
+                                        width: detailScroll.availableWidth
+                                        height: detailContent.implicitHeight + 24
+
+                                        ColumnLayout {
+                                            id: detailContent
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.margins: 12
+                                            spacing: 12
 
                                         RowLayout {
                                             Layout.fillWidth: true
@@ -1267,6 +1319,76 @@ ShellRoot {
                                         }
 
                                         CardFrame {
+                                            visible: !!(focusProvider() && focusProvider().localUsageModels && focusProvider().localUsageModels.length)
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: geminiUsageColumn.implicitHeight + 24
+                                            accent: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
+                                            color: "#101726"
+
+                                            ColumnLayout {
+                                                id: geminiUsageColumn
+                                                anchors.fill: parent
+                                                anchors.margins: 12
+                                                spacing: 8
+
+                                                RowLayout {
+                                                    Layout.fillWidth: true
+                                                    spacing: 8
+
+                                                    Text {
+                                                        text: root.glyphs.usage
+                                                        color: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
+                                                        font.family: root.iconFont
+                                                        font.pixelSize: 13
+                                                    }
+
+                                                    Label {
+                                                        Layout.fillWidth: true
+                                                        text: "Model local usage"
+                                                        color: "#F6FBFF"
+                                                        font.family: root.textFont
+                                                        font.pixelSize: 11
+                                                        font.bold: true
+                                                    }
+                                                }
+
+                                                Repeater {
+                                                    model: focusProvider() && focusProvider().localUsageModels ? focusProvider().localUsageModels : []
+
+                                                    delegate: RowLayout {
+                                                        required property var modelData
+                                                        Layout.fillWidth: true
+                                                        spacing: 8
+
+                                                        Label {
+                                                            Layout.fillWidth: true
+                                                            text: modelData.label || "--"
+                                                            color: "#A8B3D7"
+                                                            font.family: root.textFont
+                                                            font.pixelSize: 10
+                                                            elide: Text.ElideRight
+                                                        }
+
+                                                        Label {
+                                                            text: modelData.tokensText || "--"
+                                                            color: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
+                                                            font.family: root.textFont
+                                                            font.pixelSize: 10
+                                                            font.bold: true
+                                                        }
+
+                                                        Label {
+                                                            text: modelData.recordsText || ""
+                                                            color: "#8E97B5"
+                                                            font.family: root.textFont
+                                                            font.pixelSize: 10
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        CardFrame {
                                             visible: !!(focusProvider() && (focusProvider().error || focusProvider().notes.length || focusProvider().incident))
                                             Layout.fillWidth: true
                                             Layout.preferredHeight: notesColumn.implicitHeight + 24
@@ -1340,6 +1462,8 @@ ShellRoot {
                                             font.family: root.textFont
                                             font.pixelSize: 10
                                         }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1938,5 +2062,6 @@ ShellRoot {
                 }
             }
         }
+    }
     }
 }
