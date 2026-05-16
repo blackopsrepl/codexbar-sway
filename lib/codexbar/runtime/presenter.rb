@@ -38,6 +38,11 @@ module CodexBar
           modeLabel: config.dig(:display, :showHighestUsage) ? "Highest usage" : "Pinned",
           showUsedLabel: config.dig(:display, :showUsed) ? "Used" : "Remaining",
           metricModeLabel: config.dig(:display, :displayMode).to_s,
+          refreshModeLabel: config.dig(:runtime, :refreshMode).to_s == "manual" ? "Manual refresh" : "#{config.dig(:runtime, :refreshSeconds).to_i}s refresh",
+          statusLabel: config.dig(:status, :enabled) ? "Status on" : "Status off",
+          notificationsLabel: config.dig(:notifications, :enabled) ? "Notify on" : "Notify off",
+          privacyLabel: config.dig(:privacy, :hidePersonalInfo) ? "Privacy on" : "Privacy off",
+          localUsageText: local_usage_summary(snapshot[:localUsage]),
           updatedText: summary_updated_text(snapshot, config, now),
           stale: stale_snapshot?(snapshot, config, now),
           displayProvider: display_provider && display_provider[:id],
@@ -56,6 +61,10 @@ module CodexBar
         classes << display_provider unless display_provider.empty?
         classes << "provider-#{display_provider}" unless display_provider.empty?
         classes << (config.dig(:display, :showHighestUsage) ? "mode-auto" : "mode-pinned")
+        classes << "manual-refresh" if config.dig(:runtime, :refreshMode) == "manual"
+        classes << "notifications-on" if config.dig(:notifications, :enabled)
+        classes << "privacy-on" if config.dig(:privacy, :hidePersonalInfo)
+        classes << "service-#{display_view[:serviceState]}" if display_view && %w[degraded outage].include?(display_view[:serviceState].to_s)
         classes.concat(result_classes(config, display_provider, result, results))
 
         {
@@ -69,6 +78,10 @@ module CodexBar
       def build_provider_view(config, snapshot, provider, result, now)
         state = Usage.provider_state(config, provider) || {}
         usage = result && result[:usage]
+        service_status = auxiliary_provider(snapshot[:serviceStatus], provider)
+        local_usage = auxiliary_provider(snapshot[:localUsage], provider)
+        storage = auxiliary_provider(snapshot[:storage], provider)
+        history = auxiliary_provider(snapshot[:history], provider)
         metric = Core::Metric.resolve_metric_window(
           provider,
           usage,
@@ -81,9 +94,10 @@ module CodexBar
         error = clean(result && result[:error])
         notes = Array(result && result[:notes]).filter_map { |note| clean(note) }
         identity = usage && usage[:identity] || {}
-        status = provider_status(result, dominant_metric, stale)
+        status = provider_status(result, dominant_metric, stale, service_status)
         metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
         chip_text = chip_text(config, provider, result)
+        incident = clean(result && result[:incident]) || service_incident(service_status)
 
         {
           id: provider,
@@ -110,16 +124,23 @@ module CodexBar
           metrics: actual_metrics,
           secondaryMetrics: actual_metrics.reject { |entry| dominant_metric && entry[:key] == dominant_metric[:key] },
           hero: hero_view(config, provider, usage, dominant_metric, now),
-          detailCards: provider_detail_cards(config, provider, result, usage, dominant_metric, actual_metrics, now),
+          detailCards: provider_detail_cards(config, provider, result, usage, dominant_metric, actual_metrics, now, service_status, local_usage, storage, history),
           creditsText: result && result[:credits] ? Core::Format.credits_string(result[:credits]) : nil,
           providerCostText: provider_cost_text(usage),
           spendLines: spend_lines(usage),
-          identityText: identity_text(identity),
+          identityText: identity_text(identity, config.dig(:privacy, :hidePersonalInfo)),
           accountEmail: clean(identity[:accountEmail]),
           loginMethod: clean(identity[:loginMethod]),
+          serviceState: clean(service_status[:state]) || "unknown",
+          serviceStatusText: Core::Format.service_status_text(service_status),
+          serviceStatusUpdatedAt: clean(service_status[:updatedAt]),
+          localUsageText: Core::Format.token_summary_line(local_usage),
+          storageText: storage && storage[:totalBytes] ? Core::Format.bytes_string(storage[:totalBytes]) : nil,
+          historySummary: provider_history_summary(history),
+          historyDays: provider_history_days(history),
           error: error,
           notes: notes,
-          incident: clean(result && result[:incident]),
+          incident: incident,
           badges: provider_badges(config, snapshot, provider, status)
         }
       end
@@ -158,8 +179,9 @@ module CodexBar
         ].compact
       end
 
-      def identity_text(identity)
-        values = [clean(identity[:loginMethod]), clean(identity[:accountEmail])].compact
+      def identity_text(identity, hide_personal_info = false)
+        email = hide_personal_info ? Core::Format.redact_email(identity[:accountEmail]) : clean(identity[:accountEmail])
+        values = [clean(identity[:loginMethod]), email].compact
         values.empty? ? "No account metadata" : values.join(" / ")
       end
 
@@ -204,11 +226,18 @@ module CodexBar
         end
       end
 
-      def provider_detail_cards(config, provider, result, usage, dominant_metric, metrics, now)
+      def provider_detail_cards(config, provider, result, usage, dominant_metric, metrics, now, service_status = nil, local_usage = nil, storage = nil, history = nil)
         cards = metrics
           .reject { |entry| dominant_metric && entry[:key] == dominant_metric[:key] }
           .map { |entry| metric_card_view(config, entry, now) }
+        cards << service_status_card(service_status) if service_status && !service_status.empty?
         cards.concat(spend_card_views(config, usage, now))
+        local_card = local_usage_card(local_usage)
+        cards << local_card if local_card
+        history_card = history_card(history)
+        cards << history_card if history_card
+        storage_card = storage_card(storage)
+        cards << storage_card if storage_card
         provider_cost = usage && usage[:providerCost]
         if provider_cost
           cards << {
@@ -231,6 +260,99 @@ module CodexBar
         end
 
         cards
+      end
+
+      def service_status_card(service_status)
+        {
+          key: "service-status",
+          icon: service_status[:state].to_s == "ok" ? "" : "󰀨",
+          label: "Service",
+          value: service_status[:state].to_s.empty? ? "unknown" : service_status[:state].to_s,
+          detail: Core::Format.service_status_text(service_status)
+        }
+      end
+
+      def local_usage_card(local_usage)
+        text = Core::Format.token_summary_line(local_usage)
+        return nil unless text
+
+        {
+          key: "local-usage",
+          icon: "",
+          label: "Local usage",
+          value: text,
+          detail: "Exact local logs"
+        }
+      end
+
+      def history_card(history)
+        latest = Array(history && history[:daily]).last
+        return nil unless latest
+
+        values = [
+          latest[:latestPrimaryUsedPercent].to_f.positive? ? "P #{latest[:latestPrimaryUsedPercent].round}%" : nil,
+          latest[:latestSecondaryUsedPercent].to_f.positive? ? "W #{latest[:latestSecondaryUsedPercent].round}%" : nil,
+          latest[:totalTokens].to_i.positive? ? "#{format_tokens(latest[:totalTokens])} tok" : nil
+        ].compact
+        return nil if values.empty?
+
+        {
+          key: "history",
+          icon: "",
+          label: Core::Format.date_label(latest[:date]),
+          value: values.join(" / "),
+          detail: "Latest retained day"
+        }
+      end
+
+      def provider_history_summary(history)
+        days = provider_history_days(history)
+        return "No retained history" if days.empty?
+
+        token_total = days.sum { |entry| entry[:totalTokens].to_i }
+        quota_peak = days.map { |entry| entry[:barPercent].to_f }.max.to_f
+        parts = ["#{days.length} retained days"]
+        parts << "#{format_tokens(token_total)} local tokens" if token_total.positive?
+        parts << "#{quota_peak.round}% peak quota" if quota_peak.positive?
+        parts.join(" / ")
+      end
+
+      def provider_history_days(history)
+        Array(history && history[:daily]).last(14).map do |entry|
+          primary = entry[:latestPrimaryUsedPercent].to_f
+          secondary = entry[:latestSecondaryUsedPercent].to_f
+          tertiary = entry[:latestTertiaryUsedPercent].to_f
+          quota = [primary, secondary, tertiary].max
+          token_text = entry[:totalTokens].to_i.positive? ? "#{format_tokens(entry[:totalTokens])} tok" : nil
+          records_text = entry[:records].to_i.positive? ? "#{entry[:records]} records" : nil
+          cost_text = entry[:cost] ? "$#{Core::Format.money_string(entry[:cost].to_f)}" : nil
+          detail = [token_text, records_text, cost_text].compact.join(" / ")
+          {
+            date: entry[:date].to_s,
+            label: Core::Format.date_label(entry[:date]),
+            primaryPercent: primary,
+            secondaryPercent: secondary,
+            tertiaryPercent: tertiary,
+            barPercent: quota,
+            quotaText: quota.positive? ? "#{quota.round}% quota" : "No quota sample",
+            totalTokens: entry[:totalTokens].to_i,
+            records: entry[:records].to_i,
+            cost: entry[:cost],
+            detail: detail.empty? ? "No local token summary" : detail
+          }
+        end
+      end
+
+      def storage_card(storage)
+        return nil unless storage && storage[:totalBytes].to_i.positive?
+
+        {
+          key: "storage",
+          icon: "",
+          label: "Storage",
+          value: Core::Format.bytes_string(storage[:totalBytes]),
+          detail: Array(storage[:paths]).select { |entry| entry[:exists] }.map { |entry| File.basename(entry[:path].to_s) }.join(", ")
+        }
       end
 
       def metric_card_view(config, metric, now)
@@ -542,13 +664,38 @@ module CodexBar
         classes
       end
 
-      def provider_status(result, dominant_metric, stale)
+      def provider_status(result, dominant_metric, stale, service_status = nil)
         return "loading" unless result
         return "error" if result[:error] && !result[:usage]
+        return "incident" if %w[degraded outage].include?(service_status && service_status[:state].to_s)
         return "incident" if clean(result[:incident])
         return "stale" if stale
 
         dominant_metric && dominant_metric[:severity] || "healthy"
+      end
+
+      def auxiliary_provider(payload, provider)
+        providers = payload && payload[:providers]
+        return {} unless providers
+
+        providers[provider] || providers[provider.to_sym] || {}
+      end
+
+      def service_incident(service_status)
+        return nil unless service_status
+        return nil unless %w[degraded outage].include?(service_status[:state].to_s)
+
+        clean(service_status[:incident]) || clean(service_status[:description])
+      end
+
+      def local_usage_summary(local_usage)
+        providers = local_usage && local_usage[:providers]
+        return "Local usage pending" unless providers
+
+        total = providers.values.sum { |entry| entry[:totalTokens].to_i }
+        return "Local usage ready" if total.zero?
+
+        "#{format_tokens(total)} local tokens"
       end
 
       def summary_updated_text(snapshot, config, now)
