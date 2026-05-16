@@ -12,17 +12,25 @@ Location:
 
 Important fields:
 
-- `version`: current config version.
+- `version`: current config version, currently `5`.
 - `providers[]`: `id`, `enabled`, `visible`, `showInOverview`, `allowAutoSelect`, `source`.
 - `display.showHighestUsage`: automatic highest-usage display mode.
 - `display.selectedProvider`: pinned provider when automatic mode is off.
 - `display.showUsed`: used vs remaining percent.
 - `display.displayMode`: `both`, `percent`, or `pace`.
 - `runtime.refreshSeconds`: daemon cadence.
+- `runtime.refreshMode`: `interval` or `manual`.
 - `runtime.stateDir`: state directory.
 - `runtime.waybarSignal`: RT signal for Waybar repaint.
 - `runtime.quickShellCommand`: QuickShell executable.
 - `runtime.quickShellShell`: installed QML entrypoint.
+- `status.enabled`, `status.refreshSeconds`: external status polling.
+- `notifications.*`: quota and incident notification settings.
+- `history.*`: daily snapshot retention.
+- `localUsage.*`: local Codex/Claude log scan controls.
+- `storage.*`: provider storage footprint scan controls.
+- `privacy.hidePersonalInfo`: redacts identity text in the UI.
+- `server.host`, `server.port`: read-only local JSON server binding.
 
 ## Snapshot
 
@@ -36,7 +44,7 @@ Current shape:
 
 ```json
 {
-  "snapshotVersion": 2,
+  "snapshotVersion": 3,
   "generatedAt": "2026-05-06T00:00:00Z",
   "enabledProviders": ["codex"],
   "visibleProviders": ["codex"],
@@ -45,12 +53,28 @@ Current shape:
   "autoSelectableProviders": ["codex"],
   "selectedProvider": "codex",
   "displayProvider": "codex",
+  "serviceStatus": {},
+  "localUsage": {},
+  "storage": {},
+  "history": {},
   "results": {},
   "view": {}
 }
 ```
 
 The Ruby runtime owns this file. QuickShell reads it; QuickShell must not reimplement provider fetching.
+
+`view` is presenter-owned data for QuickShell and Waybar. Provider entries include view-ready quota metrics, service status text, local usage text, storage text, retained `historyDays`, and `historySummary` so the QML panel does not parse raw provider payloads.
+
+## Auxiliary State
+
+All files live under `runtime.stateDir`, are owned by Ruby, and are written with `0600` permissions:
+
+- `status.json`: current external service state for Codex/OpenAI, Claude, and Gemini/Google Cloud.
+- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs.
+- `history.json`: daily retained quota/local-usage summaries.
+- `storage.json`: optional provider storage footprint summaries.
+- `notification_state.json`: last notification state to prevent repeated alerts.
 
 ## UI State
 
@@ -91,3 +115,16 @@ Shape:
 ```
 
 Waybar reads cached state only. It must not fetch providers directly.
+
+## Local Server
+
+`codexbar serve` exposes read-only cached JSON endpoints on `server.host:server.port`:
+
+- `/health`
+- `/usage`
+- `/status`
+- `/cost`
+- `/history`
+- `/storage`
+
+Request handlers read existing cache files only.

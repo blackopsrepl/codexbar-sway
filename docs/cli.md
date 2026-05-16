@@ -19,6 +19,10 @@ Default config: `~/.codexbar/config.json`.
 - `--config <path>`
 - `--format text|json`
 - `--pretty`
+- `--json`
+- `--cached`
+- `--host <host>`
+- `--port <port>`
 - `--once`
 - `--provider <id[,id...]>`
 
@@ -48,10 +52,26 @@ codexbar display remaining
 codexbar display mode both|percent|pace
 codexbar config init
 codexbar config validate
+codexbar config dump
 codexbar open dashboard codex|claude|gemini
+codexbar runtime status
+codexbar runtime cadence manual
+codexbar runtime cadence interval 60
+codexbar notifications status|enable|disable
+codexbar privacy status|hide|show
+codexbar status [--cached]
+codexbar cost [--cached]
+codexbar history
+codexbar storage [--cached]
+codexbar cache clear status|history|cost|storage|snapshot|notifications|all
+codexbar serve [--host 127.0.0.1] [--port 8765]
 ```
 
 `codexbar bar` still exists as legacy direct-bar compatibility. The release path is QuickShell plus Waybar.
+
+`codexbar serve` is read-only and serves cached state at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`.
+
+`--cached` avoids network or filesystem scans where a command supports an explicit refresh path.
 
 ## Supported Providers
 

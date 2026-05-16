@@ -20,9 +20,15 @@ Supported providers are exactly `codex`, `claude`, and `gemini`.
 - `bin/codexbar`: executable Ruby entrypoint.
 - `lib/codexbar.rb`: top-level load file.
 - `lib/codexbar/cli.rb`: command dispatcher and config mutation surface.
-- `lib/codexbar/core/`: config version 4, provider metadata, formatting, metrics, process, HTTP.
+- `lib/codexbar/core/`: config version 5, provider metadata, formatting, metrics, process, HTTP.
 - `lib/codexbar/providers/`: Codex, Claude, Gemini fetchers and registry.
 - `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
+- `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.
+- `lib/codexbar/runtime/local_usage.rb`: local Codex/Claude token usage scanner.
+- `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries.
+- `lib/codexbar/runtime/storage.rb`: optional provider storage footprint scanner.
+- `lib/codexbar/runtime/notifications.rb`: quota and incident notification transitions.
+- `lib/codexbar/runtime/server.rb`: read-only cached localhost JSON server.
 - `lib/codexbar/runtime/state.rb`: `snapshot.json` and `ui.json` ownership.
 - `lib/codexbar/runtime/presenter.rb`: normalized view model for QuickShell and Waybar.
 - `lib/codexbar/runtime/quickshell.rb`: QuickShell process and UI-state control.
@@ -58,22 +64,31 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 1. User session or desktop starts `codexbar daemon --config ~/.codexbar/config.json`.
 2. The daemon reads enabled providers from config.
 3. Provider fetchers return raw usage payloads or explicit provider errors.
-4. `Runtime::Usage` resolves the display provider, visible providers, overview providers, and auto-select candidates.
-5. `Runtime::Presenter` builds the normalized view model.
-6. `Runtime::State` writes `snapshot.json` under `runtime.stateDir`.
-7. Waybar calls `codexbar waybar render` and reads cached state only.
-8. Waybar clicks call the wrapper, which opens the QuickShell panel or refreshes.
-9. QuickShell reads `snapshot.json` and `ui.json`, then sends mutations back through CLI commands.
+4. Auxiliary runtime modules refresh due status, local-usage, storage, notification, and history caches.
+5. `Runtime::Usage` resolves the display provider, visible providers, overview providers, and auto-select candidates.
+6. `Runtime::Presenter` builds the normalized view model.
+7. `Runtime::State` writes `snapshot.json` under `runtime.stateDir`.
+8. Waybar calls `codexbar waybar render` and reads cached state only.
+9. Waybar clicks call the wrapper, which opens the QuickShell panel or refreshes.
+10. QuickShell reads `snapshot.json` and `ui.json`, then sends mutations back through CLI commands.
+
+The QuickShell panel has four views:
+
+- Overview: active display provider, state badges, and compact cards for `codex`, `claude`, and `gemini`.
+- Provider Detail: focused provider quota, status, local usage, history/storage summaries, alerts, provider rail, and provider actions.
+- History: presenter-rendered retained daily history for the focused provider.
+- Settings: cadence, display, notification, privacy, scan, and cache-clear controls.
 
 ## State Contracts
 
 ### Config
 
 - Default path: `~/.codexbar/config.json`.
-- Version: `4`.
+- Version: `5`.
 - Provider fields: `id`, `enabled`, `visible`, `showInOverview`, `allowAutoSelect`, `source`.
 - Display fields: `mergeIcons`, `showHighestUsage`, `showUsed`, `resetStyle`, `displayMode`, `metricPreferences`, `overviewProviders`, `selectedProvider`.
-- Runtime fields: `refreshSeconds`, `notificationCommand`, `stateDir`, `waybarSignal`, `quickShellCommand`, `quickShellShell`.
+- Runtime fields: `refreshSeconds`, `refreshMode`, `notificationCommand`, `stateDir`, `waybarSignal`, `quickShellCommand`, `quickShellShell`.
+- Auxiliary fields: `status`, `notifications`, `history`, `localUsage`, `storage`, `privacy`, `server`.
 
 ### Snapshot
 
@@ -81,6 +96,7 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 - Owned by Ruby runtime.
 - Read by QuickShell and Waybar.
 - Contains enabled/visible/hidden/overview/auto-select provider lists, selected/display provider ids, provider results, and rendered view data.
+- Contains auxiliary `serviceStatus`, `localUsage`, `storage`, and `history` payloads.
 
 ### UI State
 
@@ -99,6 +115,8 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 - `codexbar panel`: open QuickShell.
 - `codexbar ui open|close|toggle|status`: control or inspect panel state.
 - `codexbar waybar render|refresh|panel|cycle-next|cycle-prev`: Waybar render and action hooks.
+- `codexbar status|cost|history|storage`: auxiliary cached status and local intelligence.
+- `codexbar serve`: read-only local JSON endpoints.
 
 ### Config Commands
 
@@ -106,6 +124,10 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 - `codexbar providers list|activate|deactivate|show|hide|allow-auto|block-auto|pin|auto`
 - `codexbar providers overview add|remove`
 - `codexbar display status|used|remaining|mode`
+- `codexbar runtime status|cadence`
+- `codexbar notifications status|enable|disable`
+- `codexbar privacy status|hide|show`
+- `codexbar cache clear ...`
 - `codexbar open dashboard codex|claude|gemini`
 
 ## Install Flow
@@ -137,4 +159,5 @@ After install/configure, the live desktop must not depend on the checkout direct
 - no alternate CodexBar product fallback
 - no providers outside the implemented Linux scope
 - no provider fetches from Waybar
+- no provider fetches from local server request handlers
 - no broad install copy of the development checkout

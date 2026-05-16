@@ -1,11 +1,24 @@
 # Status
 
-CodexBar does not run a separate provider-status polling system in the current Linux release.
+CodexBar tracks two status layers for the three supported providers.
 
-Provider health is derived from fetch results:
+Provider health is still derived from quota fetch results:
 
 - successful usage payloads render healthy, warning, critical, or pace classes through the presenter
 - provider fetch errors are preserved in snapshots and surfaced through UI/Waybar output
 - stale snapshots are detected from `generatedAt` and `runtime.refreshSeconds`
 
-See `docs/runtime-contracts.md` for the snapshot and Waybar payload shape.
+External service status is cached in `status.json`:
+
+- Codex uses OpenAI Status: `https://status.openai.com/api/v2/summary.json`
+- Claude uses Claude Status: `https://status.claude.com/api/v2/summary.json`
+- Gemini uses Google Cloud incident history: `https://status.cloud.google.com/incidents.json`
+
+Use:
+
+```bash
+codexbar status
+codexbar status --cached --format json --pretty
+```
+
+Waybar and QuickShell consume the cached status through `snapshot.json`; they do not poll status feeds directly.

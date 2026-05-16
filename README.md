@@ -19,10 +19,23 @@ The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact
 - Bar surface: Waybar calls `codexbar waybar render` and receives cached JSON.
 - Background fetch path: `codexbar daemon` fetches providers and writes snapshots.
 - State files: `snapshot.json` and `ui.json` under `runtime.stateDir`, defaulting to `~/.local/state/codexbar`.
-- Config file: `~/.codexbar/config.json`, current config version `4`.
+- Config file: `~/.codexbar/config.json`, current config version `5`.
 - Supported providers: `codex`, `claude`, and `gemini`.
 
 Provider fetches do not run inside Waybar. Waybar is only a render/action surface.
+
+The QuickShell panel is split into Overview, Provider Detail, History, and Settings views. It reads presenter data from `snapshot.json` and sends mutations back through the Ruby CLI.
+
+## Desktop Autostart
+
+CodexBar has two separate runtime pieces:
+
+- `codexbar daemon --config ~/.codexbar/config.json` refreshes provider quota state and writes `snapshot.json`.
+- `codexbar waybar render --config ~/.codexbar/config.json` reads that cached snapshot and returns Waybar JSON.
+
+Waybar does not refresh Codex, Claude, or Gemini by itself. If the daemon is not running after login or reboot, the Waybar chip can keep rendering, but it will render stale cached state. A desktop integration should therefore start and supervise the daemon at session startup.
+
+On SolverForge Linux, the managed Waybar integration starts companion daemons through `solverforge-waybar-companions-start`, launched from Sway `exec_always` beside Waybar. That launcher restarts `codexbar daemon` if an early boot-time refresh failure makes it exit.
 
 ## Install
 
@@ -89,6 +102,24 @@ codexbar display mode percent
 codexbar display mode pace
 ```
 
+Runtime, status, and cached local intelligence:
+
+```bash
+codexbar runtime status
+codexbar runtime cadence manual
+codexbar runtime cadence interval 120
+codexbar notifications enable
+codexbar privacy hide
+codexbar status
+codexbar cost
+codexbar history --format json --pretty
+codexbar storage
+codexbar cache clear status
+codexbar serve --host 127.0.0.1 --port 8765
+```
+
+`codexbar serve` exposes cached JSON at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`. It does not fetch providers from request handlers.
+
 All providers are present in the default config, but provider entries default to disabled. Activate the providers this machine should fetch.
 
 `codexbar bar` remains in the codebase as a bounded legacy direct-bar command. It is not the release UI path.
@@ -150,5 +181,6 @@ make check-live
 - `docs/runtime-contracts.md`: config, snapshot, UI, and Waybar JSON contracts.
 - `docs/architecture.md`: runtime architecture.
 - `docs/providers.md`: implemented provider fetch paths.
+- `docs/status.md`: external service-status cache behavior.
 - `docs/cli.md`: command reference.
 - `docs/RELEASING.md`: release gates.

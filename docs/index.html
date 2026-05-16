@@ -45,7 +45,7 @@
             <div>
               <h2>Keep quota state visible.</h2>
               <p>
-                CodexBar caches provider usage in a daemon, renders a compact Waybar chip, and opens a QuickShell panel for provider detail and control.
+                CodexBar caches provider usage, service status, local usage, and history in a daemon, renders a compact Waybar chip, and opens a QuickShell panel for overview, provider detail, history, and settings.
               </p>
             </div>
           </div>
@@ -56,8 +56,8 @@
           <ul class="bullets" aria-label="What it does">
             <li>Daemon-backed cached quota state for codex, claude, and gemini.</li>
             <li>Waybar chip with provider icon, quota percentages, and pace state.</li>
-            <li>QuickShell panel for overview, provider detail, and display/provider controls.</li>
-            <li>CLI-first config and automation surface through codexbar.</li>
+            <li>QuickShell panel with Overview, Provider Detail, History, and Settings views.</li>
+            <li>CLI-first config, local status, cost, history, storage, and cache-control surface through codexbar.</li>
           </ul>
         </div>
         <figure class="shot hero-shot" data-animate="3">
@@ -69,7 +69,7 @@
       <section class="details" aria-label="Details" data-animate="4">
         <div class="card">
           <h3>Runtime</h3>
-          <p>Ruby handles config, provider fetch, normalization, snapshots, and CLI actions. QuickShell renders the panel, and Waybar reads cached JSON only.</p>
+          <p>Ruby handles config, provider fetch, normalization, snapshots, auxiliary caches, and CLI actions. QuickShell renders the panel, and Waybar reads cached JSON only.</p>
         </div>
         <div class="card">
           <h3>Install</h3>

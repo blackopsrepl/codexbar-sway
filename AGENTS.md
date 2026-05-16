@@ -5,6 +5,7 @@
 - Public docs should frame it as an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete), not as a port.
 - The supported runtime stack is Ruby + QuickShell + Waybar.
 - The human-facing UI is `frontend/quickshell/shell.qml`.
+- The QuickShell panel is organized into Overview, Provider Detail, History, and Settings views.
 - Waybar is a compact launcher/render surface only.
 - Provider fetches belong in the daemon and usage commands, not in Waybar.
 - `snapshot.json` and `ui.json` are the backend/frontend runtime contract.
@@ -38,7 +39,7 @@
 - Use ASCII unless the file already depends on Unicode; Nerd Font glyphs in UI metadata are intentional.
 - Keep modules small and explicit; prefer pure functions in `core/` and `runtime/presenter.rb`.
 - Preserve the current config vocabulary: `enabled`, `visible`, `showInOverview`, `allowAutoSelect`, `showHighestUsage`.
-- Current config version is `4`.
+- Current config version is `5`.
 - Do not add fallback provider systems, fallback UI launchers, or silent compatibility aliases.
 
 ## Runtime Boundaries
@@ -47,6 +48,8 @@
 - `codexbar waybar render` reads cached state only and emits Waybar JSON.
 - `codexbar panel` opens QuickShell through `runtime.quickShellCommand` and `runtime.quickShellShell`.
 - `codexbar ui open|close|toggle|status` mutates or reports `ui.json`.
+- `codexbar serve` exposes cached state through read-only localhost JSON endpoints; request handlers must not fetch providers.
+- `codexbar status`, `codexbar cost`, `codexbar history`, and `codexbar storage` operate on auxiliary runtime caches for the three supported providers only.
 - `codexbar providers ...` and `codexbar display ...` are the supported config mutation surfaces.
 - `codexbar bar` still exists as legacy direct-bar compatibility; it is not the release UI path.
 
