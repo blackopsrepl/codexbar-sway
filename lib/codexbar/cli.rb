@@ -17,23 +17,42 @@ module CodexBar
         0
       when "config"
         run_config_command(args, config_path)
+      when "cache"
+        run_cache_command(args, config_path)
+      when "cost"
+        run_cost_command(args, config_path)
       when "display"
         run_display_command(args, config_path)
       when "daemon"
         Runtime::Daemon.run(config_path, once: args[:once])
         0
+      when "history"
+        run_history_command(args, config_path)
+      when "notifications"
+        run_notifications_command(args, config_path)
       when "open"
         run_open_command(args)
         0
       when "panel"
         Runtime::QuickShell.open(config_path, args[:provider])
         0
+      when "privacy"
+        run_privacy_command(args, config_path)
       when "providers"
         run_providers_command(args, config_path)
       when "refresh"
         snapshot = Runtime::Daemon.refresh(config_path)
         print_json_if_requested(snapshot, args)
         0
+      when "runtime"
+        run_runtime_command(args, config_path)
+      when "serve"
+        Runtime::Server.run(config_path, host: args[:host], port: args[:port])
+        0
+      when "status"
+        run_status_command(args, config_path)
+      when "storage"
+        run_storage_command(args, config_path)
       when "ui"
         run_ui_command(args, config_path)
       when "usage"
@@ -50,8 +69,11 @@ module CodexBar
 
     def parse_args(argv)
       args = {
+        cached: false,
         format: "text",
+        host: nil,
         once: false,
+        port: nil,
         pretty: false,
         provider: nil,
         positionals: []
@@ -67,8 +89,18 @@ module CodexBar
         when "--format"
           index += 1
           args[:format] = argv[index] == "json" ? "json" : "text"
+        when "--json"
+          args[:format] = "json"
         when "--pretty"
           args[:pretty] = true
+        when "--cached"
+          args[:cached] = true
+        when "--host"
+          index += 1
+          args[:host] = argv[index]
+        when "--port"
+          index += 1
+          args[:port] = argv[index].to_i
         when "--once"
           args[:once] = true
         when "--provider"
@@ -125,6 +157,11 @@ module CodexBar
       end
 
       config = Core::Config.load_config(config_path)
+      if subcommand == "dump"
+        print_payload(config, args)
+        return 0
+      end
+
       issues = Core::Config.validate_config(config)
       if args[:format] == "json"
         puts(args[:pretty] ? JSON.pretty_generate(issues) : JSON.generate(issues))
@@ -140,6 +177,115 @@ module CodexBar
         puts("#{issue[:severity].upcase}: #{issue[:field]} #{issue[:message]}")
       end
       issues.any? { |issue| issue[:severity] == "error" } ? 1 : 0
+    end
+
+    def run_runtime_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      subcommand = args[:positionals].first || "status"
+
+      case subcommand
+      when "status"
+        payload = {
+          refreshMode: config.dig(:runtime, :refreshMode),
+          refreshSeconds: config.dig(:runtime, :refreshSeconds),
+          statusEnabled: config.dig(:status, :enabled),
+          notificationsEnabled: config.dig(:notifications, :enabled),
+          localUsageEnabled: config.dig(:localUsage, :enabled),
+          storageEnabled: config.dig(:storage, :enabled),
+          privacyHidden: config.dig(:privacy, :hidePersonalInfo)
+        }
+        print_payload(payload, args)
+      when "cadence"
+        mode = args[:positionals][1].to_s
+        raise ArgumentError, "Runtime cadence must be manual or interval." unless %w[manual interval].include?(mode)
+
+        seconds = args[:positionals][2]
+        updated = Core::Config.set_refresh_mode(config, mode, seconds)
+        save_config(config_path, updated, refresh: false)
+        print_payload(updated[:runtime], args)
+      else
+        raise ArgumentError, "Unknown runtime subcommand: #{subcommand}"
+      end
+      0
+    end
+
+    def run_notifications_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      subcommand = args[:positionals].first || "status"
+      case subcommand
+      when "status"
+        print_payload(config[:notifications], args)
+      when "enable"
+        updated = Core::Config.set_notifications_enabled(config, true)
+        save_config(config_path, updated, refresh: false)
+        print_payload(updated[:notifications], args)
+      when "disable"
+        updated = Core::Config.set_notifications_enabled(config, false)
+        save_config(config_path, updated, refresh: false)
+        print_payload(updated[:notifications], args)
+      else
+        raise ArgumentError, "Unknown notifications subcommand: #{subcommand}"
+      end
+      0
+    end
+
+    def run_privacy_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      subcommand = args[:positionals].first || "status"
+      case subcommand
+      when "status"
+        print_payload(config[:privacy], args)
+      when "hide"
+        updated = Core::Config.set_privacy_hidden(config, true)
+        save_config(config_path, updated, refresh: false)
+        print_payload(updated[:privacy], args)
+      when "show"
+        updated = Core::Config.set_privacy_hidden(config, false)
+        save_config(config_path, updated, refresh: false)
+        print_payload(updated[:privacy], args)
+      else
+        raise ArgumentError, "Unknown privacy subcommand: #{subcommand}"
+      end
+      0
+    end
+
+    def run_status_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      payload = args[:cached] ? Runtime::Status.read_cache(config) : Runtime::Status.refresh(config)
+      print_payload(payload, args)
+      0
+    end
+
+    def run_cost_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      payload = args[:cached] ? Runtime::LocalUsage.read_cache(config) : Runtime::LocalUsage.refresh(config)
+      print_payload(payload, args)
+      0
+    end
+
+    def run_history_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      print_payload(Runtime::History.read_cache(config), args)
+      0
+    end
+
+    def run_storage_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      payload = args[:cached] ? Runtime::Storage.read_cache(config) : Runtime::Storage.refresh(config)
+      print_payload(payload, args)
+      0
+    end
+
+    def run_cache_command(args, config_path)
+      config = Core::Config.load_config(config_path)
+      subcommand = args[:positionals].first || "clear"
+      raise ArgumentError, "Unknown cache subcommand: #{subcommand}" unless subcommand == "clear"
+
+      target = args[:positionals][1] || "all"
+      cleared = target == "all" ? Runtime::State.delete_all_caches(config) : [Runtime::State.delete_cache(config, target)]
+      payload = { cleared: cleared }
+      print_payload(payload, args)
+      0
     end
 
     def run_providers_command(args, config_path)
@@ -419,6 +565,31 @@ module CodexBar
       return unless args[:format] == "json"
 
       puts(args[:pretty] ? JSON.pretty_generate(payload) : JSON.generate(payload))
+    end
+
+    def print_payload(payload, args)
+      if args[:format] == "json"
+        puts(args[:pretty] ? JSON.pretty_generate(payload) : JSON.generate(payload))
+        return
+      end
+
+      puts(render_text_payload(payload))
+    end
+
+    def render_text_payload(payload, indent = 0)
+      case payload
+      when Hash
+        payload.map do |key, value|
+          prefix = "#{' ' * indent}#{key}:"
+          value.is_a?(Hash) || value.is_a?(Array) ? "#{prefix}\n#{render_text_payload(value, indent + 2)}" : "#{prefix} #{value}"
+        end.join("\n")
+      when Array
+        payload.map do |value|
+          value.is_a?(Hash) || value.is_a?(Array) ? "#{' ' * indent}-\n#{render_text_payload(value, indent + 2)}" : "#{' ' * indent}- #{value}"
+        end.join("\n")
+      else
+        "#{' ' * indent}#{payload}"
+      end
     end
 
     def require_provider_argument(positionals, index)

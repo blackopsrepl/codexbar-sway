@@ -15,7 +15,10 @@ module CodexBar
         refresh(config_path, config: config)
 
         loop do
-          sleep(config.dig(:runtime, :refreshSeconds).to_i)
+          config = Core::Config.load_config(config_path)
+          sleep(config.dig(:runtime, :refreshMode) == "manual" ? 5 : config.dig(:runtime, :refreshSeconds).to_i)
+          next if config.dig(:runtime, :refreshMode) == "manual"
+
           refresh(config_path, config: config)
         rescue StandardError => e
           warn "codexbar daemon refresh error: #{e.message}"
@@ -31,7 +34,29 @@ module CodexBar
         State.with_refresh_lock(config) do
           enabled = Usage.enabled_providers(config)
           results = Usage.collect_usage(config, enabled)
-          snapshot = State.build_snapshot(config, enabled, results)
+          service_status = Status.refresh_if_due(config)
+          local_usage = LocalUsage.refresh_if_due(config)
+          storage = Storage.refresh_if_due(config)
+          previous = State.read_snapshot(config)
+          draft = State.build_snapshot(
+            config,
+            enabled,
+            results,
+            service_status: service_status,
+            local_usage: local_usage,
+            storage: storage
+          )
+          history = History.update(config, draft, local_usage)
+          snapshot = State.build_snapshot(
+            config,
+            enabled,
+            results,
+            service_status: service_status,
+            local_usage: local_usage,
+            storage: storage,
+            history: history
+          )
+          Notifications.process(config, previous, snapshot)
           State.write_snapshot(config, snapshot)
         end
 

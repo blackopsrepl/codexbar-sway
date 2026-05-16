@@ -16,10 +16,14 @@ class ConfigTest < Minitest::Test
       }
     )
 
-    assert_equal 4, config[:version]
+    assert_equal 5, config[:version]
     assert_equal %w[codex claude gemini], config[:providers].map { |entry| entry[:id] }
     assert_equal "codex", config.dig(:display, :selectedProvider)
     assert_equal "both", config.dig(:display, :displayMode)
+    assert_equal "interval", config.dig(:runtime, :refreshMode)
+    assert_equal true, config.dig(:status, :enabled)
+    assert_equal false, config.dig(:notifications, :enabled)
+    assert_equal 30, config.dig(:history, :retentionDays)
 
     claude = config[:providers].find { |entry| entry[:id] == "claude" }
     assert_equal true, claude[:enabled]
@@ -38,5 +42,16 @@ class ConfigTest < Minitest::Test
     shell_issue = issues.find { |issue| issue[:field] == "runtime.quickShellShell" }
     refute_nil shell_issue
     assert_equal "warning", shell_issue[:severity]
+  end
+
+  def test_set_refresh_mode_normalizes_manual_and_interval
+    config = build_config
+    manual = CodexBar::Core::Config.set_refresh_mode(config, "manual")
+    interval = CodexBar::Core::Config.set_refresh_mode(config, "interval", "60")
+
+    assert_equal "manual", manual.dig(:runtime, :refreshMode)
+    assert_equal 120, manual.dig(:runtime, :refreshSeconds)
+    assert_equal "interval", interval.dig(:runtime, :refreshMode)
+    assert_equal 60, interval.dig(:runtime, :refreshSeconds)
   end
 end

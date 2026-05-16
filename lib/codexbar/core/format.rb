@@ -63,6 +63,65 @@ module CodexBar
         [label, parts.join(" · ")].join(": ")
       end
 
+      def token_summary_line(summary)
+        return nil unless summary
+
+        tokens = summary[:totalTokens].to_i
+        parts = []
+        parts << "#{compact_count(tokens)} tok" if tokens.positive?
+        parts << "#{summary[:records].to_i} records" if summary[:records].to_i.positive?
+        parts << "$#{money_string(summary[:cost].to_f)}" if summary[:cost]
+        parts.empty? ? nil : parts.join(" · ")
+      end
+
+      def bytes_string(value)
+        amount = value.to_f
+        units = %w[B KB MB GB TB]
+        index = 0
+        while amount >= 1024 && index < units.length - 1
+          amount /= 1024.0
+          index += 1
+        end
+
+        return "#{amount.to_i} #{units[index]}" if index.zero?
+
+        "#{format('%.1f', amount).sub('.0', '')} #{units[index]}"
+      end
+
+      def service_status_text(status)
+        return "Status unknown" unless status
+
+        state = status[:state].to_s
+        description = clean(status[:description])
+        case state
+        when "ok"
+          description || "Service operational"
+        when "degraded"
+          description || "Service degraded"
+        when "outage"
+          description || "Service outage"
+        else
+          description || "Status unknown"
+        end
+      end
+
+      def redact_email(value)
+        text = clean(value)
+        return nil unless text
+
+        local, domain = text.split("@", 2)
+        return "hidden" unless local && domain
+
+        "#{local[0]}***@#{domain}"
+      end
+
+      def date_label(value)
+        time = Time.parse(value.to_s)
+        time.strftime("%b %-d")
+      rescue ArgumentError
+        value.to_s
+      end
+
       def spend_compact_text(spend)
         month = spend[:month]
         return nil unless month

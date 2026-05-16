@@ -72,4 +72,23 @@ class UsageTest < Minitest::Test
 
     assert_equal "claude", next_provider
   end
+
+  def test_display_provider_ignores_external_status_payload
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "codex", enabled: true, visible: true, allowAutoSelect: true)
+    config = with_provider_state(config, "claude", enabled: true, visible: true, allowAutoSelect: true)
+    results = {
+      "codex" => provider_result(
+        provider: "codex",
+        usage: usage_payload(provider: "codex", now: now, primary: window(used_percent: 20, window_minutes: 300, now: now, resets_in_minutes: 180))
+      ),
+      "claude" => provider_result(
+        provider: "claude",
+        usage: usage_payload(provider: "claude", now: now, primary: window(used_percent: 80, window_minutes: 300, now: now, resets_in_minutes: 180))
+      )
+    }
+
+    assert_equal "claude", CodexBar::Runtime::Usage.display_provider(config, %w[codex claude], results)
+  end
 end

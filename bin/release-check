@@ -74,8 +74,13 @@ run_step "ruby syntax" bash -lc 'for path in bin/codexbar $(rg --files lib test)
 run_step "test suite" ruby -Itest test/run.rb
 run_step "config init" bash -lc "bin/codexbar config init --config '$TMP_CONFIG' >/dev/null"
 run_step "config validate" bin/codexbar config validate --config "$TMP_CONFIG"
+run_step "config dump" bash -lc "bin/codexbar config dump --config '$TMP_CONFIG' --format json >/dev/null"
 run_step "waybar render" bash -lc "bin/codexbar waybar render --config '$TMP_CONFIG' >/dev/null"
 run_step "ui status" bash -lc "bin/codexbar ui status --config '$TMP_CONFIG' --format json --pretty >/dev/null"
+run_step "cached status" bash -lc "bin/codexbar status --cached --config '$TMP_CONFIG' --format json >/dev/null"
+run_step "cached cost" bash -lc "bin/codexbar cost --cached --config '$TMP_CONFIG' --format json >/dev/null"
+run_step "history" bash -lc "bin/codexbar history --config '$TMP_CONFIG' --format json >/dev/null"
+run_step "cache clear" bash -lc "bin/codexbar cache clear all --config '$TMP_CONFIG' --format json >/dev/null"
 
 if command -v quickshell >/dev/null 2>&1; then
   echo
@@ -109,6 +114,8 @@ if [[ "$WITH_LIVE" -eq 1 ]]; then
     bin/codexbar usage --provider "$provider" --format json --pretty --config "$LIVE_CONFIG" | validate_provider_json "$provider"
     echo "$provider validated"
   done
+
+  run_step "live service status" bin/codexbar status --config "$LIVE_CONFIG" --format json --pretty
 fi
 
 echo

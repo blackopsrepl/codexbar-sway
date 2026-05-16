@@ -15,6 +15,27 @@ module CodexBar
         "gemini" => { label: "Gemini", shortLabel: "GM", sessionLabel: "Pro", weeklyLabel: "Flash", defaultEnabled: false, supportsAverage: true, supportsTertiary: false, accent: "#82A7F4", icon: "", dashboardUrl: "https://gemini.google.com/" }
       }.freeze
 
+      STATUS_METADATA = {
+        "codex" => {
+          source: "openai-status",
+          url: "https://status.openai.com/api/v2/summary.json",
+          sourceUrl: "https://status.openai.com/",
+          components: ["CLI", "Codex API"]
+        },
+        "claude" => {
+          source: "claude-status",
+          url: "https://status.claude.com/api/v2/summary.json",
+          sourceUrl: "https://status.claude.com/",
+          components: ["Claude Code", "claude.ai", "Claude API", "api.anthropic.com"]
+        },
+        "gemini" => {
+          source: "google-cloud-status",
+          url: "https://status.cloud.google.com/incidents.json",
+          sourceUrl: "https://status.cloud.google.com/",
+          products: ["Vertex Gemini API", "Gemini Code Assist"]
+        }
+      }.freeze
+
       module_function
 
       def usage_provider?(value)

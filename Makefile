@@ -48,9 +48,15 @@ INSTALL_FILES := \
 	lib/codexbar/providers/gemini.rb \
 	lib/codexbar/providers/index.rb \
 	lib/codexbar/runtime/daemon.rb \
+	lib/codexbar/runtime/history.rb \
+	lib/codexbar/runtime/local_usage.rb \
+	lib/codexbar/runtime/notifications.rb \
 	lib/codexbar/runtime/presenter.rb \
 	lib/codexbar/runtime/quickshell.rb \
+	lib/codexbar/runtime/server.rb \
 	lib/codexbar/runtime/state.rb \
+	lib/codexbar/runtime/status.rb \
+	lib/codexbar/runtime/storage.rb \
 	lib/codexbar/runtime/swaybar.rb \
 	lib/codexbar/runtime/usage.rb \
 	lib/codexbar/runtime/waybar.rb
@@ -110,8 +116,13 @@ smoke:
 	trap 'rm -f "$$tmp_config"' EXIT; \
 	bin/codexbar config init --config "$$tmp_config" >/dev/null; \
 	bin/codexbar config validate --config "$$tmp_config"; \
+	bin/codexbar config dump --config "$$tmp_config" --format json >/dev/null; \
 	bin/codexbar waybar render --config "$$tmp_config" >/dev/null; \
-	bin/codexbar ui status --config "$$tmp_config" --format json --pretty >/dev/null
+	bin/codexbar ui status --config "$$tmp_config" --format json --pretty >/dev/null; \
+	bin/codexbar history --config "$$tmp_config" --format json >/dev/null; \
+	bin/codexbar cost --cached --config "$$tmp_config" --format json >/dev/null; \
+	bin/codexbar status --cached --config "$$tmp_config" --format json >/dev/null; \
+	bin/codexbar cache clear all --config "$$tmp_config" --format json >/dev/null
 
 waybar-render:
 	bin/codexbar waybar render

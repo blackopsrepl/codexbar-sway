@@ -10,7 +10,6 @@ module CodexBar
         metadata = Types::PROVIDER_METADATA.fetch(provider)
         return "automatic" if value == "average" && !metadata[:supportsAverage]
         return "automatic" if value == "tertiary" && !metadata[:supportsTertiary]
-        return "automatic" if value == "tertiary" && %w[cursor zai].include?(provider) && !snapshot&.dig(:tertiary)
 
         value
       end
@@ -29,7 +28,7 @@ module CodexBar
                  when "secondary"
                    ordered_window([secondary, primary, tertiary])
                  when "tertiary"
-                   ordered_window(provider == "perplexity" ? [tertiary, secondary, primary] : [tertiary, primary, secondary])
+                   ordered_window([tertiary, primary, secondary])
                  when "average"
                    if primary && secondary
                      { usedPercent: (primary[:usedPercent].to_f + secondary[:usedPercent].to_f) / 2.0 }
@@ -104,33 +103,32 @@ module CodexBar
         pace[:deltaPercent] >= 0 ? "hot" : "reserve"
       end
 
-      def automatic_window(provider, snapshot)
-        case provider
-        when "factory", "kimi"
-          snapshot[:secondary] || snapshot[:primary]
-        when "cursor"
-          most_constrained(snapshot[:primary], snapshot[:secondary], snapshot[:tertiary])
-        when "zai"
-          most_constrained(snapshot[:primary], snapshot[:tertiary]) || snapshot[:secondary]
-        when "copilot"
-          if snapshot[:primary] && snapshot[:secondary]
-            snapshot[:primary][:usedPercent].to_f >= snapshot[:secondary][:usedPercent].to_f ? snapshot[:primary] : snapshot[:secondary]
-          else
-            snapshot[:primary] || snapshot[:secondary]
-          end
-        when "perplexity"
-          if snapshot[:primary] && (100 - snapshot[:primary][:usedPercent].to_f) > 0
-            snapshot[:primary]
-          else
-            snapshot[:secondary] || snapshot[:tertiary] || snapshot[:primary]
-          end
-        else
-          snapshot[:primary] || snapshot[:secondary]
-        end
+      def remaining_percent(window)
+        Types.rate_window_remaining_percent(window)
       end
 
-      def most_constrained(*windows)
-        windows.compact.max_by { |window| window[:usedPercent].to_f }
+      def quota_level(window, warning_threshold:, critical_threshold:)
+        remaining = remaining_percent(window)
+        return nil unless remaining
+        return "critical" if remaining <= critical_threshold.to_f
+        return "warning" if remaining <= warning_threshold.to_f
+
+        "ok"
+      end
+
+      def worst_quota_level(windows, warning_threshold:, critical_threshold:)
+        levels = Array(windows).filter_map do |window|
+          quota_level(window, warning_threshold: warning_threshold, critical_threshold: critical_threshold)
+        end
+        return nil if levels.empty?
+        return "critical" if levels.include?("critical")
+        return "warning" if levels.include?("warning")
+
+        "ok"
+      end
+
+      def automatic_window(_provider, snapshot)
+        snapshot[:primary] || snapshot[:secondary] || snapshot[:tertiary]
       end
 
       def ordered_window(windows)

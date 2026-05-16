@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "fileutils"
+require "json"
+require "stringio"
+require "tmpdir"
 require "time"
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
@@ -54,6 +58,31 @@ module CodexBarTestHelpers
       incident: incident,
       credits: credits
     }.compact
+  end
+
+  def with_temp_home
+    Dir.mktmpdir("codexbar-home") do |dir|
+      previous = ENV["CODEXBAR_HOME"]
+      ENV["CODEXBAR_HOME"] = dir
+      yield dir
+    ensure
+      ENV["CODEXBAR_HOME"] = previous
+    end
+  end
+
+  def write_jsonl(path, records)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, records.map { |record| JSON.generate(record) }.join("\n") + "\n")
+  end
+
+  def capture_stdout
+    original = $stdout
+    output = StringIO.new
+    $stdout = output
+    yield
+    output.string
+  ensure
+    $stdout = original
   end
 end
 

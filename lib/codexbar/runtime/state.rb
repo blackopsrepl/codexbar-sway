@@ -7,9 +7,14 @@ require "time"
 module CodexBar
   module Runtime
     module State
-      SNAPSHOT_VERSION = 2
+      SNAPSHOT_VERSION = 3
       SNAPSHOT_FILE = "snapshot.json"
       UI_STATE_FILE = "ui.json"
+      STATUS_FILE = "status.json"
+      HISTORY_FILE = "history.json"
+      LOCAL_USAGE_FILE = "local_usage.json"
+      STORAGE_FILE = "storage.json"
+      NOTIFICATION_STATE_FILE = "notification_state.json"
       DAEMON_LOCK_FILE = "daemon.lock"
       REFRESH_LOCK_FILE = "refresh.lock"
 
@@ -27,6 +32,26 @@ module CodexBar
         File.join(state_dir(config), UI_STATE_FILE)
       end
 
+      def status_path(config)
+        File.join(state_dir(config), STATUS_FILE)
+      end
+
+      def history_path(config)
+        File.join(state_dir(config), HISTORY_FILE)
+      end
+
+      def local_usage_path(config)
+        File.join(state_dir(config), LOCAL_USAGE_FILE)
+      end
+
+      def storage_path(config)
+        File.join(state_dir(config), STORAGE_FILE)
+      end
+
+      def notification_state_path(config)
+        File.join(state_dir(config), NOTIFICATION_STATE_FILE)
+      end
+
       def read_snapshot(config)
         path = snapshot_path(config)
         return nil unless File.file?(path)
@@ -41,7 +66,7 @@ module CodexBar
         atomic_write_json(snapshot_path(config), snapshot)
       end
 
-      def build_snapshot(config, enabled, results, now = Time.now.utc)
+      def build_snapshot(config, enabled, results, now = Time.now.utc, service_status: nil, local_usage: nil, storage: nil, history: nil)
         visible = Usage.visible_providers(config, enabled)
         snapshot = {
           snapshotVersion: SNAPSHOT_VERSION,
@@ -53,6 +78,10 @@ module CodexBar
           autoSelectableProviders: Usage.auto_selectable_providers(config, enabled),
           selectedProvider: Usage.selected_provider(config, enabled),
           displayProvider: Usage.display_provider(config, enabled, results),
+          serviceStatus: service_status || read_status(config),
+          localUsage: local_usage || read_local_usage(config),
+          storage: storage || read_storage(config),
+          history: history || read_history(config),
           results: results
         }
         snapshot[:view] = Presenter.build_snapshot_view(config, snapshot, now)
@@ -67,7 +96,16 @@ module CodexBar
           result = cached[provider] || cached[provider.to_sym]
           output[provider] = result if result
         end
-        snapshot = build_snapshot(config, enabled, results, Time.now.utc)
+        snapshot = build_snapshot(
+          config,
+          enabled,
+          results,
+          Time.now.utc,
+          service_status: read_status(config),
+          local_usage: read_local_usage(config),
+          storage: read_storage(config),
+          history: read_history(config)
+        )
         snapshot[:generatedAt] = previous[:generatedAt] if previous && previous[:generatedAt]
         snapshot[:view] = Presenter.build_snapshot_view(config, snapshot, Time.now)
         write_snapshot(config, snapshot)
@@ -96,6 +134,65 @@ module CodexBar
 
       def snapshot_results(snapshot)
         snapshot&.dig(:results) || snapshot&.dig("results") || {}
+      end
+
+      def read_status(config)
+        read_json_file(status_path(config)) || {}
+      end
+
+      def write_status(config, payload)
+        write_json_file(status_path(config), payload)
+      end
+
+      def read_history(config)
+        read_json_file(history_path(config)) || {}
+      end
+
+      def write_history(config, payload)
+        write_json_file(history_path(config), payload)
+      end
+
+      def read_local_usage(config)
+        read_json_file(local_usage_path(config)) || {}
+      end
+
+      def write_local_usage(config, payload)
+        write_json_file(local_usage_path(config), payload)
+      end
+
+      def read_storage(config)
+        read_json_file(storage_path(config)) || {}
+      end
+
+      def write_storage(config, payload)
+        write_json_file(storage_path(config), payload)
+      end
+
+      def read_notification_state(config)
+        read_json_file(notification_state_path(config)) || {}
+      end
+
+      def write_notification_state(config, payload)
+        write_json_file(notification_state_path(config), payload)
+      end
+
+      def delete_cache(config, name)
+        path = case name.to_s
+               when "snapshot" then snapshot_path(config)
+               when "status" then status_path(config)
+               when "history" then history_path(config)
+               when "cost", "local_usage", "local-usage" then local_usage_path(config)
+               when "storage" then storage_path(config)
+               when "notifications", "notification_state", "notification-state" then notification_state_path(config)
+               else
+                 raise ArgumentError, "Unknown cache target #{name}."
+               end
+        FileUtils.rm_f(path)
+        path
+      end
+
+      def delete_all_caches(config)
+        %w[snapshot status history cost storage notifications].map { |name| delete_cache(config, name) }
       end
 
       def enabled_providers(snapshot)
@@ -196,6 +293,23 @@ module CodexBar
 
       def lock_path(config, name)
         File.join(state_dir(config), name)
+      end
+
+      def read_json_file(path)
+        return nil unless File.file?(path)
+
+        JSON.parse(File.read(path), symbolize_names: true)
+      rescue JSON::ParserError
+        nil
+      end
+
+      def write_json_file(path, payload)
+        ensure_state_dir_for(path)
+        atomic_write_json(path, payload)
+      end
+
+      def ensure_state_dir_for(path)
+        FileUtils.mkdir_p(File.dirname(path))
       end
 
       def parse_time(value)

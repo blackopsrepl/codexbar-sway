@@ -6,7 +6,7 @@ require "json"
 module CodexBar
   module Core
     module Config
-      CONFIG_VERSION = 4
+      CONFIG_VERSION = 5
       DEFAULT_QUICKSHELL_COMMAND = "quickshell"
 
       module_function
@@ -29,11 +29,44 @@ module CodexBar
           },
           runtime: {
             refreshSeconds: 120,
+            refreshMode: "interval",
             notificationCommand: "notify-send",
             stateDir: File.join(Dir.home, ".local", "state", "codexbar"),
             waybarSignal: 9,
             quickShellCommand: DEFAULT_QUICKSHELL_COMMAND,
             quickShellShell: default_quickshell_shell
+          },
+          status: {
+            enabled: true,
+            refreshSeconds: 300
+          },
+          notifications: {
+            enabled: false,
+            quotaWarnings: true,
+            incidentWarnings: true,
+            warningThreshold: 25,
+            criticalThreshold: 10,
+            restoredThreshold: 30
+          },
+          history: {
+            enabled: true,
+            retentionDays: 30
+          },
+          localUsage: {
+            enabled: true,
+            refreshSeconds: 900,
+            scanDays: 30
+          },
+          storage: {
+            enabled: false,
+            refreshSeconds: 3600
+          },
+          privacy: {
+            hidePersonalInfo: false
+          },
+          server: {
+            host: "127.0.0.1",
+            port: 8765
           }
         }
       end
@@ -110,7 +143,14 @@ module CodexBar
             overviewProviders: overview_providers.empty? ? defaults[:display][:overviewProviders] : overview_providers,
             selectedProvider: normalize_selected_provider(input.dig(:display, :selectedProvider)) || defaults[:display][:selectedProvider]
           },
-          runtime: normalize_runtime(input[:runtime])
+          runtime: normalize_runtime(input[:runtime]),
+          status: normalize_status(input[:status]),
+          notifications: normalize_notifications(input[:notifications]),
+          history: normalize_history(input[:history]),
+          localUsage: normalize_local_usage(input[:localUsage]),
+          storage: normalize_storage(input[:storage]),
+          privacy: normalize_privacy(input[:privacy]),
+          server: normalize_server(input[:server])
         }
       end
 
@@ -130,6 +170,30 @@ module CodexBar
             severity: "warning",
             field: "runtime.refreshSeconds",
             message: "Refresh below 15 seconds will hammer provider CLIs and APIs."
+          }
+        end
+
+        if config.dig(:status, :refreshSeconds).to_i < 60
+          issues << {
+            severity: "warning",
+            field: "status.refreshSeconds",
+            message: "Status polling below 60 seconds is unnecessarily aggressive."
+          }
+        end
+
+        if config.dig(:localUsage, :scanDays).to_i < 1
+          issues << {
+            severity: "error",
+            field: "localUsage.scanDays",
+            message: "Local usage scan window must be at least 1 day."
+          }
+        end
+
+        if config.dig(:server, :port).to_i <= 0
+          issues << {
+            severity: "error",
+            field: "server.port",
+            message: "Server port must be positive."
           }
         end
 
@@ -192,20 +256,126 @@ module CodexBar
         normalized
       end
 
+      def set_refresh_mode(config, mode, seconds = nil)
+        normalized = normalize_config(config)
+        normalized[:runtime][:refreshMode] = mode == "manual" ? "manual" : "interval"
+        normalized[:runtime][:refreshSeconds] = normalize_refresh_seconds(seconds || normalized.dig(:runtime, :refreshSeconds))
+        normalized
+      end
+
+      def set_notifications_enabled(config, enabled)
+        normalized = normalize_config(config)
+        normalized[:notifications][:enabled] = !!enabled
+        normalized
+      end
+
+      def set_privacy_hidden(config, hidden)
+        normalized = normalize_config(config)
+        normalized[:privacy][:hidePersonalInfo] = !!hidden
+        normalized
+      end
+
+      def set_status_enabled(config, enabled)
+        normalized = normalize_config(config)
+        normalized[:status][:enabled] = !!enabled
+        normalized
+      end
+
+      def set_local_usage_enabled(config, enabled)
+        normalized = normalize_config(config)
+        normalized[:localUsage][:enabled] = !!enabled
+        normalized
+      end
+
+      def set_storage_enabled(config, enabled)
+        normalized = normalize_config(config)
+        normalized[:storage][:enabled] = !!enabled
+        normalized
+      end
+
       def normalize_runtime(input)
         defaults = default_config[:runtime]
         input = (input || {}).transform_keys(&:to_sym)
-        refresh_seconds = input[:refreshSeconds]
-        refresh_seconds = refresh_seconds.is_a?(Numeric) ? refresh_seconds : refresh_seconds.to_i
-        refresh_seconds = defaults[:refreshSeconds] unless refresh_seconds.positive?
+        refresh_seconds = normalize_refresh_seconds(input[:refreshSeconds] || defaults[:refreshSeconds])
 
         {
-          refreshSeconds: [15, refresh_seconds.round].max,
+          refreshSeconds: refresh_seconds,
+          refreshMode: %w[interval manual].include?(input[:refreshMode].to_s) ? input[:refreshMode].to_s : defaults[:refreshMode],
           notificationCommand: clean_string(input[:notificationCommand]) || defaults[:notificationCommand],
           stateDir: File.expand_path(clean_string(input[:stateDir]) || defaults[:stateDir]),
           waybarSignal: normalize_waybar_signal(input[:waybarSignal], defaults[:waybarSignal]),
           quickShellCommand: clean_string(input[:quickShellCommand]) || defaults[:quickShellCommand],
           quickShellShell: File.expand_path(clean_string(input[:quickShellShell]) || defaults[:quickShellShell])
+        }
+      end
+
+      def normalize_status(input)
+        defaults = default_config[:status]
+        input = (input || {}).transform_keys(&:to_sym)
+        {
+          enabled: normalize_boolean(input[:enabled], defaults[:enabled]),
+          refreshSeconds: [60, positive_integer(input[:refreshSeconds], defaults[:refreshSeconds])].max
+        }
+      end
+
+      def normalize_notifications(input)
+        defaults = default_config[:notifications]
+        input = (input || {}).transform_keys(&:to_sym)
+        warning = positive_integer(input[:warningThreshold], defaults[:warningThreshold])
+        critical = positive_integer(input[:criticalThreshold], defaults[:criticalThreshold])
+        restored = positive_integer(input[:restoredThreshold], defaults[:restoredThreshold])
+        {
+          enabled: normalize_boolean(input[:enabled], defaults[:enabled]),
+          quotaWarnings: normalize_boolean(input[:quotaWarnings], defaults[:quotaWarnings]),
+          incidentWarnings: normalize_boolean(input[:incidentWarnings], defaults[:incidentWarnings]),
+          warningThreshold: clamp_integer(warning, 1, 100),
+          criticalThreshold: clamp_integer(critical, 1, 100),
+          restoredThreshold: clamp_integer(restored, 1, 100)
+        }
+      end
+
+      def normalize_history(input)
+        defaults = default_config[:history]
+        input = (input || {}).transform_keys(&:to_sym)
+        {
+          enabled: normalize_boolean(input[:enabled], defaults[:enabled]),
+          retentionDays: [1, positive_integer(input[:retentionDays], defaults[:retentionDays])].max
+        }
+      end
+
+      def normalize_local_usage(input)
+        defaults = default_config[:localUsage]
+        input = (input || {}).transform_keys(&:to_sym)
+        {
+          enabled: normalize_boolean(input[:enabled], defaults[:enabled]),
+          refreshSeconds: [60, positive_integer(input[:refreshSeconds], defaults[:refreshSeconds])].max,
+          scanDays: [1, positive_integer(input[:scanDays], defaults[:scanDays])].max
+        }
+      end
+
+      def normalize_storage(input)
+        defaults = default_config[:storage]
+        input = (input || {}).transform_keys(&:to_sym)
+        {
+          enabled: normalize_boolean(input[:enabled], defaults[:enabled]),
+          refreshSeconds: [300, positive_integer(input[:refreshSeconds], defaults[:refreshSeconds])].max
+        }
+      end
+
+      def normalize_privacy(input)
+        defaults = default_config[:privacy]
+        input = (input || {}).transform_keys(&:to_sym)
+        {
+          hidePersonalInfo: normalize_boolean(input[:hidePersonalInfo], defaults[:hidePersonalInfo])
+        }
+      end
+
+      def normalize_server(input)
+        defaults = default_config[:server]
+        input = (input || {}).transform_keys(&:to_sym)
+        {
+          host: clean_string(input[:host]) || defaults[:host],
+          port: positive_integer(input[:port], defaults[:port])
         }
       end
 
@@ -269,6 +439,21 @@ module CodexBar
       def normalize_waybar_signal(value, default)
         signal = value.is_a?(Numeric) ? value.to_i : value.to_i
         signal.positive? ? signal : default
+      end
+
+      def normalize_refresh_seconds(value)
+        refresh_seconds = value.is_a?(Numeric) ? value : value.to_i
+        refresh_seconds = default_config.dig(:runtime, :refreshSeconds) unless refresh_seconds.positive?
+        [15, refresh_seconds.round].max
+      end
+
+      def positive_integer(value, default)
+        number = value.is_a?(Numeric) ? value.to_i : value.to_i
+        number.positive? ? number : default
+      end
+
+      def clamp_integer(value, min, max)
+        [[value.to_i, min].max, max].min
       end
 
       def default_provider_config(provider)
