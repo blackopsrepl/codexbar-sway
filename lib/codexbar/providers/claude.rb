@@ -97,6 +97,7 @@ module CodexBar
           expiresAt: ((Time.now.to_f * 1000).to_i + refreshed.fetch(:expires_in, 3600).to_i * 1000)
         )
         File.write(credentials_path, "#{JSON.pretty_generate(credentials)}\n")
+        File.chmod(0o600, credentials_path)
         access_token
       end
 

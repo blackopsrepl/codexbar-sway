@@ -88,6 +88,7 @@ module CodexBar
         creds[:expiry_date] = (Time.now.to_f * 1000).to_i + refreshed.fetch(:expires_in, 3600).to_i * 1000
         creds[:id_token] = refreshed[:id_token] if refreshed[:id_token]
         File.write(creds_path, "#{JSON.pretty_generate(creds)}\n")
+        File.chmod(0o600, creds_path)
         new_access_token
       end
 
