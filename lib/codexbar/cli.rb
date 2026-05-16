@@ -252,6 +252,10 @@ module CodexBar
     def run_status_command(args, config_path)
       config = Core::Config.load_config(config_path)
       payload = args[:cached] ? Runtime::Status.read_cache(config) : Runtime::Status.refresh(config)
+      unless args[:cached]
+        Runtime::State.rebuild_snapshot(config)
+        Runtime::Daemon.signal_waybar(config)
+      end
       print_payload(payload, args)
       0
     end
@@ -259,6 +263,10 @@ module CodexBar
     def run_cost_command(args, config_path)
       config = Core::Config.load_config(config_path)
       payload = args[:cached] ? Runtime::LocalUsage.read_cache(config) : Runtime::LocalUsage.refresh(config)
+      unless args[:cached]
+        Runtime::State.rebuild_snapshot(config)
+        Runtime::Daemon.signal_waybar(config)
+      end
       print_payload(payload, args)
       0
     end
