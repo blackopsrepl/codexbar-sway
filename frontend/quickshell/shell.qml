@@ -319,13 +319,14 @@ ShellRoot {
         property color accent: "#82FB9C"
         property string glyph: ""
         property bool compact: false
+        property int minimumWidth: compact ? 74 : 92
 
         font.family: root.textFont
         font.pixelSize: compact ? 10 : 11
         hoverEnabled: true
         padding: 0
         implicitHeight: compact ? 26 : 30
-        implicitWidth: Math.max(compact ? 74 : 92, contentItem.implicitWidth + 18)
+        implicitWidth: Math.max(minimumWidth, contentItem.implicitWidth + 18)
 
         background: Rectangle {
             radius: 9
@@ -821,51 +822,59 @@ ShellRoot {
                             }
 
                             RowLayout {
+                                Layout.alignment: Qt.AlignRight
                                 spacing: 6
 
                                 BadgePill {
                                     text: viewData.summary.modeLabel || "Highest usage"
                                     icon: root.glyphs.status
                                     accent: "#82FB9C"
+                                    maximumWidth: 126
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.showUsedLabel || "Remaining"
                                     icon: root.glyphs.meter
                                     accent: "#82A7F4"
+                                    maximumWidth: 106
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.metricModeLabel || "both"
                                     icon: root.glyphs.overview
                                     accent: "#F2C572"
+                                    maximumWidth: 78
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.refreshModeLabel || "120s refresh"
                                     icon: root.glyphs.refresh
                                     accent: "#82FB9C"
+                                    maximumWidth: 124
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.notificationsLabel || "Notify off"
                                     icon: root.glyphs.bell
                                     accent: viewData.summary.notificationsLabel === "Notify on" ? "#82A7F4" : "#6A6E95"
+                                    maximumWidth: 108
                                 }
 
                                 CodexButton {
-                                    text: "Refresh"
+                                    text: ""
                                     glyph: root.glyphs.refresh
                                     accent: "#82FB9C"
                                     compact: true
+                                    minimumWidth: 34
                                     onClicked: root.runCodexbar(["refresh"])
                                 }
 
                                 CodexButton {
-                                    text: "Close"
+                                    text: ""
                                     glyph: root.glyphs.close
                                     accent: "#E06C75"
                                     compact: true
+                                    minimumWidth: 34
                                     onClicked: root.closePanel()
                                 }
                             }
