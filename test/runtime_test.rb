@@ -100,10 +100,10 @@ class RuntimeTest < Minitest::Test
     snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex claude], results, now)
     payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
 
-    assert_equal "󰚩 95%  76%  reserve", payload[:text]
+    assert_equal "󰚩 95%  76%", payload[:text]
     assert_includes payload[:class], "provider-codex"
     assert_includes payload[:class], "partial"
-    assert_includes payload[:class], "pace-reserve"
+    refute_includes payload[:class], "pace-reserve"
     assert_includes payload[:tooltip], "Display: 󰚩 Codex"
   end
 
@@ -132,6 +132,121 @@ class RuntimeTest < Minitest::Test
     payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
 
     assert_includes payload[:class], "service-outage"
+  end
+
+  def test_gemini_model_buckets_render_as_separate_meters
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "codex", enabled: true, visible: true)
+    config = with_provider_state(config, "gemini", enabled: true, visible: true)
+    results = {
+      "codex" => provider_result(
+        provider: "codex",
+        usage: usage_payload(provider: "codex", now: now, primary: window(used_percent: 14, window_minutes: 300, now: now, resets_in_minutes: 120))
+      ),
+      "gemini" => provider_result(
+        provider: "gemini",
+        usage: usage_payload(
+          provider: "gemini",
+          now: now,
+          meters: [
+            { key: "model:gemini-2.5-flash", label: "gemini-2.5-flash", shortLabel: "2.5-flash", modelId: "gemini-2.5-flash", usedPercent: 0.0, remainingPercent: 100.0, resetsAt: (now + 3600).iso8601 },
+            { key: "model:gemini-2.5-pro", label: "gemini-2.5-pro", shortLabel: "2.5-pro", modelId: "gemini-2.5-pro", usedPercent: 100.0, remainingPercent: 0.0, resetsAt: nil },
+            { key: "model:gemini-3.1-flash-lite-preview", label: "gemini-3.1-flash-lite-preview", shortLabel: "3.1-flash-lite-preview", modelId: "gemini-3.1-flash-lite-preview", usedPercent: 0.2, remainingPercent: 99.8, resetsAt: (now + 7200).iso8601 }
+          ]
+        )
+      )
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex gemini], results, now)
+    gemini = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "gemini" }
+    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+
+    assert_equal "gemini", snapshot[:displayProvider]
+    assert_equal ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-flash-lite-preview"], gemini[:metrics].map { |metric| metric[:label] }
+    assert_equal "gemini-2.5-pro", gemini[:dominantMetric][:label]
+    assert_equal "warning", gemini[:status]
+    assert_includes payload[:text], "2.5-pro"
+    assert_includes payload[:class], "warning"
+    refute_includes payload[:class], "critical"
+    assert_includes payload[:tooltip], "gemini-3.1-flash-lite-preview"
+  end
+
+  def test_unsupported_local_usage_payload_is_reported_as_unsupported_not_pending
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "gemini", enabled: true, visible: true)
+    results = {
+      "gemini" => provider_result(
+        provider: "gemini",
+        usage: usage_payload(
+          provider: "gemini",
+          now: now,
+          meters: [
+            { key: "model:gemini-2.5-flash", label: "gemini-2.5-flash", usedPercent: 5.0, remainingPercent: 95.0 }
+          ]
+        )
+      )
+    }
+    local_usage = {
+      providers: {
+        "gemini" => CodexBar::Runtime::LocalUsage.unsupported_provider("gemini")
+      }
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[gemini], results, now, local_usage: local_usage)
+    gemini = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "gemini" }
+
+    assert_equal "Local usage unsupported", gemini[:localUsageText]
+  end
+
+  def test_gemini_local_usage_models_are_exposed_to_the_view
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "gemini", enabled: true, visible: true)
+    results = {
+      "gemini" => provider_result(
+        provider: "gemini",
+        usage: usage_payload(
+          provider: "gemini",
+          now: now,
+          meters: [
+            { key: "model:gemini-2.5-flash", label: "gemini-2.5-flash", usedPercent: 5.0, remainingPercent: 95.0 }
+          ]
+        )
+      )
+    }
+    local_usage = {
+      providers: {
+        "gemini" => {
+          provider: "gemini",
+          supported: true,
+          records: 3,
+          totalTokens: 12_345,
+          models: {
+            "gemini-2.5-flash" => {
+              modelId: "gemini-2.5-flash",
+              records: 3,
+              inputTokens: 10_000,
+              cachedInputTokens: 1_000,
+              outputTokens: 2_000,
+              reasoningOutputTokens: 300,
+              toolTokens: 45,
+              totalTokens: 12_345
+            }
+          },
+          daily: []
+        }
+      }
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[gemini], results, now, local_usage: local_usage)
+    gemini = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "gemini" }
+
+    assert_equal "12.3k tok · 3 records", gemini[:localUsageText]
+    assert_equal "gemini-2.5-flash", gemini[:localUsageModels].first[:modelId]
+    assert_equal "12.3k tok", gemini[:localUsageModels].first[:tokensText]
+    assert_includes gemini[:localUsageModels].first[:detail], "1k cached"
   end
 
   def test_waybar_payload_reports_off_when_no_providers_are_enabled

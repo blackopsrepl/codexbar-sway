@@ -42,7 +42,7 @@ module CodexBar
       def current_provider_state(config, snapshot, provider)
         result = State.result_for(snapshot, provider)
         usage = result && result[:usage]
-        windows = usage ? [usage[:primary], usage[:secondary], usage[:tertiary]] : []
+        windows = usage ? Core::Metric.metric_windows(usage) : []
         service = provider_service_status(snapshot, provider)
         {
           quotaLevel: Core::Metric.worst_quota_level(

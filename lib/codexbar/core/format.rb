@@ -153,13 +153,20 @@ module CodexBar
       def render_provider_text(provider, snapshot, credits, show_used, reset_style)
         metadata = Types::PROVIDER_METADATA.fetch(provider)
         lines = []
+        meters = Array(snapshot[:meters])
         primary = snapshot[:primary]
         secondary = snapshot[:secondary]
         tertiary = snapshot[:tertiary]
 
         lines << "#{metadata[:label]} (#{snapshot.dig(:identity, :loginMethod) || 'active'})"
 
-        if primary
+        if meters.any?
+          meters.each do |meter|
+            lines << "#{meter[:label]}: #{usage_line(meter, show_used)}"
+            reset = reset_line(meter, reset_style)
+            lines << reset if reset
+          end
+        elsif primary
           lines << "#{metadata[:sessionLabel]}: #{usage_line(primary, show_used)}"
           reset = reset_line(primary, reset_style)
           lines << reset if reset
@@ -205,6 +212,7 @@ module CodexBar
 
         compact = Metric.compact_display_text(display_mode, preference, show_used)
         compact ||= spend_compact_text(snapshot[:spend])
+        compact = "#{preference.dig(:window, :shortLabel)} #{compact}" if compact && snapshot[:meters] && preference.dig(:window, :shortLabel)
         compact ? "#{Types::PROVIDER_METADATA.fetch(provider)[:shortLabel]} #{compact}" : "#{Types::PROVIDER_METADATA.fetch(provider)[:shortLabel]} --"
       end
 

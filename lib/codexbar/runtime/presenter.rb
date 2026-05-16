@@ -94,7 +94,7 @@ module CodexBar
         error = clean(result && result[:error])
         notes = Array(result && result[:notes]).filter_map { |note| clean(note) }
         identity = usage && usage[:identity] || {}
-        status = provider_status(result, dominant_metric, stale, service_status)
+        status = provider_status(result, dominant_metric, actual_metrics, stale, service_status)
         metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
         chip_text = chip_text(config, provider, result)
         incident = clean(result && result[:incident]) || service_incident(service_status)
@@ -134,7 +134,8 @@ module CodexBar
           serviceState: clean(service_status[:state]) || "unknown",
           serviceStatusText: Core::Format.service_status_text(service_status),
           serviceStatusUpdatedAt: clean(service_status[:updatedAt]),
-          localUsageText: Core::Format.token_summary_line(local_usage),
+          localUsageText: local_usage_text(local_usage),
+          localUsageModels: model_usage_rows(local_usage && local_usage[:models]),
           storageText: storage && storage[:totalBytes] ? Core::Format.bytes_string(storage[:totalBytes]) : nil,
           historySummary: provider_history_summary(history),
           historyDays: provider_history_days(history),
@@ -285,6 +286,40 @@ module CodexBar
         }
       end
 
+      def local_usage_text(local_usage)
+        return nil unless local_usage && !local_usage.empty?
+        return "Local usage unsupported" if local_usage[:supported] == false
+
+        Core::Format.token_summary_line(local_usage) || "No local token summary"
+      end
+
+      def model_usage_rows(models)
+        return [] unless models.is_a?(Hash)
+
+        models.values
+          .select { |entry| entry.is_a?(Hash) && entry[:totalTokens].to_i.positive? }
+          .sort_by { |entry| [-entry[:totalTokens].to_i, entry[:modelId].to_s] }
+          .map do |entry|
+            {
+              modelId: entry[:modelId].to_s,
+              label: entry[:modelId].to_s,
+              tokensText: "#{format_tokens(entry[:totalTokens])} tok",
+              recordsText: entry[:records].to_i.positive? ? "#{entry[:records]} records" : nil,
+              detail: model_usage_detail(entry)
+            }
+          end
+      end
+
+      def model_usage_detail(entry)
+        parts = []
+        parts << "#{format_tokens(entry[:inputTokens])} in" if entry[:inputTokens].to_i.positive?
+        parts << "#{format_tokens(entry[:cachedInputTokens])} cached" if entry[:cachedInputTokens].to_i.positive?
+        parts << "#{format_tokens(entry[:outputTokens])} out" if entry[:outputTokens].to_i.positive?
+        parts << "#{format_tokens(entry[:reasoningOutputTokens])} thought" if entry[:reasoningOutputTokens].to_i.positive?
+        parts << "#{format_tokens(entry[:toolTokens])} tool" if entry[:toolTokens].to_i.positive?
+        parts.join(" / ")
+      end
+
       def history_card(history)
         latest = Array(history && history[:daily]).last
         return nil unless latest
@@ -326,7 +361,8 @@ module CodexBar
           token_text = entry[:totalTokens].to_i.positive? ? "#{format_tokens(entry[:totalTokens])} tok" : nil
           records_text = entry[:records].to_i.positive? ? "#{entry[:records]} records" : nil
           cost_text = entry[:cost] ? "$#{Core::Format.money_string(entry[:cost].to_f)}" : nil
-          detail = [token_text, records_text, cost_text].compact.join(" / ")
+          model_text = history_day_model_text(entry)
+          detail = [token_text, records_text, cost_text, model_text].compact.join(" / ")
           {
             date: entry[:date].to_s,
             label: Core::Format.date_label(entry[:date]),
@@ -338,9 +374,39 @@ module CodexBar
             totalTokens: entry[:totalTokens].to_i,
             records: entry[:records].to_i,
             cost: entry[:cost],
-            detail: detail.empty? ? "No local token summary" : detail
+            detail: detail.empty? ? "No local token summary" : detail,
+            modelDetails: history_day_model_details(entry)
           }
         end
+      end
+
+      def history_day_model_text(entry)
+        models = history_day_model_details(entry)
+        return nil if models.empty?
+
+        "#{models.length} models"
+      end
+
+      def history_day_model_details(entry)
+        usage = entry[:modelUsage].is_a?(Hash) ? entry[:modelUsage] : {}
+        quota = entry[:modelQuota].is_a?(Hash) ? entry[:modelQuota] : {}
+        keys = (usage.keys + quota.keys).uniq
+        keys.filter_map do |model_id|
+          usage_entry = usage[model_id] || {}
+          quota_entry = quota[model_id] || {}
+          tokens = usage_entry[:totalTokens].to_i
+          quota_percent = quota_entry[:latestUsedPercent].to_f
+          next if tokens.zero? && quota_percent.zero?
+
+          parts = []
+          parts << "#{format_tokens(tokens)} tok" if tokens.positive?
+          parts << "#{quota_percent.round}% quota" if quota_percent.positive?
+          {
+            modelId: model_id.to_s,
+            label: quota_entry[:label].to_s.empty? ? model_id.to_s : quota_entry[:label].to_s,
+            detail: parts.join(" / ")
+          }
+        end.sort_by { |entry| entry[:label] }
       end
 
       def storage_card(storage)
@@ -458,7 +524,7 @@ module CodexBar
           "secondary" => "",
           "tertiary" => "",
           "average" => ""
-        }.fetch(key.to_s, "")
+        }.fetch(key.to_s, "")
       end
 
       def provider_icon(provider)
@@ -472,6 +538,8 @@ module CodexBar
         {
           key: key,
           label: label,
+          shortLabel: clean(window[:shortLabel]),
+          modelId: clean(window[:modelId]),
           summary: Core::Format.usage_line(window, config.dig(:display, :showUsed)),
           remainingPercent: Core::Types.rate_window_remaining_percent(window),
           usedPercent: window[:usedPercent].to_f,
@@ -494,6 +562,13 @@ module CodexBar
       def metric_views(config, provider, usage, resolved_metric, now)
         return [] unless usage
 
+        if Array(usage[:meters]).any?
+          active_key, = metric_identity(provider, usage, resolved_metric[:window], resolved_metric)
+          return usage[:meters].filter_map do |meter|
+            build_metric_view(config, meter[:key], meter[:label], meter, active_key, resolved_metric[:pace], now)
+          end
+        end
+
         metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
         active_key, = metric_identity(provider, usage, resolved_metric[:window], resolved_metric)
         [
@@ -507,6 +582,9 @@ module CodexBar
 
       def metric_identity(provider, usage, window, resolved_metric)
         metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
+        Array(usage && usage[:meters]).each do |meter|
+          return [meter[:key], meter[:label]] if same_window?(meter, window)
+        end
         return ["average", "Average"] if resolved_metric[:effective] == "average" && !same_window?(usage && usage[:primary], window) && !same_window?(usage && usage[:secondary], window)
         return ["primary", metadata[:sessionLabel] || "Primary"] if same_window?(usage && usage[:primary], window)
         return ["secondary", metadata[:weeklyLabel] || "Secondary"] if same_window?(usage && usage[:secondary], window)
@@ -543,13 +621,18 @@ module CodexBar
         return "#{provider_icon(provider)} err" if result && result[:error] && !result[:usage]
         return "#{provider_icon(provider)} ..." unless provider_view
 
+        if provider_view[:metrics].any? { |metric| metric[:key].to_s.start_with?("model:") }
+          metric = provider_view[:dominantMetric] || provider_view[:metrics].first
+          parts = [provider_view[:icon], metric[:shortLabel] || metric[:label], compact_metric_percent(config, metric)]
+          return parts.compact.join(" ")
+        end
+
         primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" } || provider_view[:dominantMetric]
         secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
 
         if primary
           parts = [provider_view[:icon], compact_metric_percent(config, primary)]
           parts << waybar_metric_segment(config, secondary) if secondary
-          parts << pace_chip_segment(primary)
           return parts.compact.join(" ")
         end
 
@@ -580,14 +663,19 @@ module CodexBar
         return "#{provider_icon(provider)} #{provider_label(provider)}: err" if result && result[:error] && !result[:usage]
         return "#{provider_icon(provider)} #{provider_label(provider)}: ..." unless provider_view
 
-        metrics = []
-        primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" } || provider_view[:dominantMetric]
-        secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
-        tertiary = provider_view[:metrics].find { |metric| metric[:key] == "tertiary" }
-
-        metrics << metric_tooltip_text(config, primary) if primary
-        metrics << metric_tooltip_text(config, secondary) if secondary
-        metrics << metric_tooltip_text(config, tertiary) if tertiary && provider_view[:metrics].length > 2
+        model_metrics = provider_view[:metrics].select { |metric| metric[:key].to_s.start_with?("model:") }
+        metrics = if model_metrics.any?
+                    model_metrics.map { |metric| metric_tooltip_text(config, metric) }
+                  else
+                    primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" } || provider_view[:dominantMetric]
+                    secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
+                    tertiary = provider_view[:metrics].find { |metric| metric[:key] == "tertiary" }
+                    [
+                      primary ? metric_tooltip_text(config, primary) : nil,
+                      secondary ? metric_tooltip_text(config, secondary) : nil,
+                      tertiary && provider_view[:metrics].length > 2 ? metric_tooltip_text(config, tertiary) : nil
+                    ].compact
+                  end
 
         summary = if metrics.empty?
                     compact = provider_view[:chipText].to_s.sub(/^#{Regexp.escape(provider_view[:shortLabel].to_s)}\s+/, "")
@@ -607,19 +695,6 @@ module CodexBar
 
       def waybar_metric_segment(config, metric)
         "#{metric_icon(metric[:key])} #{compact_metric_percent(config, metric)}"
-      end
-
-      def pace_chip_segment(metric)
-        state = metric && metric[:paceText].to_s
-        return nil if state.empty?
-
-        compact = case state
-                  when "on pace"
-                    "pace"
-                  else
-                    state
-                  end
-        " #{compact}"
       end
 
       def compact_metric_percent(config, metric)
@@ -645,6 +720,31 @@ module CodexBar
         "#{value.to_f.round}%"
       end
 
+      def aggregate_model_meter_severity(severities)
+        levels = Array(severities).compact
+        return nil if levels.empty?
+        return "critical" if levels.all? { |level| level == "critical" }
+        return "warning" if levels.any? { |level| %w[critical warning].include?(level) }
+
+        "healthy"
+      end
+
+      def provider_quota_status(dominant_metric, metrics)
+        model_metrics = Array(metrics).select { |metric| metric[:key].to_s.start_with?("model:") }
+        return aggregate_model_meter_severity(model_metrics.map { |metric| metric[:severity] }) unless model_metrics.empty?
+
+        dominant_metric && dominant_metric[:severity] || "healthy"
+      end
+
+      def result_quota_status(usage, resolved_window)
+        meters = Array(usage && usage[:meters])
+        unless meters.empty?
+          return aggregate_model_meter_severity(meters.map { |meter| Core::Format.window_severity(meter) })
+        end
+
+        Core::Format.window_severity(resolved_window)
+      end
+
       def result_classes(config, display_provider, display_result, results)
         errors = results.values.count { |result| result && result[:error] }
         classes = []
@@ -657,21 +757,19 @@ module CodexBar
           display_result[:usage],
           config.dig(:display, :metricPreferences, display_provider)
         )
-        severity = Core::Format.window_severity(metric[:window])
-        pace_state = Core::Metric.pace_state(metric[:pace])
+        severity = result_quota_status(display_result[:usage], metric[:window])
         classes << severity if severity
-        classes << "pace-#{pace_state}" if pace_state
         classes
       end
 
-      def provider_status(result, dominant_metric, stale, service_status = nil)
+      def provider_status(result, dominant_metric, metrics, stale, service_status = nil)
         return "loading" unless result
         return "error" if result[:error] && !result[:usage]
         return "incident" if %w[degraded outage].include?(service_status && service_status[:state].to_s)
         return "incident" if clean(result[:incident])
         return "stale" if stale
 
-        dominant_metric && dominant_metric[:severity] || "healthy"
+        provider_quota_status(dominant_metric, metrics)
       end
 
       def auxiliary_provider(payload, provider)

@@ -29,7 +29,7 @@ module CodexBar
           providers: {
             "codex" => scan_codex(cutoff),
             "claude" => scan_claude(cutoff),
-            "gemini" => unsupported_provider("gemini")
+            "gemini" => scan_gemini(cutoff)
           }
         }
         State.write_local_usage(config, payload)
@@ -88,6 +88,27 @@ module CodexBar
         finalize_summary(summary)
       end
 
+      def scan_gemini(cutoff)
+        files = gemini_chat_files
+        summary = empty_summary("gemini", supported: true)
+        files.each do |path|
+          next unless recent_file?(path, cutoff)
+
+          each_json_line(path) do |record|
+            next unless record[:type].to_s == "gemini"
+
+            tokens = record[:tokens]
+            next unless tokens.is_a?(Hash)
+
+            timestamp = parse_time(record[:timestamp]) || File.mtime(path)
+            next if timestamp < cutoff
+
+            add_gemini_usage(summary, timestamp, tokens, record[:model])
+          end
+        end
+        finalize_summary(summary)
+      end
+
       def unsupported_provider(provider)
         empty_summary(provider, supported: false).merge(
           note: "No trustworthy local usage log source is implemented for #{provider}."
@@ -116,6 +137,50 @@ module CodexBar
         daily[:outputTokens] += output
         daily[:reasoningOutputTokens] += reasoning
         daily[:totalTokens] += total
+      end
+
+      def add_gemini_usage(summary, timestamp, tokens, model)
+        input = tokens[:input].to_i
+        cached = tokens[:cached].to_i
+        output = tokens[:output].to_i
+        reasoning = tokens[:thoughts].to_i
+        tool = tokens[:tool].to_i
+        total = tokens[:total].to_i
+        total = input + output + reasoning + tool if total.zero?
+
+        summary[:records] += 1
+        summary[:inputTokens] += input
+        summary[:cachedInputTokens] += cached
+        summary[:outputTokens] += output
+        summary[:reasoningOutputTokens] += reasoning
+        summary[:toolTokens] += tool
+        summary[:totalTokens] += total
+
+        daily = day_entry(summary, timestamp)
+        daily[:records] += 1
+        daily[:inputTokens] += input
+        daily[:cachedInputTokens] += cached
+        daily[:outputTokens] += output
+        daily[:reasoningOutputTokens] += reasoning
+        daily[:toolTokens] += tool
+        daily[:totalTokens] += total
+
+        model_id = model.to_s.strip
+        return if model_id.empty?
+
+        add_model_usage(summary[:models], model_id, input, cached, output, reasoning, tool, total)
+        add_model_usage(daily[:models], model_id, input, cached, output, reasoning, tool, total)
+      end
+
+      def add_model_usage(models, model_id, input, cached, output, reasoning, tool, total)
+        entry = models[model_id] ||= empty_model_summary(model_id)
+        entry[:records] += 1
+        entry[:inputTokens] += input
+        entry[:cachedInputTokens] += cached
+        entry[:outputTokens] += output
+        entry[:reasoningOutputTokens] += reasoning
+        entry[:toolTokens] += tool
+        entry[:totalTokens] += total
       end
 
       def add_cost(summary, timestamp, cost)
@@ -151,9 +216,24 @@ module CodexBar
           cachedInputTokens: 0,
           outputTokens: 0,
           reasoningOutputTokens: 0,
+          toolTokens: 0,
           totalTokens: 0,
           cost: nil,
+          models: {},
           daily: []
+        }
+      end
+
+      def empty_model_summary(model_id)
+        {
+          modelId: model_id,
+          records: 0,
+          inputTokens: 0,
+          cachedInputTokens: 0,
+          outputTokens: 0,
+          reasoningOutputTokens: 0,
+          toolTokens: 0,
+          totalTokens: 0
         }
       end
 
@@ -168,7 +248,9 @@ module CodexBar
               cachedInputTokens: 0,
               outputTokens: 0,
               reasoningOutputTokens: 0,
+              toolTokens: 0,
               totalTokens: 0,
+              models: {},
               cost: nil
             }
             summary[:daily] << entry
@@ -179,6 +261,24 @@ module CodexBar
       def finalize_summary(summary)
         summary[:daily] = summary[:daily].sort_by { |entry| entry[:date] }
         summary
+      end
+
+      def gemini_chat_files
+        root = File.join(home_dir, ".gemini", "tmp")
+        return [] unless File.directory?(root)
+
+        files = []
+        Find.find(root) do |path|
+          Find.prune if File.basename(path).start_with?(".") && path != root
+          next unless File.file?(path)
+          next unless File.extname(path) == ".jsonl"
+          next unless path.split(File::SEPARATOR).include?("chats")
+
+          files << path
+        end
+        files
+      rescue Errno::EACCES, Errno::ENOENT
+        []
       end
 
       def jsonl_files(*roots)

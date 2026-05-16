@@ -32,11 +32,12 @@ module CodexBarTestHelpers
     }
   end
 
-  def usage_payload(provider:, now:, primary: nil, secondary: nil, tertiary: nil, identity: nil, spend: nil, provider_cost: nil)
+  def usage_payload(provider:, now:, primary: nil, secondary: nil, tertiary: nil, meters: nil, identity: nil, spend: nil, provider_cost: nil)
     {
       primary: primary,
       secondary: secondary,
       tertiary: tertiary,
+      meters: meters,
       updatedAt: now.utc.iso8601,
       identity: identity || {
         providerID: provider,

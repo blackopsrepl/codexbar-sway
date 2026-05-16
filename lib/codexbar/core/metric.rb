@@ -18,6 +18,17 @@ module CodexBar
         return {} unless snapshot
 
         effective = resolve_metric_preference(provider, snapshot, preference)
+        meters = metric_windows(snapshot)
+        if meters.any? && snapshot[:meters]
+          window = case effective
+                   when "average"
+                     average_window(meters)
+                   else
+                     meters.find { |meter| meter[:key].to_s == effective } || automatic_window(provider, snapshot)
+                   end
+          return { effective: effective, window: window, pace: window ? usage_pace(window) : nil }
+        end
+
         primary = snapshot[:primary]
         secondary = snapshot[:secondary]
         tertiary = snapshot[:tertiary]
@@ -62,6 +73,17 @@ module CodexBar
         end
 
         best&.dig(:provider)
+      end
+
+      def metric_windows(snapshot)
+        meters = Array(snapshot && snapshot[:meters]).compact
+        return meters unless meters.empty?
+
+        [
+          snapshot && snapshot[:primary],
+          snapshot && snapshot[:secondary],
+          snapshot && snapshot[:tertiary]
+        ].compact
       end
 
       def pace_summary_text(window)
@@ -128,7 +150,22 @@ module CodexBar
       end
 
       def automatic_window(_provider, snapshot)
+        meters = Array(snapshot && snapshot[:meters]).compact
+        return meters.max_by { |meter| meter[:usedPercent].to_f } unless meters.empty?
+
         snapshot[:primary] || snapshot[:secondary] || snapshot[:tertiary]
+      end
+
+      def average_window(windows)
+        valid = Array(windows).compact
+        return nil if valid.empty?
+
+        {
+          key: "average",
+          label: "Average",
+          shortLabel: "avg",
+          usedPercent: valid.sum { |window| window[:usedPercent].to_f } / valid.length
+        }
       end
 
       def ordered_window(windows)
