@@ -73,6 +73,8 @@ codexbar serve [--host 127.0.0.1] [--port 8765]
 
 `--cached` avoids network or filesystem scans where a command supports an explicit refresh path.
 
+Provider activation, deactivation, show/hide, overview, and auto-select commands mutate local config and cached snapshot state immediately. They do not synchronously fetch provider quota; use `codexbar refresh` or `codexbar usage` for explicit provider fetches.
+
 ## Supported Providers
 
 - `codex`

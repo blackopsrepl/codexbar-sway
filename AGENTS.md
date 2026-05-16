@@ -7,9 +7,12 @@
 - The human-facing UI is `frontend/quickshell/shell.qml`.
 - The QuickShell panel is organized into Overview, Provider Detail, History, and Settings views.
 - Waybar is a compact launcher/render surface only.
+- Waybar text is compact provider quota percentage text; do not put pace/reserve/hot labels or pace CSS classes in the bar.
 - Provider fetches belong in the daemon and usage commands, not in Waybar.
 - `snapshot.json` and `ui.json` are the backend/frontend runtime contract.
 - Supported providers are exactly `codex`, `claude`, and `gemini`.
+- Gemini quota must stay model-meter based. Preserve each CLI/API model bucket instead of collapsing Gemini into a single Pro/Flash pair.
+- Gemini local usage must come from deterministic Gemini CLI chat JSONL records or an explicitly documented telemetry file. Do not add browser scraping, cookie scraping, or silent API-key/Vertex quota fallbacks.
 
 ## Project Structure & Modules
 - `bin/codexbar`: Ruby entrypoint.
@@ -50,8 +53,16 @@
 - `codexbar ui open|close|toggle|status` mutates or reports `ui.json`.
 - `codexbar serve` exposes cached state through read-only localhost JSON endpoints; request handlers must not fetch providers.
 - `codexbar status`, `codexbar cost`, `codexbar history`, and `codexbar storage` operate on auxiliary runtime caches for the three supported providers only.
-- `codexbar providers ...` and `codexbar display ...` are the supported config mutation surfaces.
+- `codexbar providers ...` and `codexbar display ...` are the supported config mutation surfaces. Provider activation, deactivation, show/hide, overview, and auto-select commands are immediate local config/snapshot updates; they must not synchronously fetch provider quota.
 - `codexbar bar` still exists as legacy direct-bar compatibility; it is not the release UI path.
+
+## UI Rules
+- QuickShell Overview must render enabled, visible, `showInOverview` providers only.
+- The provider rail may show all configured providers so inactive or hidden providers can be managed.
+- Provider action controls should queue rather than kill in-flight CLI actions.
+- The QuickShell panel is a modal overlay. It must stay above windows, ignore layer-shell exclusion, and remain vertically relaxed.
+- Gemini detail views must preserve model-level quota and local usage rows where presenter data provides them.
+- Keep pace/reserve/hot detail in the modal/provider cards where it helps interpretation; keep it out of Waybar.
 
 ## Testing Guidelines
 - Add regression tests under `test/` using the built-in Ruby test stack.

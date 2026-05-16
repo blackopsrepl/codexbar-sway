@@ -29,6 +29,8 @@ CodexBar has four active layers:
 7. QuickShell watches `snapshot.json` and `ui.json`.
 8. UI actions call back into `codexbar providers`, `codexbar display`, `codexbar refresh`, `codexbar runtime`, or `codexbar ui`.
 
+Provider state commands are local config/snapshot mutations. They do not synchronously fetch provider usage; the daemon and explicit refresh command own quota fetches.
+
 ## Boundaries
 
 - Provider fetchers do network/CLI/auth work.

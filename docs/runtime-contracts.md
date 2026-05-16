@@ -27,7 +27,7 @@ Important fields:
 - `status.enabled`, `status.refreshSeconds`: external status polling.
 - `notifications.*`: quota and incident notification settings.
 - `history.*`: daily snapshot retention.
-- `localUsage.*`: local Codex/Claude log scan controls.
+- `localUsage.*`: local Codex, Claude, and Gemini log scan controls.
 - `storage.*`: provider storage footprint scan controls.
 - `privacy.hidePersonalInfo`: redacts identity text in the UI.
 - `server.host`, `server.port`: read-only local JSON server binding.
@@ -64,15 +64,15 @@ Current shape:
 
 The Ruby runtime owns this file. QuickShell reads it; QuickShell must not reimplement provider fetching.
 
-`view` is presenter-owned data for QuickShell and Waybar. Provider entries include view-ready quota metrics, service status text, local usage text, storage text, retained `historyDays`, and `historySummary` so the QML panel does not parse raw provider payloads.
+`view` is presenter-owned data for QuickShell and Waybar. Provider entries include view-ready quota metrics, service status text, local usage text, optional `localUsageModels`, storage text, retained `historyDays`, and `historySummary` so the QML panel does not parse raw provider payloads.
 
 ## Auxiliary State
 
 All files live under `runtime.stateDir`, are owned by Ruby, and are written with `0600` permissions:
 
 - `status.json`: current external service state for Codex/OpenAI, Claude, and Gemini/Google Cloud.
-- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs.
-- `history.json`: daily retained quota/local-usage summaries.
+- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs plus Gemini CLI chat token summaries. Gemini entries can include a `models` map keyed by raw model id.
+- `history.json`: daily retained quota/local-usage summaries. Gemini meter providers can include `modelQuota` and `modelUsage` maps keyed by raw model id.
 - `storage.json`: optional provider storage footprint summaries.
 - `notification_state.json`: last notification state to prevent repeated alerts.
 
@@ -108,13 +108,14 @@ Shape:
 
 ```json
 {
-  "text": "CX 97% reserve",
+  "text": "CX 97%",
   "tooltip": "Display: Codex",
   "class": ["codexbar", "provider-codex", "healthy"]
 }
 ```
 
 Waybar reads cached state only. It must not fetch providers directly.
+Waybar text omits pace/reserve/hot labels and pace classes; those remain modal-only detail.
 
 ## Local Server
 

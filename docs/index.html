@@ -55,7 +55,8 @@
           <p class="note">No native desktop bundle, updater feed, widget extension, or tap/cask package is part of this release.</p>
           <ul class="bullets" aria-label="What it does">
             <li>Daemon-backed cached quota state for codex, claude, and gemini.</li>
-            <li>Waybar chip with provider icon, quota percentages, and pace state.</li>
+            <li>Waybar chip with provider icon and quota percentages.</li>
+            <li>Gemini model buckets and local CLI token totals stay separate in detail views.</li>
             <li>QuickShell panel with Overview, Provider Detail, History, and Settings views.</li>
             <li>CLI-first config, local status, cost, history, storage, and cache-control surface through codexbar.</li>
           </ul>
@@ -69,7 +70,7 @@
       <section class="details" aria-label="Details" data-animate="4">
         <div class="card">
           <h3>Runtime</h3>
-          <p>Ruby handles config, provider fetch, normalization, snapshots, auxiliary caches, and CLI actions. QuickShell renders the panel, and Waybar reads cached JSON only.</p>
+          <p>Ruby handles config, provider fetch, normalization, snapshots, auxiliary caches, and CLI actions. QuickShell renders the modal panel, and Waybar reads cached JSON only.</p>
         </div>
         <div class="card">
           <h3>Install</h3>

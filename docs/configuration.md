@@ -16,7 +16,23 @@ The file is written with `0600` permissions.
   "providers": [
     {
       "id": "codex",
-      "enabled": true,
+      "enabled": false,
+      "visible": true,
+      "showInOverview": true,
+      "allowAutoSelect": true,
+      "source": "auto"
+    },
+    {
+      "id": "claude",
+      "enabled": false,
+      "visible": true,
+      "showInOverview": true,
+      "allowAutoSelect": true,
+      "source": "auto"
+    },
+    {
+      "id": "gemini",
+      "enabled": false,
       "visible": true,
       "showInOverview": true,
       "allowAutoSelect": true,
@@ -77,7 +93,7 @@ The file is written with `0600` permissions.
 
 - `enabled`: provider is refreshed by the daemon.
 - `visible`: provider appears in the main UI.
-- `showInOverview`: provider can appear in the overview row.
+- `showInOverview`: provider can appear in the overview row when it is also enabled and visible.
 - `allowAutoSelect`: provider can win automatic highest-usage display.
 - `showHighestUsage`: automatic display mode vs pinned provider.
 - `selectedProvider`: pinned provider.
@@ -87,7 +103,7 @@ The file is written with `0600` permissions.
 - `status`: polls external service-status feeds for the three supported providers.
 - `notifications`: controls quota and incident desktop notifications through `runtime.notificationCommand`.
 - `history`: retains daily cached quota/local-usage summaries.
-- `localUsage`: scans local Codex and Claude logs for exact token/cost records.
+- `localUsage`: scans local Codex, Claude, and Gemini logs for exact token records and Claude cost records.
 - `storage`: optionally scans local provider state directories for footprint summaries.
 - `privacy.hidePersonalInfo`: redacts account identity text in the UI.
 - `server`: controls the read-only cached JSON server.
@@ -95,6 +111,7 @@ The file is written with `0600` permissions.
 `make configure-user` preserves provider and display settings and updates only `runtime.quickShellShell`.
 
 Supported provider IDs remain exactly `codex`, `claude`, and `gemini`.
+Default provider entries are present but disabled; activate only the providers this machine should fetch.
 
 Validate with:
 

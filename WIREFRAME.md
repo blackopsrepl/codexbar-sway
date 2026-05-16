@@ -13,6 +13,8 @@ This repository ships an independent Linux implementation inspired by [the origi
 
 Supported providers are exactly `codex`, `claude`, and `gemini`.
 
+Codex and Claude expose named quota windows. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible.
+
 ## Repository Map
 
 ### Runtime
@@ -24,7 +26,7 @@ Supported providers are exactly `codex`, `claude`, and `gemini`.
 - `lib/codexbar/providers/`: Codex, Claude, Gemini fetchers and registry.
 - `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
 - `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.
-- `lib/codexbar/runtime/local_usage.rb`: local Codex/Claude token usage scanner.
+- `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, and Gemini token usage scanner.
 - `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries.
 - `lib/codexbar/runtime/storage.rb`: optional provider storage footprint scanner.
 - `lib/codexbar/runtime/notifications.rb`: quota and incident notification transitions.
@@ -72,12 +74,18 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 9. Waybar clicks call the wrapper, which opens the QuickShell panel or refreshes.
 10. QuickShell reads `snapshot.json` and `ui.json`, then sends mutations back through CLI commands.
 
+Provider visibility, activation, overview membership, and auto-select commands update local config and rebuild cached snapshot state immediately. They do not synchronously fetch provider quota.
+
 The QuickShell panel has four views:
 
-- Overview: active display provider, state badges, and compact cards for `codex`, `claude`, and `gemini`.
+- Overview: active display provider, state badges, and compact cards for enabled, visible providers that are in overview.
 - Provider Detail: focused provider quota, status, local usage, history/storage summaries, alerts, provider rail, and provider actions.
 - History: presenter-rendered retained daily history for the focused provider.
 - Settings: cadence, display, notification, privacy, scan, and cache-clear controls.
+
+The QuickShell panel is a modal overlay. It stays above application windows, ignores layer-shell exclusion, and uses a relaxed vertical footprint with scrolling where detail content exceeds the available height.
+
+Waybar is intentionally smaller than the modal: it renders provider icon, quota percentages, provider/display classes, health classes, and tooltip detail. It does not render pace/reserve/hot text or pace classes.
 
 ## State Contracts
 
@@ -97,6 +105,7 @@ The QuickShell panel has four views:
 - Read by QuickShell and Waybar.
 - Contains enabled/visible/hidden/overview/auto-select provider lists, selected/display provider ids, provider results, and rendered view data.
 - Contains auxiliary `serviceStatus`, `localUsage`, `storage`, and `history` payloads.
+- Gemini provider results use `usage.meters`, with keys like `model:gemini-2.5-pro` and labels preserving the raw model id. Gemini local usage and retained history include model maps when Gemini CLI records include model ids.
 
 ### UI State
 
@@ -160,4 +169,5 @@ After install/configure, the live desktop must not depend on the checkout direct
 - no providers outside the implemented Linux scope
 - no provider fetches from Waybar
 - no provider fetches from local server request handlers
+- no synchronous provider quota fetches from provider state toggles
 - no broad install copy of the development checkout

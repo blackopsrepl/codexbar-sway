@@ -35,10 +35,16 @@ Local token summaries are read from Claude project JSONL logs by `codexbar cost`
 - Source label: `api`.
 - Credentials: `~/.gemini/oauth_creds.json`.
 - Settings: `~/.gemini/settings.json`.
+- OAuth client metadata: discovered from the installed Gemini CLI package or bundled Gemini CLI chunks.
+- Project discovery: Code Assist project from `loadCodeAssist`, then Google Cloud project discovery when needed.
 - Quota endpoint: `https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota`.
+- Local usage source: `~/.gemini/tmp/**/chats/*.jsonl`.
 - Dashboard: `https://gemini.google.com/`
 
-API-key and Vertex auth modes are not supported by the current independent Linux implementation.
-No trustworthy Gemini local usage log scanner is currently implemented.
+Gemini quota renders as separate model meters. Each quota bucket preserves the raw model id, for example `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model ids returned by the API. The presenter may choose the highest-used model as the compact display meter, but it must keep all model buckets visible in detail and tooltip surfaces.
+
+Gemini local usage scans Gemini CLI chat JSONL records with `type: "gemini"` and `tokens` fields. Summaries preserve input, cached, output, reasoning/thought, tool, total, daily, and per-model token totals.
+
+API-key and Vertex auth modes are not supported for quota in the current independent Linux implementation unless usable OAuth credentials are also present for Code Assist quota.
 
 Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, and `gemini` are out of scope for this release line.

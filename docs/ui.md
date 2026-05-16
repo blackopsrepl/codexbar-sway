@@ -12,9 +12,11 @@ codexbar waybar render
 
 The payload includes:
 
-- `text`: compact provider/quota/pace text.
+- `text`: compact provider/quota text.
 - `tooltip`: multiline detail.
-- `class`: CSS classes for provider, health, pace, and display mode.
+- `class`: CSS classes for provider, health, and display mode.
+
+Waybar does not render pace/reserve/hot text or pace classes. Pace detail remains available in the QuickShell panel.
 
 Click behavior is provided by the desktop wrapper:
 
@@ -33,12 +35,14 @@ The panel renders:
 
 - summary band
 - view tabs for Overview, Provider Detail, History, and Settings
-- Overview: active display provider, freshness, service/runtime/privacy state, and compact cards for `codex`, `claude`, and `gemini`
-- Provider Detail: focused provider identity, quota hero, service/local/history/storage detail cards, alerts, provider rail, and provider actions
-- History: retained presenter history for the focused provider, including quota bars and local token summaries when present
+- Overview: active display provider, freshness, service/runtime/privacy state, and compact cards for enabled, visible overview providers
+- Provider Detail: focused provider identity, quota hero, service/local/history/storage detail cards, model local usage rows when present, alerts, provider rail, and provider actions
+- History: retained presenter history for the focused provider, including quota bars, local token summaries, and model detail when present
 - Settings: cadence, display mode, notification, privacy, scan, and cache-clear controls
 
 The panel sends mutations back through the Ruby CLI. It does not fetch provider usage directly.
+
+Provider action controls queue CLI mutations instead of killing in-flight commands. Provider on/off, show/hide, overview, and auto-select changes update local config/snapshot state immediately; quota refresh remains daemon/refresh owned.
 
 Runtime controls include manual, 1m, 2m, 5m, 15m, and 30m refresh cadence, notifications, privacy redaction, status refresh, local usage scan, storage scan, and cache clear commands.
 

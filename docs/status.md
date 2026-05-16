@@ -4,7 +4,7 @@ CodexBar tracks two status layers for the three supported providers.
 
 Provider health is still derived from quota fetch results:
 
-- successful usage payloads render healthy, warning, critical, or pace classes through the presenter
+- successful usage payloads render healthy, warning, or critical classes through the presenter
 - provider fetch errors are preserved in snapshots and surfaced through UI/Waybar output
 - stale snapshots are detected from `generatedAt` and `runtime.refreshSeconds`
 

@@ -24,7 +24,11 @@ The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact
 
 Provider fetches do not run inside Waybar. Waybar is only a render/action surface.
 
-The QuickShell panel is split into Overview, Provider Detail, History, and Settings views. It reads presenter data from `snapshot.json` and sends mutations back through the Ruby CLI.
+The QuickShell panel is split into Overview, Provider Detail, History, and Settings views. It reads presenter data from `snapshot.json` and sends mutations back through the Ruby CLI. Provider toggles update config and the cached snapshot immediately; provider quota fetches happen through `codexbar daemon`, `codexbar refresh`, or `codexbar usage`.
+
+The Waybar chip shows compact provider quota percentages and health classes only. Pace labels such as `reserve` and `hot` stay in the QuickShell panel and provider detail cards.
+
+Gemini quota is represented as separate model meters exactly as returned by the Gemini CLI-backed quota API, not as a single blended Pro/Flash pair. Gemini local usage is read from Gemini CLI chat JSONL records under `~/.gemini/tmp/**/chats/`. The provider-level Gemini status aggregates quota model meters: exhausted model buckets are still visible as critical meters, while mixed healthy and exhausted buckets make the provider warning rather than critical.
 
 ## Desktop Autostart
 
@@ -91,6 +95,8 @@ codexbar providers allow-auto gemini
 codexbar providers block-auto gemini
 ```
 
+`activate`, `deactivate`, `show`, `hide`, overview membership, and auto-select changes are local config/snapshot mutations. They do not synchronously fetch provider quota, so UI controls should feel immediate even when a provider credential path is slow or unavailable.
+
 Display controls:
 
 ```bash
@@ -151,6 +157,8 @@ The release surface is exactly:
 - `codex`
 - `claude`
 - `gemini`
+
+Codex and Claude expose named quota windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, and Gemini; Gemini summaries preserve per-model token totals from CLI chat logs.
 
 Other providers are not part of this Linux release.
 
