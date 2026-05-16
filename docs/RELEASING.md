@@ -66,7 +66,7 @@ Provider behavior must match `lib/codexbar/providers/*`.
 When validation passes and release notes are final:
 
 ```bash
-git tag -a v0.1.1 -m "CodexBar 0.1.1"
+git tag -a v1.0.0 -m "CodexBar 1.0.0"
 git push origin main --tags
 ```
 

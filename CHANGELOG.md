@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## 0.1.1 (2026-05-16)
+## 1.0.0 (2026-05-16)
 
 
 ### Features
@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file. See [commit
 
 * **providers:** restrict refreshed credential files 9d6a5bd
 
-## 0.1.1 - Unreleased
+## 1.0.0 - Unreleased
 
 ### Added
 - Linux-first Ruby backend for CodexBar.

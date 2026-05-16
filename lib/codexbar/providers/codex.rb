@@ -14,7 +14,7 @@ module CodexBar
 
         begin
           rpc = RpcClient.new
-          rpc.initialize_client("codexbar-linux", "0.1.1")
+          rpc.initialize_client("codexbar-linux", "1.0.0")
           limits = rpc.fetch_rate_limits
           account = rpc.fetch_account rescue nil
 
