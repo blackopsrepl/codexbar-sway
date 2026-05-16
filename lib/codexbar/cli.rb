@@ -299,11 +299,11 @@ module CodexBar
         print_provider_rows(rows, config, args)
       when "activate"
         provider = require_provider_argument(args[:positionals], 1)
-        config = mutate_provider_config(config_path, config, provider, refresh: true) { |entry| entry[:enabled] = true }
+        config = mutate_provider_config(config_path, config, provider, refresh: false) { |entry| entry[:enabled] = true }
         print_provider_change("Activated", provider, config, args)
       when "deactivate"
         provider = require_provider_argument(args[:positionals], 1)
-        config = mutate_provider_config(config_path, config, provider, refresh: true) { |entry| entry[:enabled] = false }
+        config = mutate_provider_config(config_path, config, provider, refresh: false) { |entry| entry[:enabled] = false }
         print_provider_change("Deactivated", provider, config, args)
       when "show"
         provider = require_provider_argument(args[:positionals], 1)
