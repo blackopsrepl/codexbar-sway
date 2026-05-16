@@ -1,6 +1,7 @@
 # Local config and environment
 .codexbar/config.json
 *.env
+!version.env
 *.local
 
 # Ruby/editor state
