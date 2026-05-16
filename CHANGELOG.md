@@ -1,5 +1,21 @@
 # Changelog
 
+All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
+
+## 0.1.1 (2026-05-16)
+
+
+### Features
+
+* establish CodexBar Linux release baseline 201a896
+* **runtime:** add auxiliary quota intelligence 94ee4d4
+* **ui:** add tabbed QuickShell quota panel c89ca1e
+
+
+### Bug Fixes
+
+* **providers:** restrict refreshed credential files 9d6a5bd
+
 ## 0.1.1 - Unreleased
 
 ### Added
