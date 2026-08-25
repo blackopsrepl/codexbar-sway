@@ -83,16 +83,28 @@ module CodexBar
 
       def running_pid(config)
         shell = resolve_shell_path(config)
+        executable_name = File.basename(resolve_quickshell_executable(config))
         result = Core::Process.run_command("pgrep", ["-af", shell])
         return nil unless result[:exitCode].zero?
 
-        line = result[:stdout].lines.find do |entry|
-          entry.include?("quickshell") && entry.include?(shell)
-        end
-        return nil unless line
+        result[:stdout].each_line do |entry|
+          pid_text, command = entry.split(/\s+/, 2)
+          next unless command&.include?(shell)
 
-        line.split(/\s+/, 2).first.to_i
+          pid = pid_text.to_i
+          next unless process_executable_name(pid) == executable_name
+
+          return pid
+        end
+
+        nil
       rescue StandardError
+        nil
+      end
+
+      def process_executable_name(pid)
+        File.basename(File.readlink("/proc/#{pid}/exe"))
+      rescue Errno::ENOENT, Errno::EACCES
         nil
       end
 
