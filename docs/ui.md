@@ -18,6 +18,8 @@ The payload includes:
 
 Waybar does not render pace/reserve/hot text or pace classes. Pace detail remains available in the QuickShell panel.
 
+The compact Codex chip renders only quota windows present in the cached provider response. A lone weekly window is rendered once with the weekly metric icon; the UI does not relabel it as the five-hour window or invent a missing percentage.
+
 Click behavior is provided by the desktop wrapper:
 
 - left click: open QuickShell panel

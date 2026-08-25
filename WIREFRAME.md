@@ -13,7 +13,7 @@ This repository ships an independent Linux implementation inspired by [the origi
 
 Supported providers are exactly `codex`, `claude`, and `gemini`.
 
-Codex and Claude expose named quota windows. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible.
+Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations, and absent upstream windows are not synthesized. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible.
 
 ## Repository Map
 
@@ -75,6 +75,8 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 10. QuickShell reads `snapshot.json` and `ui.json`, then sends mutations back through CLI commands.
 
 Provider visibility, activation, overview membership, and auto-select commands update local config and rebuild cached snapshot state immediately. They do not synchronously fetch provider quota.
+
+Provider refresh failures retain the last successful quota sample with its original timestamp while exposing the current error and a cached-data note.
 
 The QuickShell panel has four views:
 

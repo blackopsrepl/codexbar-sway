@@ -34,10 +34,11 @@ module CodexBar
         State.with_refresh_lock(config) do
           enabled = Usage.enabled_providers(config)
           results = Usage.collect_usage(config, enabled)
+          previous = State.read_snapshot(config)
+          results = retain_cached_usage(results, previous)
           service_status = Status.refresh_if_due(config)
           local_usage = LocalUsage.refresh_if_due(config)
           storage = Storage.refresh_if_due(config)
-          previous = State.read_snapshot(config)
           draft = State.build_snapshot(
             config,
             enabled,
@@ -62,6 +63,22 @@ module CodexBar
 
         signal_waybar(config)
         snapshot
+      end
+
+      def retain_cached_usage(results, previous)
+        cached = State.snapshot_results(previous)
+        results.each_with_object({}) do |(provider, result), retained|
+          prior = cached[provider] || cached[provider.to_sym]
+          if result && result[:error] && !result[:usage] && prior && prior[:usage]
+            retained[provider] = prior.merge(result).merge(
+              usage: prior[:usage],
+              credits: prior[:credits],
+              notes: (Array(prior[:notes]) + Array(result[:notes]) + ["Showing last cached quota after refresh failure."]).uniq
+            ).compact
+          else
+            retained[provider] = result
+          end
+        end
       end
 
       def signal_waybar(config)

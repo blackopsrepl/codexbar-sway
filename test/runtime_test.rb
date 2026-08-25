@@ -107,6 +107,55 @@ class RuntimeTest < Minitest::Test
     assert_includes payload[:tooltip], "Display: 󰚩 Codex"
   end
 
+  def test_waybar_payload_renders_lone_weekly_window_once
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "codex", enabled: true, visible: true)
+    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    results = {
+      "codex" => provider_result(
+        provider: "codex",
+        usage: usage_payload(
+          provider: "codex",
+          now: now,
+          secondary: window(used_percent: 7, window_minutes: 10_080, now: now, resets_in_minutes: 6_000)
+        )
+      )
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now)
+    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+
+    assert_equal "󰚩  93%", payload[:text]
+    assert_includes payload[:tooltip], "Weekly 93% left"
+    assert_equal 1, payload[:tooltip].scan("Weekly 93% left").length
+    refute_includes payload[:tooltip], "5-hour"
+  end
+
+  def test_daemon_retains_cached_usage_after_refresh_failure
+    now = Time.now.utc
+    cached_usage = usage_payload(
+      provider: "codex",
+      now: now,
+      primary: window(used_percent: 11, window_minutes: 300, now: now, resets_in_minutes: 240)
+    )
+    previous = {
+      results: {
+        "codex" => provider_result(provider: "codex", usage: cached_usage, credits: { remaining: 2 })
+      }
+    }
+    failed = {
+      "codex" => provider_result(provider: "codex", error: "Codex app-server closed stdout")
+    }
+
+    retained = CodexBar::Runtime::Daemon.retain_cached_usage(failed, previous).fetch("codex")
+
+    assert_same cached_usage, retained[:usage]
+    assert_equal({ remaining: 2 }, retained[:credits])
+    assert_equal "Codex app-server closed stdout", retained[:error]
+    assert_includes retained[:notes], "Showing last cached quota after refresh failure."
+  end
+
   def test_waybar_payload_includes_service_outage_class
     now = Time.now.utc
     config = build_config

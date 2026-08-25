@@ -627,7 +627,7 @@ module CodexBar
           return parts.compact.join(" ")
         end
 
-        primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" } || provider_view[:dominantMetric]
+        primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" }
         secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
 
         if primary
@@ -635,6 +635,8 @@ module CodexBar
           parts << waybar_metric_segment(config, secondary) if secondary
           return parts.compact.join(" ")
         end
+
+        return [provider_view[:icon], waybar_metric_segment(config, secondary)].join(" ") if secondary
 
         compact = provider_view[:chipText].to_s.sub(/^#{Regexp.escape(provider_view[:shortLabel].to_s)}\s+/, "")
         compact = provider_view[:chipText].to_s if compact.empty?
@@ -667,14 +669,16 @@ module CodexBar
         metrics = if model_metrics.any?
                     model_metrics.map { |metric| metric_tooltip_text(config, metric) }
                   else
-                    primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" } || provider_view[:dominantMetric]
+                    primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" }
                     secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
                     tertiary = provider_view[:metrics].find { |metric| metric[:key] == "tertiary" }
-                    [
+                    named_metrics = [
                       primary ? metric_tooltip_text(config, primary) : nil,
                       secondary ? metric_tooltip_text(config, secondary) : nil,
                       tertiary && provider_view[:metrics].length > 2 ? metric_tooltip_text(config, tertiary) : nil
                     ].compact
+                    named_metrics = [metric_tooltip_text(config, provider_view[:dominantMetric])] if named_metrics.empty? && provider_view[:dominantMetric]
+                    named_metrics
                   end
 
         summary = if metrics.empty?

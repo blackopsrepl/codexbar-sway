@@ -9,12 +9,14 @@ The Linux release supports exactly:
 ## Codex
 
 - Source label: `codex-cli`.
-- Runtime path: `codex -s read-only -a untrusted app-server`.
+- Runtime path: `codex --sandbox read-only --ask-for-approval never app-server --stdio`.
 - RPC methods:
   - `initialize`
   - `account/read`
   - `account/rateLimits/read`
 - Dashboard: `https://chatgpt.com/codex`
+
+CodexBar reads the `codex` entry from `rateLimitsByLimitId` when present and falls back to the backward-compatible `rateLimits` snapshot. It identifies the five-hour and weekly windows by their declared 300-minute and 10,080-minute durations instead of assuming that `primary` and `secondary` always retain fixed meanings. Missing windows remain missing; CodexBar does not synthesize quota values that the Codex app-server did not return.
 
 There is no PTY fallback in the current Ruby implementation.
 Local token summaries are read from Codex session JSONL logs by `codexbar cost`; monetary cost is reported only when an exact cost exists in the source record.

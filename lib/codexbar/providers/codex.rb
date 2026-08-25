@@ -6,6 +6,9 @@ require "open3"
 module CodexBar
   module Providers
     module Codex
+      FIVE_HOUR_MINUTES = 300
+      WEEKLY_MINUTES = 10_080
+
       module_function
 
       def fetch(config)
@@ -17,10 +20,11 @@ module CodexBar
           rpc.initialize_client("codexbar-linux", "1.0.0")
           limits = rpc.fetch_rate_limits
           account = rpc.fetch_account rescue nil
+          windows = rate_limit_windows(limits)
 
           usage = {
-            primary: make_window(limits.dig(:rateLimits, :primary)),
-            secondary: make_window(limits.dig(:rateLimits, :secondary)),
+            primary: make_window(windows[:primary]),
+            secondary: make_window(windows[:secondary]),
             updatedAt: Time.now.utc.iso8601,
             identity: make_identity(account)
           }
@@ -56,8 +60,29 @@ module CodexBar
         }
       end
 
+      def rate_limit_windows(response)
+        snapshot = rate_limit_snapshot(response)
+        windows = [snapshot[:primary], snapshot[:secondary]].compact
+
+        primary = windows.find { |window| window[:windowDurationMins].to_i == FIVE_HOUR_MINUTES }
+        secondary = windows.find { |window| window[:windowDurationMins].to_i == WEEKLY_MINUTES }
+        remaining = windows.reject { |window| window.equal?(primary) || window.equal?(secondary) }
+
+        primary ||= remaining.shift
+        secondary ||= remaining.shift
+        { primary: primary, secondary: secondary }
+      end
+
+      def rate_limit_snapshot(response)
+        limits_by_id = response[:rateLimitsByLimitId]
+        limits_by_id && (limits_by_id[:codex] || limits_by_id["codex"]) || response[:rateLimits] || {}
+      end
+
       def make_credits(response)
-        balance = response.dig(:rateLimits, :credits, :balance)
+        credits = rate_limit_snapshot(response)[:credits]
+        return nil unless credits && credits[:hasCredits]
+
+        balance = credits[:balance]
         return nil unless balance
 
         remaining = balance.to_f
@@ -80,8 +105,12 @@ module CodexBar
       end
 
       class RpcClient
+        def self.command
+          ["codex", "--sandbox", "read-only", "--ask-for-approval", "never", "app-server", "--stdio"]
+        end
+
         def initialize
-          @stdin, @stdout, @stderr, @wait_thread = Open3.popen3("codex", "-s", "read-only", "-a", "untrusted", "app-server")
+          @stdin, @stdout, @stderr, @wait_thread = Open3.popen3(*self.class.command)
           @stderr_thread = Thread.new { @stderr.read }
           @next_id = 1
         end

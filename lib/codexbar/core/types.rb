@@ -10,7 +10,7 @@ module CodexBar
       ].freeze
 
       PROVIDER_METADATA = {
-        "codex" => { label: "Codex", shortLabel: "CX", sessionLabel: "Session", weeklyLabel: "Weekly", defaultEnabled: false, supportsAverage: false, supportsTertiary: false, accent: "#82FB9C", icon: "󰚩", dashboardUrl: "https://chatgpt.com/codex" },
+        "codex" => { label: "Codex", shortLabel: "CX", sessionLabel: "5-hour", weeklyLabel: "Weekly", defaultEnabled: false, supportsAverage: false, supportsTertiary: false, accent: "#82FB9C", icon: "󰚩", dashboardUrl: "https://chatgpt.com/codex" },
         "claude" => { label: "Claude", shortLabel: "CL", sessionLabel: "Session", weeklyLabel: "Weekly", tertiaryLabel: "Sonnet", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#F2C572", icon: "", dashboardUrl: "https://claude.ai/" },
         "gemini" => { label: "Gemini", shortLabel: "GM", sessionLabel: "Pro", weeklyLabel: "Flash", defaultEnabled: false, supportsAverage: true, supportsTertiary: false, accent: "#82A7F4", icon: "", dashboardUrl: "https://gemini.google.com/" }
       }.freeze
