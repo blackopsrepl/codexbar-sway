@@ -2,12 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_CONFIG="$(mktemp -t codexbar-release-check-XXXXXX.json)"
+TMP_ROOT="$(mktemp -d -t codexbar-release-check-XXXXXX)"
+TMP_CONFIG="${TMP_ROOT}/config.json"
 WITH_LIVE=0
 LIVE_CONFIG="${HOME}/.codexbar/config.json"
 
 cleanup() {
-  rm -f "$TMP_CONFIG"
+  rm -rf "$TMP_ROOT"
 }
 
 usage() {
@@ -24,6 +25,13 @@ run_step() {
   echo "==> $1"
   shift
   "$@"
+}
+
+run_quiet_step() {
+  echo
+  echo "==> $1"
+  shift
+  "$@" >/dev/null
 }
 
 validate_provider_json() {
@@ -72,25 +80,26 @@ run_step "pre-commit" python3 -m pre_commit run --all-files
 run_step "bash syntax" bash -n bin/release-check
 run_step "ruby syntax" bash -lc 'for path in bin/codexbar $(rg --files lib test); do ruby -wc "$path"; done'
 run_step "test suite" ruby -Itest test/run.rb
-run_step "config init" bash -lc "bin/codexbar config init --config '$TMP_CONFIG' >/dev/null"
-run_step "config validate" bin/codexbar config validate --config "$TMP_CONFIG"
-run_step "config dump" bash -lc "bin/codexbar config dump --config '$TMP_CONFIG' --format json >/dev/null"
-run_step "waybar render" bash -lc "bin/codexbar waybar render --config '$TMP_CONFIG' >/dev/null"
-run_step "ui status" bash -lc "bin/codexbar ui status --config '$TMP_CONFIG' --format json --pretty >/dev/null"
-run_step "cached status" bash -lc "bin/codexbar status --cached --config '$TMP_CONFIG' --format json >/dev/null"
-run_step "cached cost" bash -lc "bin/codexbar cost --cached --config '$TMP_CONFIG' --format json >/dev/null"
-run_step "history" bash -lc "bin/codexbar history --config '$TMP_CONFIG' --format json >/dev/null"
-run_step "cache clear" bash -lc "bin/codexbar cache clear all --config '$TMP_CONFIG' --format json >/dev/null"
+run_quiet_step "config init" env HOME="$TMP_ROOT" bin/codexbar config init --config "$TMP_CONFIG"
+run_step "config validate" env HOME="$TMP_ROOT" bin/codexbar config validate --config "$TMP_CONFIG"
+run_quiet_step "config dump" env HOME="$TMP_ROOT" bin/codexbar config dump --config "$TMP_CONFIG" --format json
+run_quiet_step "waybar render" env HOME="$TMP_ROOT" bin/codexbar waybar render --config "$TMP_CONFIG"
+run_quiet_step "ui status" env HOME="$TMP_ROOT" bin/codexbar ui status --config "$TMP_CONFIG" --format json --pretty
+run_quiet_step "cached status" env HOME="$TMP_ROOT" bin/codexbar status --cached --config "$TMP_CONFIG" --format json
+run_quiet_step "cached cost" env HOME="$TMP_ROOT" bin/codexbar cost --cached --config "$TMP_CONFIG" --format json
+run_quiet_step "history" env HOME="$TMP_ROOT" bin/codexbar history --config "$TMP_CONFIG" --format json
+run_quiet_step "cache clear" env HOME="$TMP_ROOT" bin/codexbar cache clear all --config "$TMP_CONFIG" --format json
 
 if command -v quickshell >/dev/null 2>&1; then
   echo
   echo "==> quickshell load"
   set +e
   env \
+    HOME="$TMP_ROOT" \
     QT_QPA_PLATFORM=wayland \
     CODEXBAR_BIN="$ROOT_DIR/bin/codexbar" \
-    CODEXBAR_CONFIG="$LIVE_CONFIG" \
-    CODEXBAR_STATE_DIR="${HOME}/.local/state/codexbar" \
+    CODEXBAR_CONFIG="$TMP_CONFIG" \
+    CODEXBAR_STATE_DIR="${TMP_ROOT}/.local/state/codexbar" \
     timeout 8s quickshell --path "$ROOT_DIR/frontend/quickshell/shell.qml" >/dev/null
   status=$?
   set -e

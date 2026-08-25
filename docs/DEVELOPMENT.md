@@ -58,3 +58,5 @@ Prefer tests for:
 - Waybar payload generation
 
 Live provider checks are smoke tests, not the primary regression suite.
+
+`make smoke` and the non-live portion of `make check` create an isolated temporary home and state directory. They must never read, rewrite, or clear the active user's CodexBar runtime caches.

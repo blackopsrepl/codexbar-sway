@@ -112,17 +112,18 @@ test:
 	ruby -Itest test/run.rb
 
 smoke:
-	tmp_config="$$(mktemp -t codexbar-smoke-XXXXXX.json)"; \
-	trap 'rm -f "$$tmp_config"' EXIT; \
-	bin/codexbar config init --config "$$tmp_config" >/dev/null; \
-	bin/codexbar config validate --config "$$tmp_config"; \
-	bin/codexbar config dump --config "$$tmp_config" --format json >/dev/null; \
-	bin/codexbar waybar render --config "$$tmp_config" >/dev/null; \
-	bin/codexbar ui status --config "$$tmp_config" --format json --pretty >/dev/null; \
-	bin/codexbar history --config "$$tmp_config" --format json >/dev/null; \
-	bin/codexbar cost --cached --config "$$tmp_config" --format json >/dev/null; \
-	bin/codexbar status --cached --config "$$tmp_config" --format json >/dev/null; \
-	bin/codexbar cache clear all --config "$$tmp_config" --format json >/dev/null
+	tmp_root="$$(mktemp -d -t codexbar-smoke-XXXXXX)"; \
+	trap 'rm -rf "$$tmp_root"' EXIT; \
+	tmp_config="$$tmp_root/config.json"; \
+	HOME="$$tmp_root" bin/codexbar config init --config "$$tmp_config" >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar config validate --config "$$tmp_config"; \
+	HOME="$$tmp_root" bin/codexbar config dump --config "$$tmp_config" --format json >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar waybar render --config "$$tmp_config" >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar ui status --config "$$tmp_config" --format json --pretty >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar history --config "$$tmp_config" --format json >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar cost --cached --config "$$tmp_config" --format json >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar status --cached --config "$$tmp_config" --format json >/dev/null; \
+	HOME="$$tmp_root" bin/codexbar cache clear all --config "$$tmp_config" --format json >/dev/null
 
 waybar-render:
 	bin/codexbar waybar render
