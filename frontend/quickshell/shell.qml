@@ -1051,7 +1051,7 @@ ShellRoot {
                                                             }
 
                                                             Label {
-                                                                text: modelData.chipText || "--"
+                                                                text: modelData.quotaSummaryText || modelData.chipText || "--"
                                                                 color: statusColor(modelData)
                                                                 font.family: root.textFont
                                                                 font.pixelSize: 11

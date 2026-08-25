@@ -18,7 +18,7 @@ The payload includes:
 
 Waybar does not render pace/reserve/hot text or pace classes. Pace detail remains available in the QuickShell panel.
 
-The compact Codex chip renders only quota windows present in the cached provider response. A lone weekly window is rendered once with the weekly metric icon; the UI does not relabel it as the five-hour window or invent a missing percentage.
+The compact Codex chip renders every quota window present in the cached provider response. When a non-Pro ChatGPT account omits its expected five-hour value, the chip keeps that lane visible as `--` beside the real weekly percentage; the modal labels it unavailable. A missing weekly window stays absent, and the UI never turns a missing value into a fabricated percentage.
 
 Click behavior is provided by the desktop wrapper:
 

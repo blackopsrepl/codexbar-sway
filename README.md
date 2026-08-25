@@ -158,7 +158,7 @@ The release surface is exactly:
 - `claude`
 - `gemini`
 
-Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order; a window absent from the response stays absent in the UI. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, and Gemini; Gemini summaries preserve per-model token totals from CLI chat logs.
+Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, and Gemini; Gemini summaries preserve per-model token totals from CLI chat logs.
 
 Other providers are not part of this Linux release.
 
