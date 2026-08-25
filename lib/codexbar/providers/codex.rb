@@ -21,12 +21,10 @@ module CodexBar
           limits = rpc.fetch_rate_limits
           account = rpc.fetch_account rescue nil
           windows = rate_limit_windows(limits)
-          plan_type = account_plan_type(account, limits)
 
           usage = {
             primary: make_window(windows[:primary]),
             secondary: make_window(windows[:secondary]),
-            unavailableWindows: unavailable_windows(windows, plan_type),
             updatedAt: Time.now.utc.iso8601,
             identity: make_identity(account)
           }
@@ -78,19 +76,6 @@ module CodexBar
       def rate_limit_snapshot(response)
         limits_by_id = response[:rateLimitsByLimitId]
         limits_by_id && (limits_by_id[:codex] || limits_by_id["codex"]) || response[:rateLimits] || {}
-      end
-
-      def account_plan_type(account, response)
-        value = account&.dig(:account, :planType).to_s.downcase
-        return value unless value.empty?
-
-        rate_limit_snapshot(response)[:planType].to_s.downcase
-      end
-
-      def unavailable_windows(windows, plan_type)
-        return [] if plan_type.to_s.empty? || plan_type.to_s == "pro"
-
-        windows[:primary] ? [] : ["primary"]
       end
 
       def make_credits(response)

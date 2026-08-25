@@ -89,7 +89,6 @@ module CodexBar
         )
         dominant_metric = dominant_metric_view(config, provider, usage, metric, now)
         actual_metrics = metric_views(config, provider, usage, metric, now)
-        unavailable_metrics = unavailable_metric_views(provider, usage)
         updated_at = provider_updated_at(result, snapshot)
         stale = stale_snapshot?(snapshot, config, now)
         error = clean(result && result[:error])
@@ -123,8 +122,7 @@ module CodexBar
           status: status,
           dominantMetric: dominant_metric,
           metrics: actual_metrics,
-          unavailableMetrics: unavailable_metrics,
-          quotaSummaryText: quota_summary_text(config, provider, actual_metrics, unavailable_metrics),
+          quotaSummaryText: quota_summary_text(config, provider, actual_metrics),
           secondaryMetrics: actual_metrics.reject { |entry| dominant_metric && entry[:key] == dominant_metric[:key] },
           hero: hero_view(config, provider, usage, dominant_metric, now),
           detailCards: provider_detail_cards(config, provider, result, usage, dominant_metric, actual_metrics, now, service_status, local_usage, storage, history),
@@ -231,18 +229,9 @@ module CodexBar
       end
 
       def provider_detail_cards(config, provider, result, usage, dominant_metric, metrics, now, service_status = nil, local_usage = nil, storage = nil, history = nil)
-        cards = unavailable_metric_views(provider, usage).map do |entry|
-          {
-            key: "#{entry[:key]}-unavailable",
-            icon: metric_icon(entry[:key]),
-            label: entry[:label],
-            value: "Unavailable",
-            detail: "Not reported by OpenAI"
-          }
-        end
-        cards.concat(metrics
+        cards = metrics
           .reject { |entry| dominant_metric && entry[:key] == dominant_metric[:key] }
-          .map { |entry| metric_card_view(config, entry, now) })
+          .map { |entry| metric_card_view(config, entry, now) }
         cards << service_status_card(service_status) if service_status && !service_status.empty?
         cards.concat(spend_card_views(config, usage, now))
         local_card = local_usage_card(local_usage)
@@ -592,33 +581,15 @@ module CodexBar
         end
       end
 
-      def unavailable_metric_views(provider, usage)
-        return [] unless usage
-
-        metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
-        labels = {
-          "primary" => metadata[:sessionLabel] || "Primary",
-          "secondary" => metadata[:weeklyLabel] || "Secondary",
-          "tertiary" => metadata[:tertiaryLabel] || "Tertiary"
-        }
-        Array(usage[:unavailableWindows]).filter_map do |key|
-          normalized = key.to_s
-          next unless labels.key?(normalized)
-
-          { key: normalized, label: labels.fetch(normalized), available: false }
-        end
-      end
-
-      def quota_summary_text(config, provider, metrics, unavailable_metrics)
+      def quota_summary_text(config, provider, metrics)
         return nil unless provider == "codex"
 
-        entries = (metrics + unavailable_metrics).sort_by do |entry|
+        entries = metrics.sort_by do |entry|
           { "primary" => 0, "secondary" => 1, "tertiary" => 2 }.fetch(entry[:key].to_s, 3)
         end
         parts = entries.map do |entry|
           label = entry[:key] == "primary" ? "5h" : (entry[:key] == "secondary" ? "W" : entry[:label])
-          value = entry[:available] == false ? "--" : compact_metric_percent(config, entry)
-          "#{label} #{value}"
+          "#{label} #{compact_metric_percent(config, entry)}"
         end
         parts.empty? ? nil : parts.join(" / ")
       end
@@ -672,20 +643,12 @@ module CodexBar
 
         primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" }
         secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
-        unavailable_metrics = Array(provider_view[:unavailableMetrics])
-        primary_unavailable = unavailable_metrics.any? { |metric| metric[:key] == "primary" }
 
         if primary
           parts = [provider_view[:icon], compact_metric_percent(config, primary)]
           parts << waybar_metric_segment(config, secondary) if secondary
           return parts.compact.join(" ")
         end
-        if primary_unavailable
-          parts = [provider_view[:icon], "--"]
-          parts << waybar_metric_segment(config, secondary) if secondary
-          return parts.compact.join(" ")
-        end
-
         return [provider_view[:icon], waybar_metric_segment(config, secondary)].join(" ") if secondary
 
         compact = provider_view[:chipText].to_s.sub(/^#{Regexp.escape(provider_view[:shortLabel].to_s)}\s+/, "")
@@ -722,13 +685,9 @@ module CodexBar
                     primary = provider_view[:metrics].find { |metric| metric[:key] == "primary" }
                     secondary = provider_view[:metrics].find { |metric| metric[:key] == "secondary" }
                     tertiary = provider_view[:metrics].find { |metric| metric[:key] == "tertiary" }
-                    available = [primary, secondary, tertiary && provider_view[:metrics].length > 2 ? tertiary : nil].compact
-                    unavailable = Array(provider_view[:unavailableMetrics])
-                    named_metrics = (available + unavailable).sort_by do |metric|
+                    named_metrics = [primary, secondary, tertiary && provider_view[:metrics].length > 2 ? tertiary : nil].compact.sort_by do |metric|
                       { "primary" => 0, "secondary" => 1, "tertiary" => 2 }.fetch(metric[:key].to_s, 3)
-                    end.map do |metric|
-                      metric[:available] == false ? "#{metric_icon(metric[:key])} #{metric[:label]} unavailable" : metric_tooltip_text(config, metric)
-                    end
+                    end.map { |metric| metric_tooltip_text(config, metric) }
                     named_metrics = [metric_tooltip_text(config, provider_view[:dominantMetric])] if named_metrics.empty? && provider_view[:dominantMetric]
                     named_metrics
                   end

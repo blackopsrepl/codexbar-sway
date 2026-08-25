@@ -99,8 +99,11 @@ class RuntimeTest < Minitest::Test
 
     snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex claude], results, now)
     payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    codex_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "codex" }
 
     assert_equal "󰚩 95%  76%", payload[:text]
+    assert_equal "5h 95% / W 76%", codex_view[:quotaSummaryText]
+    assert_equal %w[primary secondary], codex_view[:metrics].map { |metric| metric[:key] }
     assert_includes payload[:class], "provider-codex"
     assert_includes payload[:class], "partial"
     refute_includes payload[:class], "pace-reserve"
@@ -130,28 +133,6 @@ class RuntimeTest < Minitest::Test
     assert_includes payload[:tooltip], "Weekly 93% left"
     assert_equal 1, payload[:tooltip].scan("Weekly 93% left").length
     refute_includes payload[:tooltip], "5-hour"
-  end
-
-  def test_waybar_and_modal_surface_an_expected_but_unreported_five_hour_window
-    now = Time.now.utc
-    config = build_config
-    config = with_provider_state(config, "codex", enabled: true, visible: true)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
-    usage = usage_payload(
-      provider: "codex",
-      now: now,
-      secondary: window(used_percent: 7, window_minutes: 10_080, now: now, resets_in_minutes: 6_000)
-    ).merge(unavailableWindows: ["primary"])
-    results = { "codex" => provider_result(provider: "codex", usage: usage) }
-
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now)
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
-    codex_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "codex" }
-
-    assert_equal "󰚩 --  93%", payload[:text]
-    assert_includes payload[:tooltip], "5-hour unavailable"
-    assert_equal "5h -- / W 93%", codex_view[:quotaSummaryText]
-    assert_equal "Unavailable", codex_view[:detailCards].find { |card| card[:key] == "primary-unavailable" }[:value]
   end
 
   def test_daemon_retains_cached_usage_after_refresh_failure

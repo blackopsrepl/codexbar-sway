@@ -13,7 +13,7 @@ This repository ships an independent Linux implementation inspired by [the origi
 
 Supported providers are exactly `codex`, `claude`, and `gemini`.
 
-Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations. Missing percentages are never synthesized: non-Pro ChatGPT accounts keep an omitted five-hour lane visibly unavailable, while an absent weekly lane and omitted Pro lanes stay absent. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible.
+Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations and every returned window is rendered in both Waybar and QuickShell. Missing windows stay absent; percentages and placeholder lanes are never synthesized. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible.
 
 ## Repository Map
 

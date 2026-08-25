@@ -39,18 +39,6 @@ class CodexProviderTest < Minitest::Test
     assert_same weekly, windows[:secondary]
   end
 
-  def test_non_pro_chatgpt_plan_marks_an_unreported_five_hour_window_unavailable
-    windows = { primary: nil, secondary: { usedPercent: 7, windowDurationMins: 10_080 } }
-
-    assert_equal ["primary"], CodexBar::Providers::Codex.unavailable_windows(windows, "plus")
-  end
-
-  def test_pro_plan_does_not_invent_an_unreported_five_hour_window
-    windows = { primary: nil, secondary: { usedPercent: 7, windowDurationMins: 10_080 } }
-
-    assert_empty CodexBar::Providers::Codex.unavailable_windows(windows, "pro")
-  end
-
   def test_credits_are_absent_when_account_has_no_credit_balance
     response = {
       rateLimits: {
