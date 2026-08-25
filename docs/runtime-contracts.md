@@ -66,7 +66,7 @@ The Ruby runtime owns this file. QuickShell reads it; QuickShell must not reimpl
 
 When a provider refresh fails after a successful sample, the daemon retains that provider's last good `usage` and `credits`, records the current error, and adds a note that cached quota is being shown. The original usage timestamp remains authoritative, so consumers can distinguish cached quota from a fresh provider response.
 
-`view` is presenter-owned data for QuickShell and Waybar. Provider entries include view-ready quota metrics, a compact `quotaSummaryText`, service status text, local usage text, optional `localUsageModels`, storage text, retained `historyDays`, and `historySummary` so the QML panel does not parse raw provider payloads. Only quota windows returned by the provider appear as metrics.
+`view` is presenter-owned data for QuickShell and Waybar. Provider entries include view-ready quota metrics, explicit `unavailableMetrics`, a compact `quotaSummaryText`, service status text, local usage text, optional `localUsageModels`, storage text, retained `historyDays`, and `historySummary` so the QML panel does not parse raw provider payloads. An unavailable metric has no percentage and must not participate in severity, pace, or automatic provider selection.
 
 ## Auxiliary State
 

@@ -18,7 +18,7 @@ The payload includes:
 
 Waybar does not render pace/reserve/hot text or pace classes. Pace detail remains available in the QuickShell panel.
 
-The compact Codex chip and QuickShell modal render every quota window present in the cached provider response. Missing windows stay absent, and the UI never turns an omitted window into a fabricated percentage or placeholder lane.
+The compact Codex chip renders every quota window present in the cached provider response. When a non-Pro ChatGPT account omits its expected five-hour value, the chip keeps that lane visible as `--` beside the real weekly percentage; the modal labels it unavailable. A missing weekly window stays absent, and the UI never turns a missing value into a fabricated percentage.
 
 Click behavior is provided by the desktop wrapper:
 

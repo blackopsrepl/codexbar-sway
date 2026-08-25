@@ -135,6 +135,28 @@ class RuntimeTest < Minitest::Test
     refute_includes payload[:tooltip], "5-hour"
   end
 
+  def test_waybar_and_modal_surface_an_expected_but_unreported_five_hour_window
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "codex", enabled: true, visible: true)
+    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    usage = usage_payload(
+      provider: "codex",
+      now: now,
+      secondary: window(used_percent: 7, window_minutes: 10_080, now: now, resets_in_minutes: 6_000)
+    ).merge(unavailableWindows: ["primary"])
+    results = { "codex" => provider_result(provider: "codex", usage: usage) }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now)
+    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    codex_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "codex" }
+
+    assert_equal "󰚩 --  93%", payload[:text]
+    assert_includes payload[:tooltip], "5-hour unavailable"
+    assert_equal "5h -- / W 93%", codex_view[:quotaSummaryText]
+    assert_equal "Unavailable", codex_view[:detailCards].find { |card| card[:key] == "primary-unavailable" }[:value]
+  end
+
   def test_daemon_retains_cached_usage_after_refresh_failure
     now = Time.now.utc
     cached_usage = usage_payload(
