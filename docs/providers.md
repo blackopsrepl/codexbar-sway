@@ -5,6 +5,7 @@ The Linux release supports exactly:
 - `codex`
 - `claude`
 - `gemini`
+- `opencode`
 
 ## Codex
 
@@ -49,4 +50,16 @@ Gemini local usage scans Gemini CLI chat JSONL records with `type: "gemini"` and
 
 API-key and Vertex auth modes are not supported for quota in the current independent Linux implementation unless usable OAuth credentials are also present for Code Assist quota.
 
-Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, and `gemini` are out of scope for this release line.
+## OpenCode
+
+- Source label: `opencode-go`.
+- Credentials: `~/.local/share/opencode/auth.json` (the `opencode-go` API key, falling back to the `opencode` entry).
+- Usage endpoint: `https://opencode.ai/zen/go/v1/usage`.
+- Local usage source: `~/.local/share/opencode/opencode.db` (the OpenCode SQLite usage database).
+- Dashboard: `https://opencode.ai/`
+
+OpenCode Go exposes three subscription allowance windows as returned by the usage endpoint: `rolling` (five-hour), `weekly`, and `monthly`. Each window reports a used `percent` and a `resetsAt` timestamp. CodexBar maps `rolling` to the primary lane, `weekly` to the secondary lane, and `monthly` to the tertiary lane, matching the Codex window shape. Percentages are used percentages, matching the OpenCode console; a missing window stays absent.
+
+OpenCode local usage is read from assistant messages in the OpenCode usage database. Each message contributes its input, cached read/write, output, and reasoning tokens plus monetary cost to the message's activity date and model id. This preserves model switches and sessions that span multiple days. The scanner groups these message records in SQLite before Ruby summarizes them, keeping refreshes bounded even for larger databases. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
+
+Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, and `opencode` are out of scope for this release line.

@@ -46,7 +46,7 @@ module CodexBar
         preferred = Array(config.dig(:display, :overviewProviders)).map(&:to_s)
         ordered = preferred.select { |provider| overview_members.include?(provider) }
         ordered.concat(overview_members.reject { |provider| ordered.include?(provider) })
-        ordered.first(3)
+        ordered.first(4)
       end
 
       def provider_state(config, provider)

@@ -53,7 +53,7 @@ codexbar display mode both|percent|pace
 codexbar config init
 codexbar config validate
 codexbar config dump
-codexbar open dashboard codex|claude|gemini
+codexbar open dashboard codex|claude|gemini|opencode
 codexbar runtime status
 codexbar runtime cadence manual
 codexbar runtime cadence interval 60
@@ -80,3 +80,4 @@ Provider activation, deactivation, show/hide, overview, and auto-select commands
 - `codex`
 - `claude`
 - `gemini`
+- `opencode`

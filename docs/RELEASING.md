@@ -7,7 +7,7 @@ It does not define a native desktop bundle, updater feed, tap/cask package, or n
 ## Release Tracks
 
 - Preview release: `make check` passes.
-- Stable release: `make check-live` passes on the intended release machine with live Codex, Claude, and Gemini credentials.
+- Stable release: `make check-live` passes on the intended release machine with live Codex, Claude, Gemini, and OpenCode credentials.
 
 ## Required Gates
 

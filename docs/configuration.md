@@ -37,6 +37,14 @@ The file is written with `0600` permissions.
       "showInOverview": true,
       "allowAutoSelect": true,
       "source": "auto"
+    },
+    {
+      "id": "opencode",
+      "enabled": false,
+      "visible": true,
+      "showInOverview": true,
+      "allowAutoSelect": true,
+      "source": "auto"
     }
   ],
   "display": {
@@ -100,17 +108,17 @@ The file is written with `0600` permissions.
 - `showUsed`: used vs remaining percent phrasing.
 - `displayMode`: `both`, `percent`, or `pace`.
 - `refreshMode`: `interval` refreshes on `refreshSeconds`; `manual` keeps the daemon resident without periodic provider refreshes.
-- `status`: polls external service-status feeds for the three supported providers.
+- `status`: polls external service-status feeds for the supported providers.
 - `notifications`: controls quota and incident desktop notifications through `runtime.notificationCommand`.
 - `history`: retains daily cached quota/local-usage summaries.
-- `localUsage`: scans local Codex, Claude, and Gemini logs for exact token records and Claude cost records.
+- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records.
 - `storage`: optionally scans local provider state directories for footprint summaries.
 - `privacy.hidePersonalInfo`: redacts account identity text in the UI.
 - `server`: controls the read-only cached JSON server.
 
 `make configure-user` preserves provider and display settings and updates only `runtime.quickShellShell`.
 
-Supported provider IDs remain exactly `codex`, `claude`, and `gemini`.
+Supported provider IDs remain exactly `codex`, `claude`, `gemini`, and `opencode`.
 Default provider entries are present but disabled; activate only the providers this machine should fetch.
 
 Validate with:

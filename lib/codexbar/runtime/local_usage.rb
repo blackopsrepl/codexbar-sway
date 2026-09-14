@@ -29,7 +29,8 @@ module CodexBar
           providers: {
             "codex" => scan_codex(cutoff),
             "claude" => scan_claude(cutoff),
-            "gemini" => scan_gemini(cutoff)
+            "gemini" => scan_gemini(cutoff),
+            "opencode" => scan_opencode(cutoff)
           }
         }
         State.write_local_usage(config, payload)
@@ -109,13 +110,104 @@ module CodexBar
         finalize_summary(summary)
       end
 
+      def scan_opencode(cutoff)
+        db_path = opencode_db_path
+        return empty_summary("opencode", supported: true) unless db_path && File.file?(db_path)
+
+        rows = opencode_messages(db_path, cutoff)
+        return empty_summary("opencode", supported: false).merge(
+          note: "The sqlite3 binary is unavailable to read the OpenCode usage database."
+        ) if rows.nil?
+
+        summarize_opencode_messages(rows)
+      end
+
+      def summarize_opencode_messages(rows)
+        summary = empty_summary("opencode", supported: true)
+        Array(rows).each do |row|
+          timestamp = Time.parse("#{row[:date]}T00:00:00Z")
+          records = row[:records].to_i
+          input = row[:input_tokens].to_i
+          cached = row[:cached_input_tokens].to_i
+          output = row[:output_tokens].to_i
+          reasoning = row[:reasoning_output_tokens].to_i
+          total = row[:total_tokens].to_i
+          total = input + cached + output + reasoning if total.zero?
+          model_id = row[:model_id].to_s.strip
+
+          usage = {
+            input_tokens: input,
+            cached_input_tokens: cached,
+            output_tokens: output,
+            reasoning_output_tokens: reasoning,
+            total_tokens: total
+          }
+          add_usage(summary, timestamp, usage, records: records)
+          add_cost(summary, timestamp, row[:cost])
+          next if model_id.empty?
+
+          add_model_usage(summary[:models], model_id, input, cached, output, reasoning, 0, total, records: records)
+          add_model_usage(day_entry(summary, timestamp)[:models], model_id, input, cached, output, reasoning, 0, total, records: records)
+        end
+        finalize_summary(summary)
+      rescue ArgumentError
+        summary
+      end
+
+      def opencode_messages(db_path, cutoff)
+        cutoff_ms = (cutoff.to_f * 1000).to_i
+        session_query = "SELECT id FROM session WHERE time_updated >= #{cutoff_ms}"
+        session_result = Core::Process.run_command("sqlite3", ["-json", db_path, session_query], timeout_ms: 15_000)
+        return nil unless session_result[:exitCode].zero?
+
+        session_rows = JSON.parse(session_result[:stdout].to_s.strip.empty? ? "[]" : session_result[:stdout], symbolize_names: true)
+        session_ids = Array(session_rows).filter_map { |row| row[:id].to_s.strip unless row[:id].to_s.strip.empty? }
+        return [] if session_ids.empty?
+
+        quoted_ids = session_ids.map { |id| "'#{id.gsub("'", "''")}'" }.join(", ")
+        query = <<~SQL
+          SELECT
+            strftime('%Y-%m-%d', time_created / 1000, 'unixepoch') AS date,
+            json_extract(data, '$.modelID') AS model_id,
+            COUNT(*) AS records,
+            SUM(COALESCE(json_extract(data, '$.tokens.input'), 0)) AS input_tokens,
+            SUM(COALESCE(json_extract(data, '$.tokens.cache.read'), 0) + COALESCE(json_extract(data, '$.tokens.cache.write'), 0)) AS cached_input_tokens,
+            SUM(COALESCE(json_extract(data, '$.tokens.output'), 0)) AS output_tokens,
+            SUM(COALESCE(json_extract(data, '$.tokens.reasoning'), 0)) AS reasoning_output_tokens,
+            SUM(
+              COALESCE(json_extract(data, '$.tokens.input'), 0) +
+              COALESCE(json_extract(data, '$.tokens.cache.read'), 0) +
+              COALESCE(json_extract(data, '$.tokens.cache.write'), 0) +
+              COALESCE(json_extract(data, '$.tokens.output'), 0) +
+              COALESCE(json_extract(data, '$.tokens.reasoning'), 0)
+            ) AS total_tokens,
+            SUM(CASE WHEN json_extract(data, '$.cost') IS NOT NULL THEN json_extract(data, '$.cost') END) AS cost
+          FROM message
+          WHERE session_id IN (#{quoted_ids})
+            AND time_created >= #{cutoff_ms}
+            AND json_extract(data, '$.role') = 'assistant'
+            AND json_type(data, '$.tokens') = 'object'
+          GROUP BY date, model_id
+        SQL
+        result = Core::Process.run_command("sqlite3", ["-json", db_path, query], timeout_ms: 15_000)
+        return nil unless result[:exitCode].zero?
+
+        JSON.parse(result[:stdout].to_s.strip.empty? ? "[]" : result[:stdout], symbolize_names: true)
+      rescue Errno::ENOENT, JSON::ParserError
+        nil
+      end
+
+      def opencode_db_path
+        ENV["CODEXBAR_OPENCODE_DB"] || File.join(home_dir, ".local", "share", "opencode", "opencode.db")
+      end
+
       def unsupported_provider(provider)
         empty_summary(provider, supported: false).merge(
           note: "No trustworthy local usage log source is implemented for #{provider}."
         )
       end
 
-      def add_usage(summary, timestamp, usage)
+      def add_usage(summary, timestamp, usage, records: 1)
         input = usage[:input_tokens].to_i
         cached = usage[:cached_input_tokens].to_i + usage[:cache_creation_input_tokens].to_i + usage[:cache_read_input_tokens].to_i
         output = usage[:output_tokens].to_i
@@ -123,7 +215,7 @@ module CodexBar
         total = usage[:total_tokens].to_i
         total = input + cached + output + reasoning if total.zero?
 
-        summary[:records] += 1
+        summary[:records] += records
         summary[:inputTokens] += input
         summary[:cachedInputTokens] += cached
         summary[:outputTokens] += output
@@ -131,7 +223,7 @@ module CodexBar
         summary[:totalTokens] += total
 
         daily = day_entry(summary, timestamp)
-        daily[:records] += 1
+        daily[:records] += records
         daily[:inputTokens] += input
         daily[:cachedInputTokens] += cached
         daily[:outputTokens] += output
@@ -172,9 +264,9 @@ module CodexBar
         add_model_usage(daily[:models], model_id, input, cached, output, reasoning, tool, total)
       end
 
-      def add_model_usage(models, model_id, input, cached, output, reasoning, tool, total)
+      def add_model_usage(models, model_id, input, cached, output, reasoning, tool, total, records: 1)
         entry = models[model_id] ||= empty_model_summary(model_id)
-        entry[:records] += 1
+        entry[:records] += records
         entry[:inputTokens] += input
         entry[:cachedInputTokens] += cached
         entry[:outputTokens] += output

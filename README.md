@@ -4,12 +4,12 @@
 
 # CodexBar
 
-CodexBar is a Linux-first quota bar for Codex, Claude, and Gemini. It is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete).
+CodexBar is a Linux-first quota bar for Codex, Claude, Gemini, and OpenCode Go. It is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete).
 
 The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact Waybar JSON renderer, and one QuickShell panel. The supported runtime is Ruby + QuickShell + Waybar.
 
 <p align="center">
-  <img src="./codexbar.png" alt="CodexBar QuickShell panel showing Codex, Claude, and Gemini quota state" />
+  <img src="./codexbar.png" alt="CodexBar QuickShell panel showing Codex, Claude, Gemini, and OpenCode quota state" />
 </p>
 
 ## Current Contract
@@ -20,7 +20,7 @@ The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact
 - Background fetch path: `codexbar daemon` fetches providers and writes snapshots.
 - State files: `snapshot.json` and `ui.json` under `runtime.stateDir`, defaulting to `~/.local/state/codexbar`.
 - Config file: `~/.codexbar/config.json`, current config version `5`.
-- Supported providers: `codex`, `claude`, and `gemini`.
+- Supported providers: `codex`, `claude`, `gemini`, and `opencode`.
 
 Provider fetches do not run inside Waybar. Waybar is only a render/action surface.
 
@@ -30,6 +30,8 @@ The Waybar chip shows compact provider quota percentages and health classes only
 
 Gemini quota is represented as separate model meters exactly as returned by the Gemini CLI-backed quota API, not as a single blended Pro/Flash pair. Gemini local usage is read from Gemini CLI chat JSONL records under `~/.gemini/tmp/**/chats/`. The provider-level Gemini status aggregates quota model meters: exhausted model buckets are still visible as critical meters, while mixed healthy and exhausted buckets make the provider warning rather than critical.
 
+OpenCode Go quota is represented as its three subscription allowance windows as returned by the OpenCode Go usage endpoint: a five-hour rolling window, a weekly window, and a monthly window. These map to the primary, secondary, and tertiary lanes exactly like Codex. OpenCode Go local usage is read from the OpenCode usage database at `~/.local/share/opencode/opencode.db`.
+
 ## Desktop Autostart
 
 CodexBar has two separate runtime pieces:
@@ -37,7 +39,7 @@ CodexBar has two separate runtime pieces:
 - `codexbar daemon --config ~/.codexbar/config.json` refreshes provider quota state and writes `snapshot.json`.
 - `codexbar waybar render --config ~/.codexbar/config.json` reads that cached snapshot and returns Waybar JSON.
 
-Waybar does not refresh Codex, Claude, or Gemini by itself. If the daemon is not running after login or reboot, the Waybar chip can keep rendering, but it will render stale cached state. A desktop integration should therefore start and supervise the daemon at session startup.
+Waybar does not refresh Codex, Claude, Gemini, or OpenCode by itself. If the daemon is not running after login or reboot, the Waybar chip can keep rendering, but it will render stale cached state. A desktop integration should therefore start and supervise the daemon at session startup.
 
 On SolverForge Linux, the managed Waybar integration starts companion daemons through `solverforge-waybar-companions-start`, launched from Sway `exec_always` beside Waybar. That launcher restarts `codexbar daemon` if an early boot-time refresh failure makes it exit.
 
@@ -72,7 +74,7 @@ Core commands:
 ```bash
 codexbar daemon
 codexbar refresh
-codexbar usage --provider codex,claude,gemini --format json --pretty
+codexbar usage --provider codex,claude,gemini,opencode --format json --pretty
 codexbar config validate
 codexbar waybar render
 codexbar panel
@@ -157,8 +159,11 @@ The release surface is exactly:
 - `codex`
 - `claude`
 - `gemini`
+- `opencode`
 
-Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, and Gemini; Gemini summaries preserve per-model token totals from CLI chat logs.
+Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, Gemini, and OpenCode; Gemini summaries preserve per-model token totals from CLI chat logs, and OpenCode summaries preserve per-model token totals from the OpenCode usage database.
+
+OpenCode Go exposes its five-hour rolling, weekly, and monthly allowance windows as returned by `https://opencode.ai/zen/go/v1/usage`. Percentages are used percentages, matching the OpenCode console. The five-hour, weekly, and monthly windows map to the primary, secondary, and tertiary lanes respectively; a missing window stays absent.
 
 Other providers are not part of this Linux release.
 
@@ -179,7 +184,7 @@ Stable release validation on a credentialed machine:
 make check-live
 ```
 
-`make check-live` requires working live credentials for Codex, Claude, and Gemini. Credential or upstream auth failures are release-environment blockers, not unit-test failures.
+`make check-live` requires working live credentials for Codex, Claude, Gemini, and OpenCode. Credential or upstream auth failures are release-environment blockers, not unit-test failures.
 
 ## Documentation
 

@@ -1,6 +1,6 @@
 # Status
 
-CodexBar tracks two status layers for the three supported providers.
+CodexBar tracks two status layers for the supported providers.
 
 Provider health is still derived from quota fetch results:
 
@@ -13,6 +13,7 @@ External service status is cached in `status.json`:
 - Codex uses OpenAI Status: `https://status.openai.com/api/v2/summary.json`
 - Claude uses Claude Status: `https://status.claude.com/api/v2/summary.json`
 - Gemini uses Google Cloud incident history: `https://status.cloud.google.com/incidents.json`
+- OpenCode uses the OpenCode Go usage endpoint `https://opencode.ai/zen/go/v1/usage` as the service health signal (there is no public OpenCode status page)
 
 Use:
 

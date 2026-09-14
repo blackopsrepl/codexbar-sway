@@ -5,7 +5,8 @@ module CodexBar
     FETCHERS = {
       "codex" => ->(config) { Providers::Codex.fetch(config) },
       "claude" => ->(config) { Providers::Claude.fetch(config) },
-      "gemini" => ->(config) { Providers::Gemini.fetch(config) }
+      "gemini" => ->(config) { Providers::Gemini.fetch(config) },
+      "opencode" => ->(config) { Providers::Opencode.fetch(config) }
     }.freeze
 
     module_function

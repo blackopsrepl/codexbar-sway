@@ -9,7 +9,8 @@ module CodexBar
       PROVIDER_PATHS = {
         "codex" => [".codex"],
         "claude" => [".claude"],
-        "gemini" => [".gemini"]
+        "gemini" => [".gemini"],
+        "opencode" => [".opencode", File.join(".local", "share", "opencode")]
       }.freeze
 
       module_function

@@ -65,6 +65,8 @@ module CodexBar
         case provider
         when "gemini"
           fetch_google_status(metadata, now: now)
+        when "opencode"
+          fetch_opencode_status(metadata, now: now)
         else
           fetch_statuspage(metadata, now: now)
         end.merge(provider: provider)
@@ -94,6 +96,27 @@ module CodexBar
           sourceUrl: metadata[:sourceUrl],
           updatedAt: now.iso8601,
           components: matched.map { |component| component.slice(:name, :status) }
+        }
+      end
+
+      def fetch_opencode_status(metadata, now:)
+        key = Providers::Opencode.resolve_api_key
+        raise "OpenCode Go API key not found in #{Providers::Opencode.auth_path}." if key.to_s.strip.empty?
+
+        response = Core::Http.request(
+          "GET",
+          Providers::Opencode::USAGE_URL,
+          headers: { "Authorization" => "Bearer #{key}", "Accept" => "application/json" }
+        )
+        state = response.status.between?(200, 299) ? "ok" : "degraded"
+        {
+          state: state,
+          description: state == "ok" ? "Service operational" : "OpenCode Go usage endpoint returned HTTP #{response.status}",
+          incident: nil,
+          source: metadata[:source],
+          sourceUrl: metadata[:sourceUrl],
+          updatedAt: now.iso8601,
+          components: []
         }
       end
 

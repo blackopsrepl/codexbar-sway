@@ -5,7 +5,7 @@ require "time"
 module CodexBar
   module Runtime
     module Presenter
-      TARGET_PROVIDERS = %w[codex claude gemini].freeze
+      TARGET_PROVIDERS = %w[codex claude gemini opencode].freeze
 
       module_function
 

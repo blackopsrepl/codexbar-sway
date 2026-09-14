@@ -17,7 +17,7 @@ class ConfigTest < Minitest::Test
     )
 
     assert_equal 5, config[:version]
-    assert_equal %w[codex claude gemini], config[:providers].map { |entry| entry[:id] }
+    assert_equal %w[codex claude gemini opencode], config[:providers].map { |entry| entry[:id] }
     assert_equal "codex", config.dig(:display, :selectedProvider)
     assert_equal "both", config.dig(:display, :displayMode)
     assert_equal "interval", config.dig(:runtime, :refreshMode)

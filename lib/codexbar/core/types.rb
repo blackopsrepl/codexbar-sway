@@ -7,12 +7,14 @@ module CodexBar
         codex
         claude
         gemini
+        opencode
       ].freeze
 
       PROVIDER_METADATA = {
         "codex" => { label: "Codex", shortLabel: "CX", sessionLabel: "5-hour", weeklyLabel: "Weekly", defaultEnabled: false, supportsAverage: false, supportsTertiary: false, accent: "#82FB9C", icon: "󰚩", dashboardUrl: "https://chatgpt.com/codex" },
         "claude" => { label: "Claude", shortLabel: "CL", sessionLabel: "Session", weeklyLabel: "Weekly", tertiaryLabel: "Sonnet", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#F2C572", icon: "", dashboardUrl: "https://claude.ai/" },
-        "gemini" => { label: "Gemini", shortLabel: "GM", sessionLabel: "Pro", weeklyLabel: "Flash", defaultEnabled: false, supportsAverage: true, supportsTertiary: false, accent: "#82A7F4", icon: "", dashboardUrl: "https://gemini.google.com/" }
+        "gemini" => { label: "Gemini", shortLabel: "GM", sessionLabel: "Pro", weeklyLabel: "Flash", defaultEnabled: false, supportsAverage: true, supportsTertiary: false, accent: "#82A7F4", icon: "", dashboardUrl: "https://gemini.google.com/" },
+        "opencode" => { label: "OpenCode", shortLabel: "OC", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Monthly", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#C792EA", icon: "", dashboardUrl: "https://opencode.ai/" }
       }.freeze
 
       STATUS_METADATA = {
@@ -33,6 +35,12 @@ module CodexBar
           url: "https://status.cloud.google.com/incidents.json",
           sourceUrl: "https://status.cloud.google.com/",
           products: ["Vertex Gemini API", "Gemini Code Assist"]
+        },
+        "opencode" => {
+          source: "opencode-go-usage",
+          url: nil,
+          sourceUrl: "https://opencode.ai/",
+          components: []
         }
       }.freeze
 
