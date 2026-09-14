@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.1.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.1.0...v1.1.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* **quickshell:** keep history tiles in fixed columns 7bc30fb
+* **quickshell:** stop rewriting ui state on adapter updates 4dc4d3c
+
 ## [1.1.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.0.2...v1.1.0) (2026-09-14)
 
 
