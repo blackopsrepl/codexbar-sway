@@ -14,6 +14,7 @@
 - Gemini quota must stay model-meter based. Preserve each CLI/API model bucket instead of collapsing Gemini into a single Pro/Flash pair.
 - Gemini local usage must come from deterministic Gemini CLI chat JSONL records or an explicitly documented telemetry file. Do not add browser scraping, cookie scraping, or silent API-key/Vertex quota fallbacks.
 - Z.ai quota is the GLM Coding Plan subscription allowance from `https://api.z.ai/api/monitor/usage/quota/limit`, not pay-as-you-go API credit. Its API key comes from `ZAI_API_KEY`/`GLM_API_KEY` or the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json`. Z.ai local usage is read from the OpenCode usage database by filtering assistant messages whose provider is `zai-coding-plan` or `zai`; never attribute OpenCode Go rows to Z.ai or Z.ai rows to OpenCode Go.
+- Provider ids are stable config keys: `opencode` is the OpenCode Go subscription provider (display label `OpenCode Go`), and `zai` is the GLM Coding Plan provider. Change labels freely; never rename ids for a label change.
 
 ## Project Structure & Modules
 - `bin/codexbar`: Ruby entrypoint.
@@ -63,6 +64,7 @@
 - Provider action controls should queue rather than kill in-flight CLI actions.
 - The QuickShell panel is a modal overlay. It must stay above windows, ignore layer-shell exclusion, and remain vertically relaxed.
 - Gemini detail views must preserve model-level quota and local usage rows where presenter data provides them.
+- Overview cards render an equivalent compact summary for every provider: window providers show `5h X% / W Y%` from the five-hour and weekly lanes, and model-meter providers show their dominant model.
 - Retained history must stay provider-shaped: model-meter providers keep per-model quota in `modelQuota`/`modelUsage` and never synthesize window lanes, and days with no quota sample and no local usage are omitted so the History view falls back to its empty state.
 - Keep pace/reserve/hot detail in the modal/provider cards where it helps interpretation; keep it out of Waybar.
 
@@ -95,3 +97,7 @@
 - Use `make install-solverforge-linux-integration` for the explicit local SolverForge wrapper.
 - Do not move provider fetching into Waybar.
 - Do not make the checkout path part of the live desktop contract; install before renaming or moving this directory.
+- After `make install`, restart `codexbar daemon` and the QuickShell panel before verifying anything on the live desktop: the install swaps the installed directory, so running processes keep executing the previous code and file watchers do not fire. See "Restart After Install" in `docs/installation.md`.
+- `commit-and-tag-version` (v12.5.0) is installed globally. Run `commit-and-tag-version --release-as vX.Y.Z` directly; do not use `npx`.
+- Publish releases to both remotes, `git.local` (Forgejo at `vigilance:3002`) and `blackopsrepl` (GitHub): push `main` and the release tag to each, then verify remote heads and zero divergence.
+- `lib/codexbar/core/types.rb` metadata lines contain Nerd Font glyphs (non-ASCII private-use characters). Some editing tools silently strip them and blank the icons; after editing those lines, confirm every provider's `icon` still has its codepoint, or patch the file through Ruby with explicit codepoints.

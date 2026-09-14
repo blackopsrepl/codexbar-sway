@@ -46,6 +46,7 @@ Retained history follows the same provider shape. Window providers keep their pr
 - `packaging/solverforge-linux/solverforge-waybar-codexbar`: checked-in source for the SolverForge Waybar wrapper.
 - `bin/release-check`: canonical release validation script used by `make check`.
 - `version.env`: current release version metadata.
+- Release publication pushes `main` and release tags to both remotes: `git.local` (Forgejo at `vigilance:3002`) and `blackopsrepl` (GitHub).
 
 ### Documentation
 
@@ -150,6 +151,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 3. `make configure-user` creates config if missing.
 4. `make configure-user` preserves user provider/display settings and updates only `runtime.quickShellShell`.
 5. `make install-solverforge-linux-integration` installs the SolverForge wrapper only when explicitly requested.
+6. Restart `codexbar daemon` and the QuickShell panel after installing: the install swaps the installed directory, so running processes keep executing the previous code and file watchers do not fire (see "Restart After Install" in `docs/installation.md`).
 
 After install/configure, the live desktop must not depend on the checkout directory path.
 

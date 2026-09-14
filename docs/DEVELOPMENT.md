@@ -45,7 +45,7 @@ Direct QuickShell load:
 make quickshell-load
 ```
 
-The installed runtime lives under `~/.local/share/codexbar`. Use `make install && make configure-user` before relying on the app across checkout renames.
+The installed runtime lives under `~/.local/share/codexbar`. Use `make install && make configure-user` before relying on the app across checkout renames. The live desktop executes the installed copy, not this checkout: after every `make install`, restart `codexbar daemon` and the QuickShell panel (see "Restart After Install" in `docs/installation.md`) or you will keep observing the previous code.
 
 ## Test Strategy
 

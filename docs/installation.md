@@ -13,6 +13,8 @@ CodexBar installs as a user-prefix Linux tool. The install must not depend on th
   - Codex CLI authenticated and able to run `codex app-server`
   - Claude credentials in `~/.claude/.credentials.json`
   - Gemini CLI OAuth credentials in `~/.gemini/oauth_creds.json`
+  - OpenCode Go: `opencode-go` key in `~/.local/share/opencode/auth.json`, with local usage read from `~/.local/share/opencode/opencode.db`
+  - Z.ai: `ZAI_API_KEY`/`GLM_API_KEY`, or the `zai-coding-plan` key in `~/.local/share/opencode/auth.json` (local usage reads Z.ai-routed messages from the same OpenCode database)
 
 ## Install
 
@@ -39,6 +41,20 @@ Defaults:
 ```
 
 Existing provider and display settings are preserved.
+
+## Restart After Install
+
+`make install` replaces the installed directory, so the resident `codexbar daemon` and the QuickShell panel keep executing the previously installed code until restarted — file watchers do not fire across the directory swap. Restart both before verifying behavior on the live desktop:
+
+```bash
+# restart the daemon (the SolverForge launcher also restarts it at session start)
+pkill -f 'codexbar daemon' && setsid nohup codexbar daemon --config ~/.codexbar/config.json >/dev/null 2>&1 &
+
+# restart the panel (ui open respawns it when it is not running)
+pkill -f 'codexbar/frontend/quickshell/shell.qml'; codexbar ui open
+```
+
+The installed version is recorded in `~/.local/share/codexbar/version.env`.
 
 ## SolverForge Linux Waybar
 

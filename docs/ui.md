@@ -37,7 +37,7 @@ The panel renders:
 
 - summary band
 - view tabs for Overview, Provider Detail, History, and Settings
-- Overview: active display provider, freshness, service/runtime/privacy state, and compact cards for enabled, visible overview providers; every overview member renders with no fixed provider cap
+- Overview: active display provider, freshness, service/runtime/privacy state, and compact cards for enabled, visible overview providers; every overview member renders with no fixed provider cap, and each card shows an equivalent compact summary (five-hour and weekly lanes for window providers, dominant model for model-meter providers)
 - Provider Detail: focused provider identity, quota hero, service/local/history/storage detail cards, model local usage rows when present, alerts, provider rail, and provider actions
 - History: retained presenter history for the focused provider, including quota bars, local token summaries, and per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view shows its empty state when no day remains
 - Settings: cadence, display mode, notification, privacy, scan, and cache-clear controls
