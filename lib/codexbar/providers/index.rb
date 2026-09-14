@@ -6,7 +6,8 @@ module CodexBar
       "codex" => ->(config) { Providers::Codex.fetch(config) },
       "claude" => ->(config) { Providers::Claude.fetch(config) },
       "gemini" => ->(config) { Providers::Gemini.fetch(config) },
-      "opencode" => ->(config) { Providers::Opencode.fetch(config) }
+      "opencode" => ->(config) { Providers::Opencode.fetch(config) },
+      "zai" => ->(config) { Providers::Zai.fetch(config) }
     }.freeze
 
     module_function

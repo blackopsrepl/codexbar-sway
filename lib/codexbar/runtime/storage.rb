@@ -10,7 +10,8 @@ module CodexBar
         "codex" => [".codex"],
         "claude" => [".claude"],
         "gemini" => [".gemini"],
-        "opencode" => [".opencode", File.join(".local", "share", "opencode")]
+        "opencode" => [".opencode", File.join(".local", "share", "opencode")],
+        "zai" => [File.join(".config", "zai")]
       }.freeze
 
       module_function

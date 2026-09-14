@@ -117,7 +117,7 @@ if [[ "$WITH_LIVE" -eq 1 ]]; then
 
   run_step "live config validate" bin/codexbar config validate --config "$LIVE_CONFIG"
 
-  for provider in codex claude gemini opencode; do
+  for provider in codex claude gemini opencode zai; do
     echo
     echo "==> live provider $provider"
     bin/codexbar usage --provider "$provider" --format json --pretty --config "$LIVE_CONFIG" | validate_provider_json "$provider"

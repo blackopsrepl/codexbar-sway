@@ -66,7 +66,23 @@ module CodexBar
         when "gemini"
           fetch_google_status(metadata, now: now)
         when "opencode"
-          fetch_opencode_status(metadata, now: now)
+          fetch_usage_endpoint_status(
+            metadata,
+            now: now,
+            key: Providers::Opencode.resolve_api_key,
+            key_error: "OpenCode Go API key not found in #{Providers::Opencode.auth_path}.",
+            url: Providers::Opencode::USAGE_URL,
+            service: "OpenCode Go"
+          )
+        when "zai"
+          fetch_usage_endpoint_status(
+            metadata,
+            now: now,
+            key: Providers::Zai.resolve_api_key,
+            key_error: "Z.ai API key not found. Set ZAI_API_KEY or add a zai-coding-plan entry to #{Providers::Zai.auth_path}.",
+            url: Providers::Zai::QUOTA_URL,
+            service: "Z.ai"
+          )
         else
           fetch_statuspage(metadata, now: now)
         end.merge(provider: provider)
@@ -99,19 +115,18 @@ module CodexBar
         }
       end
 
-      def fetch_opencode_status(metadata, now:)
-        key = Providers::Opencode.resolve_api_key
-        raise "OpenCode Go API key not found in #{Providers::Opencode.auth_path}." if key.to_s.strip.empty?
+      def fetch_usage_endpoint_status(metadata, now:, key:, key_error:, url:, service:)
+        raise key_error if key.to_s.strip.empty?
 
         response = Core::Http.request(
           "GET",
-          Providers::Opencode::USAGE_URL,
+          url,
           headers: { "Authorization" => "Bearer #{key}", "Accept" => "application/json" }
         )
         state = response.status.between?(200, 299) ? "ok" : "degraded"
         {
           state: state,
-          description: state == "ok" ? "Service operational" : "OpenCode Go usage endpoint returned HTTP #{response.status}",
+          description: state == "ok" ? "Service operational" : "#{service} usage endpoint returned HTTP #{response.status}",
           incident: nil,
           source: metadata[:source],
           sourceUrl: metadata[:sourceUrl],

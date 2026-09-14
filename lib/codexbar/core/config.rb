@@ -24,7 +24,7 @@ module CodexBar
             resetStyle: "countdown",
             displayMode: "both",
             metricPreferences: {},
-            overviewProviders: %w[codex claude gemini opencode],
+            overviewProviders: %w[codex claude gemini opencode zai],
             selectedProvider: "codex"
           },
           runtime: {
@@ -468,7 +468,7 @@ module CodexBar
       end
 
       def default_overview_providers
-        %w[codex claude gemini opencode]
+        %w[codex claude gemini opencode zai]
       end
 
       def default_quickshell_shell
@@ -480,7 +480,6 @@ module CodexBar
         overview_members = providers.select { |provider| provider[:showInOverview] }.map { |provider| provider[:id] }
         ordered = preferred.select { |provider| overview_members.include?(provider) }
         ordered.concat(overview_members.reject { |provider| ordered.include?(provider) })
-        ordered.first(4)
       end
     end
   end

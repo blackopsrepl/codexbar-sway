@@ -8,13 +8,15 @@ module CodexBar
         claude
         gemini
         opencode
+        zai
       ].freeze
 
       PROVIDER_METADATA = {
         "codex" => { label: "Codex", shortLabel: "CX", sessionLabel: "5-hour", weeklyLabel: "Weekly", defaultEnabled: false, supportsAverage: false, supportsTertiary: false, accent: "#82FB9C", icon: "󰚩", dashboardUrl: "https://chatgpt.com/codex" },
         "claude" => { label: "Claude", shortLabel: "CL", sessionLabel: "Session", weeklyLabel: "Weekly", tertiaryLabel: "Sonnet", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#F2C572", icon: "", dashboardUrl: "https://claude.ai/" },
         "gemini" => { label: "Gemini", shortLabel: "GM", sessionLabel: "Pro", weeklyLabel: "Flash", defaultEnabled: false, supportsAverage: true, supportsTertiary: false, accent: "#82A7F4", icon: "", dashboardUrl: "https://gemini.google.com/" },
-        "opencode" => { label: "OpenCode", shortLabel: "OC", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Monthly", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#C792EA", icon: "", dashboardUrl: "https://opencode.ai/" }
+        "opencode" => { label: "OpenCode", shortLabel: "OC", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Monthly", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#C792EA", icon: "", dashboardUrl: "https://opencode.ai/" },
+        "zai" => { label: "Z.ai", shortLabel: "Z", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Tools", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#4ECDC4", icon: "󰉁", dashboardUrl: "https://z.ai/manage-apikey/coding-plan/personal/my-plan" }
       }.freeze
 
       STATUS_METADATA = {
@@ -40,6 +42,12 @@ module CodexBar
           source: "opencode-go-usage",
           url: nil,
           sourceUrl: "https://opencode.ai/",
+          components: []
+        },
+        "zai" => {
+          source: "zai-quota",
+          url: nil,
+          sourceUrl: "https://z.ai/",
           components: []
         }
       }.freeze

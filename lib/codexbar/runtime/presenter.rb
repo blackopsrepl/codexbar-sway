@@ -5,7 +5,7 @@ require "time"
 module CodexBar
   module Runtime
     module Presenter
-      TARGET_PROVIDERS = %w[codex claude gemini opencode].freeze
+      TARGET_PROVIDERS = %w[codex claude gemini opencode zai].freeze
 
       module_function
 
@@ -633,7 +633,7 @@ module CodexBar
       end
 
       def quota_summary_text(config, provider, metrics, unavailable_metrics)
-        return nil unless provider == "codex"
+        return nil unless %w[codex zai].include?(provider)
 
         entries = (metrics + unavailable_metrics).sort_by do |entry|
           { "primary" => 0, "secondary" => 1, "tertiary" => 2 }.fetch(entry[:key].to_s, 3)

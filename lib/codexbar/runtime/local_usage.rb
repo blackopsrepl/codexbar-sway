@@ -30,7 +30,8 @@ module CodexBar
             "codex" => scan_codex(cutoff),
             "claude" => scan_claude(cutoff),
             "gemini" => scan_gemini(cutoff),
-            "opencode" => scan_opencode(cutoff)
+            "opencode" => scan_opencode(cutoff),
+            "zai" => scan_zai(cutoff)
           }
         }
         State.write_local_usage(config, payload)
@@ -199,6 +200,10 @@ module CodexBar
 
       def opencode_db_path
         ENV["CODEXBAR_OPENCODE_DB"] || File.join(home_dir, ".local", "share", "opencode", "opencode.db")
+      end
+
+      def scan_zai(cutoff)
+        unsupported_provider("zai")
       end
 
       def unsupported_provider(provider)
