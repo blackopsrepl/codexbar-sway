@@ -58,6 +58,7 @@ The release may claim support for exactly:
 - `codex`
 - `claude`
 - `gemini`
+- `opencode`
 
 Provider behavior must match `lib/codexbar/providers/*`.
 
