@@ -13,7 +13,7 @@
 - Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
 - Gemini quota must stay model-meter based. Preserve each CLI/API model bucket instead of collapsing Gemini into a single Pro/Flash pair.
 - Gemini local usage must come from deterministic Gemini CLI chat JSONL records or an explicitly documented telemetry file. Do not add browser scraping, cookie scraping, or silent API-key/Vertex quota fallbacks.
-- Z.ai quota is the GLM Coding Plan subscription allowance from `https://api.z.ai/api/monitor/usage/quota/limit`, not pay-as-you-go API credit. Its API key comes from `ZAI_API_KEY`/`GLM_API_KEY` or the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json`. Do not add a local token scanner for Z.ai; its local usage summary is intentionally unsupported.
+- Z.ai quota is the GLM Coding Plan subscription allowance from `https://api.z.ai/api/monitor/usage/quota/limit`, not pay-as-you-go API credit. Its API key comes from `ZAI_API_KEY`/`GLM_API_KEY` or the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json`. Z.ai local usage is read from the OpenCode usage database by filtering assistant messages whose provider is `zai-coding-plan` or `zai`; never attribute OpenCode Go rows to Z.ai or Z.ai rows to OpenCode Go.
 
 ## Project Structure & Modules
 - `bin/codexbar`: Ruby entrypoint.

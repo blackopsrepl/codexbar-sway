@@ -111,7 +111,7 @@ The file is written with `0600` permissions.
 - `status`: polls external service-status feeds for the supported providers.
 - `notifications`: controls quota and incident desktop notifications through `runtime.notificationCommand`.
 - `history`: retains daily cached quota/local-usage summaries.
-- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records. Z.ai has no local log source and reports an unsupported local usage note.
+- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records. Z.ai reads its routed assistant messages from the OpenCode usage database; the coding plan reports no per-token cost.
 - `storage`: optionally scans local provider state directories for footprint summaries.
 - `privacy.hidePersonalInfo`: redacts account identity text in the UI.
 - `server`: controls the read-only cached JSON server.
