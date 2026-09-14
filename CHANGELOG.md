@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.2.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.1.1...v1.2.0) (2026-09-14)
+
+
+### Features
+
+* **zai:** add Z.ai GLM Coding Plan provider 64b13ab
+
+
+### Bug Fixes
+
+* **history:** retain consistent history across window and model providers 2619786
+* **quickshell:** compact the overview display indicator 80f1d42
+* **quickshell:** size history tiles from the layout, not their own grid 6b1bce7
+
 ## [1.1.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.1.0...v1.1.1) (2026-09-14)
 
 
