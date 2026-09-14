@@ -193,6 +193,8 @@ make check-live
 
 `make check-live` requires working live credentials for Codex, Claude, Gemini, OpenCode, and Z.ai. Credential or upstream auth failures are release-environment blockers, not unit-test failures.
 
+Run `make help` for the full colorized target overview. `make version` prints the version from `version.env`, and `make bump-patch`, `make bump-minor`, `make bump-major` (with `make bump-dry` to preview) run `commit-and-tag-version` so releases keep using the repository's `.versionrc.js` contract.
+
 ## Documentation
 
 - `AGENTS.md`: repo-local implementation and release rules.
