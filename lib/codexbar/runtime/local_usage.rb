@@ -7,6 +7,8 @@ require "time"
 module CodexBar
   module Runtime
     module LocalUsage
+      ZAI_PROVIDER_IDS = %w[zai-coding-plan zai].freeze
+
       module_function
 
       def read_cache(config)
@@ -115,7 +117,7 @@ module CodexBar
         db_path = opencode_db_path
         return empty_summary("opencode", supported: true) unless db_path && File.file?(db_path)
 
-        rows = opencode_messages(db_path, cutoff)
+        rows = opencode_messages(db_path, cutoff, providers: :not_zai)
         return empty_summary("opencode", supported: false).merge(
           note: "The sqlite3 binary is unavailable to read the OpenCode usage database."
         ) if rows.nil?
@@ -123,8 +125,8 @@ module CodexBar
         summarize_opencode_messages(rows)
       end
 
-      def summarize_opencode_messages(rows)
-        summary = empty_summary("opencode", supported: true)
+      def summarize_opencode_messages(rows, provider: "opencode")
+        summary = empty_summary(provider, supported: true)
         Array(rows).each do |row|
           timestamp = Time.parse("#{row[:date]}T00:00:00Z")
           records = row[:records].to_i
@@ -155,7 +157,7 @@ module CodexBar
         summary
       end
 
-      def opencode_messages(db_path, cutoff)
+      def opencode_messages(db_path, cutoff, providers: :all)
         cutoff_ms = (cutoff.to_f * 1000).to_i
         session_query = "SELECT id FROM session WHERE time_updated >= #{cutoff_ms}"
         session_result = Core::Process.run_command("sqlite3", ["-json", db_path, session_query], timeout_ms: 15_000)
@@ -166,6 +168,7 @@ module CodexBar
         return [] if session_ids.empty?
 
         quoted_ids = session_ids.map { |id| "'#{id.gsub("'", "''")}'" }.join(", ")
+        provider_filter = opencode_provider_filter(providers)
         query = <<~SQL
           SELECT
             strftime('%Y-%m-%d', time_created / 1000, 'unixepoch') AS date,
@@ -188,6 +191,7 @@ module CodexBar
             AND time_created >= #{cutoff_ms}
             AND json_extract(data, '$.role') = 'assistant'
             AND json_type(data, '$.tokens') = 'object'
+            #{provider_filter ? "AND #{provider_filter}" : ""}
           GROUP BY date, model_id
         SQL
         result = Core::Process.run_command("sqlite3", ["-json", db_path, query], timeout_ms: 15_000)
@@ -198,12 +202,30 @@ module CodexBar
         nil
       end
 
+      def opencode_provider_filter(mode)
+        zai_ids = ZAI_PROVIDER_IDS.map { |id| "'#{id}'" }.join(", ")
+        case mode
+        when :zai_only
+          "COALESCE(json_extract(data, '$.providerID'), '') IN (#{zai_ids})"
+        when :not_zai
+          "COALESCE(json_extract(data, '$.providerID'), '') NOT IN (#{zai_ids})"
+        end
+      end
+
       def opencode_db_path
         ENV["CODEXBAR_OPENCODE_DB"] || File.join(home_dir, ".local", "share", "opencode", "opencode.db")
       end
 
       def scan_zai(cutoff)
-        unsupported_provider("zai")
+        db_path = opencode_db_path
+        return empty_summary("zai", supported: true) unless db_path && File.file?(db_path)
+
+        rows = opencode_messages(db_path, cutoff, providers: :zai_only)
+        return empty_summary("zai", supported: false).merge(
+          note: "The sqlite3 binary is unavailable to read the OpenCode usage database."
+        ) if rows.nil?
+
+        summarize_opencode_messages(rows, provider: "zai")
       end
 
       def unsupported_provider(provider)

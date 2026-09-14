@@ -232,4 +232,79 @@ class LocalUsageTest < Minitest::Test
       assert_equal 3, summary[:totalTokens]
     end
   end
+  def test_opencode_message_query_filters_zai_provider_rows
+    calls = []
+    result = lambda do |_command, args, **_options|
+      calls << args
+      if args.last.include?("SELECT id FROM session")
+        { exitCode: 0, stdout: JSON.generate([{ id: "session-1" }]) }
+      else
+        { exitCode: 0, stdout: "[]" }
+      end
+    end
+
+    CodexBar::Core::Process.stub(:run_command, result) do
+      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :not_zai)
+      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :zai_only)
+    end
+
+    assert_includes calls[1].last, "NOT IN ('zai-coding-plan', 'zai')"
+    assert_includes calls[3].last, "IN ('zai-coding-plan', 'zai')"
+  end
+
+  def test_scan_zai_reads_zai_routed_messages_from_opencode_database
+    rows = [
+      {
+        date: "2026-09-14",
+        model_id: "glm-5.3-flash",
+        records: 3,
+        input_tokens: 100,
+        cached_input_tokens: 10,
+        output_tokens: 200,
+        reasoning_output_tokens: 5,
+        total_tokens: 315,
+        cost: 0.0
+      }
+    ]
+    result = lambda do |_command, args, **_options|
+      if args.last.include?("SELECT id FROM session")
+        { exitCode: 0, stdout: JSON.generate([{ id: "session-1" }]) }
+      else
+        { exitCode: 0, stdout: JSON.generate(rows) }
+      end
+    end
+
+    previous = ENV["CODEXBAR_OPENCODE_DB"]
+    Dir.mktmpdir("codexbar-zai") do |dir|
+      db_path = File.join(dir, "opencode.db")
+      File.write(db_path, "")
+      ENV["CODEXBAR_OPENCODE_DB"] = db_path
+      summary = nil
+      CodexBar::Core::Process.stub(:run_command, result) do
+        summary = CodexBar::Runtime::LocalUsage.scan_zai(Time.now.utc - 86_400)
+      end
+
+      assert_equal "zai", summary[:provider]
+      assert_equal true, summary[:supported]
+      assert_equal 3, summary[:records]
+      assert_equal 315, summary[:totalTokens]
+      assert_equal "glm-5.3-flash", summary[:models].keys.first
+    ensure
+      ENV["CODEXBAR_OPENCODE_DB"] = previous
+    end
+  end
+
+  def test_scan_zai_reports_supported_without_database
+    Dir.mktmpdir("codexbar-zai") do |dir|
+      previous = ENV["CODEXBAR_OPENCODE_DB"]
+      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing.db")
+
+      summary = CodexBar::Runtime::LocalUsage.scan_zai(Time.now.utc - 86_400)
+
+      assert_equal true, summary[:supported]
+      assert_equal 0, summary[:records]
+    ensure
+      ENV["CODEXBAR_OPENCODE_DB"] = previous
+    end
+  end
 end
