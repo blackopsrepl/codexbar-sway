@@ -3,6 +3,20 @@
 require_relative "test_helper"
 
 class QuickShellTest < Minitest::Test
+  def test_ui_adapter_only_writes_ui_state_on_explicit_actions
+    qml = File.read(File.expand_path("../frontend/quickshell/shell.qml", __dir__))
+
+    refute_match(
+      /onAdapterUpdated\s*:\s*writeAdapter\(\)/,
+      qml,
+      "Rewriting ui.json on every adapter update clobbers the daemon-written open state"
+    )
+    assert_operator(
+      qml.scan("writeAdapter()").length, :>=, 2,
+      "Closing the panel and focusing a provider must still persist ui.json"
+    )
+  end
+
   def test_running_pid_rejects_a_shell_command_that_only_mentions_the_qml_path
     config = build_config
     result = {

@@ -190,9 +190,6 @@ ShellRoot {
         }
 
         focusProviderId = fallbackFocusId()
-        if (uiAdapter.open && focusProviderId && uiAdapter.focusProvider !== focusProviderId) {
-            uiAdapter.focusProvider = focusProviderId
-        }
     }
 
     function setFocus(providerId) {
@@ -204,11 +201,13 @@ ShellRoot {
         focusProviderId = providerId
         if (uiAdapter.focusProvider !== providerId) {
             uiAdapter.focusProvider = providerId
+            uiFile.writeAdapter()
         }
     }
 
     function closePanel() {
         uiAdapter.open = false
+        uiFile.writeAdapter()
     }
 
     function providerCommand(action, providerId) {
@@ -291,7 +290,6 @@ ShellRoot {
         path: root.uiPath
         watchChanges: true
         onFileChanged: reload()
-        onAdapterUpdated: writeAdapter()
 
         JsonAdapter {
             id: uiAdapter
