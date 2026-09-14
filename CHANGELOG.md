@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.2.2](https://github.com/blackopsrepl/codexbar-sway/compare/v1.2.1...v1.2.2) (2026-09-14)
+
+
+### Features
+
+* **zai:** read zai-routed local usage from the opencode database 2b50fc0
+
+
+### Bug Fixes
+
+* **opencode:** label the provider OpenCode Go edcb0fa
+
 ## [1.2.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.2.0...v1.2.1) (2026-09-14)
 
 
