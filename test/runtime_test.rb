@@ -110,6 +110,18 @@ class RuntimeTest < Minitest::Test
     assert_includes payload[:tooltip], "Display: 󰚩 Codex"
   end
 
+  def test_tooltip_provider_line_surfaces_provider_error_detail
+    line = CodexBar::Runtime::Presenter.tooltip_provider_line(
+      build_config,
+      "gemini",
+      nil,
+      provider_result(provider: "gemini", error: "Gemini quota request failed with HTTP 403: SUBSCRIPTION_REQUIRED")
+    )
+
+    assert_includes line, "Gemini quota request failed with HTTP 403"
+    assert_includes line, "SUBSCRIPTION_REQUIRED"
+  end
+
   def test_waybar_payload_renders_lone_weekly_window_once
     now = Time.now.utc
     config = build_config

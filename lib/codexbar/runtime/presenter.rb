@@ -712,7 +712,8 @@ module CodexBar
       end
 
       def tooltip_provider_line(config, provider, provider_view, result)
-        return "#{provider_icon(provider)} #{provider_label(provider)}: err" if result && result[:error] && !result[:usage]
+        error = clean(result && result[:error])
+        return "#{provider_icon(provider)} #{provider_label(provider)}: #{error}" if error && !(result && result[:usage])
         return "#{provider_icon(provider)} #{provider_label(provider)}: ..." unless provider_view
 
         model_metrics = provider_view[:metrics].select { |metric| metric[:key].to_s.start_with?("model:") }

@@ -113,9 +113,22 @@ module CodexBar
           headers: { "Authorization" => "Bearer #{access_token}" },
           json: project_id ? { project: project_id } : {}
         )
-        raise "Gemini quota request failed with HTTP #{response.status}." unless response.status.between?(200, 299)
+        raise http_error_message("Gemini quota request", response) unless response.status.between?(200, 299)
 
         Core::Http.parse_json(response)
+      end
+
+      def http_error_message(context, response)
+        error = Core::Http.parse_json(response)[:error]
+        error = {} unless error.is_a?(Hash)
+        message = error[:message].to_s.strip
+        reason = Array(error[:details]).filter_map { |detail| detail[:reason] }.first
+        reason = error[:status].to_s.strip if reason.to_s.empty?
+
+        text = "#{context} failed with HTTP #{response.status}"
+        text += ": #{message}" unless message.empty?
+        text += " (#{reason})" unless reason.to_s.empty?
+        text
       end
 
       def discover_project_id(access_token)

@@ -52,6 +52,36 @@ class GeminiProviderTest < Minitest::Test
     refute provider.unsupported_quota_auth_type?("oauth-personal")
   end
 
+  def test_http_error_message_surfaces_api_reason_and_status
+    response = CodexBar::Core::Http::Response.new(
+      status: 403,
+      body: JSON.generate(
+        error: {
+          code: 403,
+          status: "PERMISSION_DENIED",
+          message: "You do not have a valid license of this product. (#3501)",
+          details: [
+            { "@type" => "type.googleapis.com/google.rpc.ErrorInfo", reason: "SUBSCRIPTION_REQUIRED" }
+          ]
+        }
+      ),
+      headers: {}
+    )
+
+    message = CodexBar::Providers::Gemini.http_error_message("Gemini quota request", response)
+
+    assert_includes message, "Gemini quota request failed with HTTP 403"
+    assert_includes message, "valid license"
+    assert_includes message, "SUBSCRIPTION_REQUIRED"
+  end
+
+  def test_http_error_message_falls_back_when_body_is_not_json
+    response = CodexBar::Core::Http::Response.new(status: 500, body: "<html>boom</html>", headers: {})
+
+    assert_equal "Gemini quota request failed with HTTP 500",
+                 CodexBar::Providers::Gemini.http_error_message("Gemini quota request", response)
+  end
+
   def test_project_id_extraction_accepts_string_and_hash_shapes
     provider = CodexBar::Providers::Gemini
 
