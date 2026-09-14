@@ -11,9 +11,9 @@ This repository ships an independent Linux implementation inspired by [the origi
 - Deterministic user-prefix install through `Makefile`.
 - Optional SolverForge Linux wrapper for the existing Waybar module.
 
-Supported providers are exactly `codex`, `claude`, `gemini`, and `opencode`.
+Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
 
-Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations. Missing percentages are never synthesized: non-Pro ChatGPT accounts keep an omitted five-hour lane visibly unavailable, while an absent weekly lane and omitted Pro lanes stay absent. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible. OpenCode exposes five-hour rolling, weekly, and monthly allowance windows from the OpenCode Go usage endpoint, mapped to the primary, secondary, and tertiary lanes; missing windows stay absent. OpenCode local usage is read from the OpenCode usage database and retained by model.
+Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations. Missing percentages are never synthesized: non-Pro ChatGPT accounts keep an omitted five-hour lane visibly unavailable, while an absent weekly lane and omitted Pro lanes stay absent. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible. OpenCode exposes five-hour rolling, weekly, and monthly allowance windows from the OpenCode Go usage endpoint, mapped to the primary, secondary, and tertiary lanes; missing windows stay absent. OpenCode local usage is read from the OpenCode usage database and retained by model. Z.ai exposes GLM Coding Plan used-percentage windows from the Z.ai quota endpoint: five-hour and weekly windows map to the primary and secondary lanes, and a monthly tools window maps to the tertiary lane when present; missing windows stay absent. Z.ai local usage is intentionally unsupported because it has no dedicated local token log.
 
 ## Repository Map
 
@@ -23,10 +23,10 @@ Codex and Claude expose named quota windows. Codex five-hour and weekly windows 
 - `lib/codexbar.rb`: top-level load file.
 - `lib/codexbar/cli.rb`: command dispatcher and config mutation surface.
 - `lib/codexbar/core/`: config version 5, provider metadata, formatting, metrics, process, HTTP.
-- `lib/codexbar/providers/`: Codex, Claude, Gemini, OpenCode fetchers and registry.
+- `lib/codexbar/providers/`: Codex, Claude, Gemini, OpenCode, and Z.ai fetchers and registry.
 - `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
 - `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.
-- `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, Gemini, and OpenCode token usage scanner.
+- `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, Gemini, and OpenCode token usage scanner (Z.ai reports an unsupported local usage note).
 - `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries.
 - `lib/codexbar/runtime/storage.rb`: optional provider storage footprint scanner.
 - `lib/codexbar/runtime/notifications.rb`: quota and incident notification transitions.
@@ -157,7 +157,7 @@ After install/configure, the live desktop must not depend on the checkout direct
 2. `make test`: built-in Ruby test suite.
 3. `make smoke`: config, Waybar render, and UI status smoke checks.
 4. `make check`: canonical preview release gate via `bin/release-check`.
-5. `make check-live`: credentialed stable release gate for Codex, Claude, Gemini, and OpenCode.
+5. `make check-live`: credentialed stable release gate for Codex, Claude, Gemini, OpenCode, and Z.ai.
 
 `make check-live` can fail because credentials or upstream provider auth are missing or invalid. That is a live release-environment blocker, not a regression in the local unit suite.
 

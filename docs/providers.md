@@ -6,6 +6,7 @@ The Linux release supports exactly:
 - `claude`
 - `gemini`
 - `opencode`
+- `zai`
 
 ## Codex
 
@@ -62,4 +63,15 @@ OpenCode Go exposes three subscription allowance windows as returned by the usag
 
 OpenCode local usage is read from assistant messages in the OpenCode usage database. Each message contributes its input, cached read/write, output, and reasoning tokens plus monetary cost to the message's activity date and model id. This preserves model switches and sessions that span multiple days. The scanner groups these message records in SQLite before Ruby summarizes them, keeping refreshes bounded even for larger databases. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
 
-Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, and `opencode` are out of scope for this release line.
+## Z.ai
+
+- Source label: `zai-coding-plan`.
+- Credentials: `ZAI_API_KEY` or `GLM_API_KEY`, falling back to the `zai-coding-plan` key in `~/.local/share/opencode/auth.json`.
+- Quota endpoint: `https://api.z.ai/api/monitor/usage/quota/limit`.
+- Dashboard: `https://z.ai/manage-apikey/coding-plan/personal/my-plan`
+
+Z.ai tracks the GLM Coding Plan subscription allowance, not pay-as-you-go API credit. The quota endpoint returns a `limits` array of used-percentage windows; CodexBar reads each `TOKENS_LIMIT`/`CREDIT_LIMIT` entry and maps the five-hour unit (3) to the primary lane and the weekly unit (6) to the secondary lane. A monthly `TIME_LIMIT` entry maps to the tertiary lane when the account returns one; a missing window stays absent. Reset times are returned as epoch milliseconds. The account plan tier is shown in the provider identity.
+
+Z.ai local usage is intentionally unsupported. The coding plan has no dedicated local token log, and usage run through OpenCode, Claude Code, or other tools is already attributed to those providers; CodexBar reports an unsupported local usage note instead of inventing or double-counting a source.
+
+Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, `opencode`, and `zai` are out of scope for this release line.

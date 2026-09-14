@@ -4,12 +4,12 @@
 
 # CodexBar
 
-CodexBar is a Linux-first quota bar for Codex, Claude, Gemini, and OpenCode Go. It is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete).
+CodexBar is a Linux-first quota bar for Codex, Claude, Gemini, OpenCode Go, and Z.ai. It is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete).
 
 The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact Waybar JSON renderer, and one QuickShell panel. The supported runtime is Ruby + QuickShell + Waybar.
 
 <p align="center">
-  <img src="./codexbar.png" alt="CodexBar QuickShell panel showing Codex, Claude, Gemini, and OpenCode quota state" />
+  <img src="./codexbar.png" alt="CodexBar QuickShell panel showing Codex, Claude, Gemini, OpenCode, and Z.ai quota state" />
 </p>
 
 ## Current Contract
@@ -20,7 +20,7 @@ The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact
 - Background fetch path: `codexbar daemon` fetches providers and writes snapshots.
 - State files: `snapshot.json` and `ui.json` under `runtime.stateDir`, defaulting to `~/.local/state/codexbar`.
 - Config file: `~/.codexbar/config.json`, current config version `5`.
-- Supported providers: `codex`, `claude`, `gemini`, and `opencode`.
+- Supported providers: `codex`, `claude`, `gemini`, `opencode`, and `zai`.
 
 Provider fetches do not run inside Waybar. Waybar is only a render/action surface.
 
@@ -32,6 +32,8 @@ Gemini quota is represented as separate model meters exactly as returned by the 
 
 OpenCode Go quota is represented as its three subscription allowance windows as returned by the OpenCode Go usage endpoint: a five-hour rolling window, a weekly window, and a monthly window. These map to the primary, secondary, and tertiary lanes exactly like Codex. OpenCode Go local usage is read from the OpenCode usage database at `~/.local/share/opencode/opencode.db`.
 
+Z.ai quota is the GLM Coding Plan subscription allowance, not pay-as-you-go API credit. It is read from `https://api.z.ai/api/monitor/usage/quota/limit` as used-percentage windows: a five-hour window and a weekly window map to the primary and secondary lanes, and a monthly tools window maps to the tertiary lane when the account returns one. The API key comes from `ZAI_API_KEY`/`GLM_API_KEY`, or from the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json` when you use Z.ai through OpenCode. Z.ai has no dedicated local token log, so its local usage summary is reported as unsupported rather than fabricated.
+
 ## Desktop Autostart
 
 CodexBar has two separate runtime pieces:
@@ -39,7 +41,7 @@ CodexBar has two separate runtime pieces:
 - `codexbar daemon --config ~/.codexbar/config.json` refreshes provider quota state and writes `snapshot.json`.
 - `codexbar waybar render --config ~/.codexbar/config.json` reads that cached snapshot and returns Waybar JSON.
 
-Waybar does not refresh Codex, Claude, Gemini, or OpenCode by itself. If the daemon is not running after login or reboot, the Waybar chip can keep rendering, but it will render stale cached state. A desktop integration should therefore start and supervise the daemon at session startup.
+Waybar does not refresh Codex, Claude, Gemini, OpenCode, or Z.ai by itself. If the daemon is not running after login or reboot, the Waybar chip can keep rendering, but it will render stale cached state. A desktop integration should therefore start and supervise the daemon at session startup.
 
 On SolverForge Linux, the managed Waybar integration starts companion daemons through `solverforge-waybar-companions-start`, launched from Sway `exec_always` beside Waybar. That launcher restarts `codexbar daemon` if an early boot-time refresh failure makes it exit.
 
@@ -74,7 +76,7 @@ Core commands:
 ```bash
 codexbar daemon
 codexbar refresh
-codexbar usage --provider codex,claude,gemini,opencode --format json --pretty
+codexbar usage --provider codex,claude,gemini,opencode,zai --format json --pretty
 codexbar config validate
 codexbar waybar render
 codexbar panel
@@ -160,10 +162,13 @@ The release surface is exactly:
 - `claude`
 - `gemini`
 - `opencode`
+- `zai`
 
-Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, Gemini, and OpenCode; Gemini summaries preserve per-model token totals from CLI chat logs, and OpenCode summaries preserve per-model token totals from the OpenCode usage database.
+Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, Gemini, and OpenCode; Gemini summaries preserve per-model token totals from CLI chat logs, and OpenCode summaries preserve per-model token totals from the OpenCode usage database. Z.ai is quota-only: it has no dedicated local token log, so its local usage summary is reported as unsupported rather than fabricated.
 
 OpenCode Go exposes its five-hour rolling, weekly, and monthly allowance windows as returned by `https://opencode.ai/zen/go/v1/usage`. Percentages are used percentages, matching the OpenCode console. The five-hour, weekly, and monthly windows map to the primary, secondary, and tertiary lanes respectively; a missing window stays absent.
+
+Z.ai exposes the GLM Coding Plan subscription allowance as used-percentage windows returned by `https://api.z.ai/api/monitor/usage/quota/limit`. The five-hour window maps to the primary lane and the weekly window to the secondary lane; a monthly tools window maps to the tertiary lane when the account returns one, and a missing window stays absent. This is the coding-plan subscription quota, not pay-as-you-go API credit. The API key is read from `ZAI_API_KEY`/`GLM_API_KEY`, or from the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json` when Z.ai is configured through OpenCode.
 
 Other providers are not part of this Linux release.
 
@@ -184,7 +189,7 @@ Stable release validation on a credentialed machine:
 make check-live
 ```
 
-`make check-live` requires working live credentials for Codex, Claude, Gemini, and OpenCode. Credential or upstream auth failures are release-environment blockers, not unit-test failures.
+`make check-live` requires working live credentials for Codex, Claude, Gemini, OpenCode, and Z.ai. Credential or upstream auth failures are release-environment blockers, not unit-test failures.
 
 ## Documentation
 

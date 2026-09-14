@@ -27,7 +27,7 @@ Important fields:
 - `status.enabled`, `status.refreshSeconds`: external status polling.
 - `notifications.*`: quota and incident notification settings.
 - `history.*`: daily snapshot retention.
-- `localUsage.*`: local Codex, Claude, Gemini, and OpenCode log scan controls.
+- `localUsage.*`: local Codex, Claude, Gemini, and OpenCode log scan controls (Z.ai reports an unsupported local usage note).
 - `storage.*`: provider storage footprint scan controls.
 - `privacy.hidePersonalInfo`: redacts identity text in the UI.
 - `server.host`, `server.port`: read-only local JSON server binding.
@@ -73,7 +73,7 @@ When a provider refresh fails after a successful sample, the daemon retains that
 All files live under `runtime.stateDir`, are owned by Ruby, and are written with `0600` permissions:
 
 - `status.json`: current external service state for Codex/OpenAI, Claude, and Gemini/Google Cloud.
-- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs plus Gemini CLI chat token summaries and OpenCode usage database summaries. Gemini entries can include a `models` map keyed by raw model id; OpenCode entries can include a `models` map keyed by model id.
+- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs plus Gemini CLI chat token summaries and OpenCode usage database summaries. Gemini entries can include a `models` map keyed by raw model id; OpenCode entries can include a `models` map keyed by model id. Z.ai entries are present with `supported: false` and a note because Z.ai has no local token log.
 - `history.json`: daily retained quota/local-usage summaries. Gemini meter providers can include `modelQuota` and `modelUsage` maps keyed by raw model id.
 - `storage.json`: optional provider storage footprint summaries.
 - `notification_state.json`: last notification state to prevent repeated alerts.

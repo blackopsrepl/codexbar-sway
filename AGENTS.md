@@ -10,15 +10,16 @@
 - Waybar text is compact provider quota percentage text; do not put pace/reserve/hot labels or pace CSS classes in the bar.
 - Provider fetches belong in the daemon and usage commands, not in Waybar.
 - `snapshot.json` and `ui.json` are the backend/frontend runtime contract.
-- Supported providers are exactly `codex`, `claude`, `gemini`, and `opencode`.
+- Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
 - Gemini quota must stay model-meter based. Preserve each CLI/API model bucket instead of collapsing Gemini into a single Pro/Flash pair.
 - Gemini local usage must come from deterministic Gemini CLI chat JSONL records or an explicitly documented telemetry file. Do not add browser scraping, cookie scraping, or silent API-key/Vertex quota fallbacks.
+- Z.ai quota is the GLM Coding Plan subscription allowance from `https://api.z.ai/api/monitor/usage/quota/limit`, not pay-as-you-go API credit. Its API key comes from `ZAI_API_KEY`/`GLM_API_KEY` or the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json`. Do not add a local token scanner for Z.ai; its local usage summary is intentionally unsupported.
 
 ## Project Structure & Modules
 - `bin/codexbar`: Ruby entrypoint.
 - `bin/release-check`: canonical release validation script used by `make check`.
 - `lib/codexbar/core`: config, types, formatting, process, HTTP, and metric logic.
-- `lib/codexbar/providers`: Codex, Claude, Gemini, and OpenCode fetchers and registry.
+- `lib/codexbar/providers`: Codex, Claude, Gemini, OpenCode, and Z.ai fetchers and registry.
 - `lib/codexbar/runtime`: daemon, snapshot state, presenter, QuickShell control, Waybar JSON, and the bounded legacy direct-bar command.
 - `frontend/quickshell/shell.qml`: the only human-facing UI.
 - `packaging/solverforge-linux`: reproducible SolverForge Linux Waybar wrapper integration.
@@ -70,7 +71,7 @@
 - Treat live provider checks as smoke tests, not as the primary regression suite.
 - `make syntax` must check each Ruby source file separately.
 - Run `make test` before handoff and `make check` before release.
-- Run `make check-live` only when the machine has working Codex, Claude, Gemini, and OpenCode credentials.
+- Run `make check-live` only when the machine has working Codex, Claude, Gemini, OpenCode, and Z.ai credentials.
 
 ## Documentation Guidelines
 - Keep `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `docs/` aligned with the Ruby code.

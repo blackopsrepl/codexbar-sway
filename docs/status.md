@@ -14,6 +14,7 @@ External service status is cached in `status.json`:
 - Claude uses Claude Status: `https://status.claude.com/api/v2/summary.json`
 - Gemini uses Google Cloud incident history: `https://status.cloud.google.com/incidents.json`
 - OpenCode uses the OpenCode Go usage endpoint `https://opencode.ai/zen/go/v1/usage` as the service health signal (there is no public OpenCode status page)
+- Z.ai uses the Z.ai quota endpoint `https://api.z.ai/api/monitor/usage/quota/limit` as the service health signal (there is no public Z.ai status page)
 
 Use:
 
