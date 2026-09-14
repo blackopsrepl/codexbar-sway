@@ -1060,9 +1060,9 @@ ShellRoot {
 
                                                         BadgePill {
                                                             visible: modelData.display
-                                                            text: "display"
                                                             icon: root.glyphs.display
                                                             accent: statusColor(modelData)
+                                                            maximumWidth: 30
                                                         }
                                                     }
 
