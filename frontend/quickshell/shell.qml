@@ -484,7 +484,6 @@ ShellRoot {
     component HistoryDayTile: CardFrame {
         id: dayTile
         property var itemData: ({})
-        Layout.fillWidth: true
         Layout.preferredHeight: 86
         accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
         color: "#0E1423"
@@ -1572,6 +1571,7 @@ ShellRoot {
                             }
 
                             GridLayout {
+                                id: historyGrid
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 columns: 4
@@ -1585,6 +1585,7 @@ ShellRoot {
                                     delegate: HistoryDayTile {
                                         required property var modelData
                                         itemData: modelData
+                                        Layout.preferredWidth: (historyGrid.width - (historyGrid.columns - 1) * historyGrid.columnSpacing) / historyGrid.columns
                                     }
                                 }
                             }
