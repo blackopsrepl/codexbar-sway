@@ -58,11 +58,12 @@
 - `codexbar bar` still exists as legacy direct-bar compatibility; it is not the release UI path.
 
 ## UI Rules
-- QuickShell Overview must render enabled, visible, `showInOverview` providers only.
+- QuickShell Overview must render enabled, visible, `showInOverview` providers only, with no fixed provider cap.
 - The provider rail may show all configured providers so inactive or hidden providers can be managed.
 - Provider action controls should queue rather than kill in-flight CLI actions.
 - The QuickShell panel is a modal overlay. It must stay above windows, ignore layer-shell exclusion, and remain vertically relaxed.
 - Gemini detail views must preserve model-level quota and local usage rows where presenter data provides them.
+- Retained history must stay provider-shaped: model-meter providers keep per-model quota in `modelQuota`/`modelUsage` and never synthesize window lanes, and days with no quota sample and no local usage are omitted so the History view falls back to its empty state.
 - Keep pace/reserve/hot detail in the modal/provider cards where it helps interpretation; keep it out of Waybar.
 
 ## Testing Guidelines

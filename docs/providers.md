@@ -47,6 +47,8 @@ Local token summaries are read from Claude project JSONL logs by `codexbar cost`
 
 Gemini quota renders as separate model meters. Each quota bucket preserves the raw model id, for example `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model ids returned by the API. The presenter may choose the highest-used model as the compact display meter, but it must keep all model buckets visible in detail and tooltip surfaces.
 
+Retained history stays model-based: Gemini per-model quota is stored as `modelQuota` and model usage as `modelUsage`, and model buckets are never copied into the primary/secondary/tertiary window lanes. Days with no quota sample and no local usage are omitted from the History view.
+
 Gemini local usage scans Gemini CLI chat JSONL records with `type: "gemini"` and `tokens` fields. Summaries preserve input, cached, output, reasoning/thought, tool, total, daily, and per-model token totals.
 
 API-key and Vertex auth modes are not supported for quota in the current independent Linux implementation unless usable OAuth credentials are also present for Code Assist quota.

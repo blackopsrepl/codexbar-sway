@@ -170,6 +170,8 @@ OpenCode Go exposes its five-hour rolling, weekly, and monthly allowance windows
 
 Z.ai exposes the GLM Coding Plan subscription allowance as used-percentage windows returned by `https://api.z.ai/api/monitor/usage/quota/limit`. The five-hour window maps to the primary lane and the weekly window to the secondary lane; a monthly tools window maps to the tertiary lane when the account returns one, and a missing window stays absent. This is the coding-plan subscription quota, not pay-as-you-go API credit. The API key is read from `ZAI_API_KEY`/`GLM_API_KEY`, or from the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json` when Z.ai is configured through OpenCode.
 
+Retained history keeps each provider's shape: window providers store their primary/secondary/tertiary samples, Gemini stores per-model quota in `modelQuota` and model usage in `modelUsage`, and days with neither a quota sample nor local usage are omitted so the History view falls back to its empty state. The Overview renders every enabled, visible provider marked `showInOverview`; there is no fixed provider cap.
+
 Other providers are not part of this Linux release.
 
 ## Validation

@@ -74,7 +74,7 @@ All files live under `runtime.stateDir`, are owned by Ruby, and are written with
 
 - `status.json`: current external service state for Codex/OpenAI, Claude, and Gemini/Google Cloud.
 - `local_usage.json`: exact local token/cost summaries from Codex and Claude logs plus Gemini CLI chat token summaries and OpenCode usage database summaries. Gemini entries can include a `models` map keyed by raw model id; OpenCode entries can include a `models` map keyed by model id. Z.ai entries are present with `supported: false` and a note because Z.ai has no local token log.
-- `history.json`: daily retained quota/local-usage summaries. Gemini meter providers can include `modelQuota` and `modelUsage` maps keyed by raw model id.
+- `history.json`: daily retained quota/local-usage summaries. Window providers keep primary/secondary/tertiary samples; Gemini meter providers keep per-model quota in `modelQuota` and model usage in `modelUsage` keyed by raw model id without synthesizing window lanes. Days with neither a quota sample nor local usage are omitted from the presenter's `historyDays`, so a provider with no samples yields the History empty state.
 - `storage.json`: optional provider storage footprint summaries.
 - `notification_state.json`: last notification state to prevent repeated alerts.
 

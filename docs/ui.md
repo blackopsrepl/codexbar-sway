@@ -37,9 +37,9 @@ The panel renders:
 
 - summary band
 - view tabs for Overview, Provider Detail, History, and Settings
-- Overview: active display provider, freshness, service/runtime/privacy state, and compact cards for enabled, visible overview providers
+- Overview: active display provider, freshness, service/runtime/privacy state, and compact cards for enabled, visible overview providers; every overview member renders with no fixed provider cap
 - Provider Detail: focused provider identity, quota hero, service/local/history/storage detail cards, model local usage rows when present, alerts, provider rail, and provider actions
-- History: retained presenter history for the focused provider, including quota bars, local token summaries, and model detail when present
+- History: retained presenter history for the focused provider, including quota bars, local token summaries, and per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view shows its empty state when no day remains
 - Settings: cadence, display mode, notification, privacy, scan, and cache-clear controls
 
 The panel sends mutations back through the Ruby CLI. It does not fetch provider usage directly.

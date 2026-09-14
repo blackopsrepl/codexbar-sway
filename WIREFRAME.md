@@ -15,6 +15,8 @@ Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `za
 
 Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations. Missing percentages are never synthesized: non-Pro ChatGPT accounts keep an omitted five-hour lane visibly unavailable, while an absent weekly lane and omitted Pro lanes stay absent. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible. OpenCode exposes five-hour rolling, weekly, and monthly allowance windows from the OpenCode Go usage endpoint, mapped to the primary, secondary, and tertiary lanes; missing windows stay absent. OpenCode local usage is read from the OpenCode usage database and retained by model. Z.ai exposes GLM Coding Plan used-percentage windows from the Z.ai quota endpoint: five-hour and weekly windows map to the primary and secondary lanes, and a monthly tools window maps to the tertiary lane when present; missing windows stay absent. Z.ai local usage is intentionally unsupported because it has no dedicated local token log.
 
+Retained history follows the same provider shape. Window providers keep their primary/secondary/tertiary samples, model-meter providers keep per-model quota without copying model buckets into window lanes, and days with neither a quota sample nor local usage are omitted from the History view.
+
 ## Repository Map
 
 ### Runtime
@@ -27,7 +29,7 @@ Codex and Claude expose named quota windows. Codex five-hour and weekly windows 
 - `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
 - `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.
 - `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, Gemini, and OpenCode token usage scanner (Z.ai reports an unsupported local usage note).
-- `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries.
+- `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries, keeping model-meter quota in per-model maps rather than window lanes.
 - `lib/codexbar/runtime/storage.rb`: optional provider storage footprint scanner.
 - `lib/codexbar/runtime/notifications.rb`: quota and incident notification transitions.
 - `lib/codexbar/runtime/server.rb`: read-only cached localhost JSON server.
@@ -80,9 +82,9 @@ Provider refresh failures retain the last successful quota sample with its origi
 
 The QuickShell panel has four views:
 
-- Overview: active display provider, state badges, and compact cards for enabled, visible providers that are in overview.
+- Overview: active display provider, state badges, and compact cards for enabled, visible providers that are in overview. Every overview member renders; there is no fixed provider cap.
 - Provider Detail: focused provider quota, status, local usage, history/storage summaries, alerts, provider rail, and provider actions.
-- History: presenter-rendered retained daily history for the focused provider.
+- History: presenter-rendered retained daily history for the focused provider, including per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view falls back to its empty state.
 - Settings: cadence, display, notification, privacy, scan, and cache-clear controls.
 
 The QuickShell panel is a modal overlay. It stays above application windows, ignores layer-shell exclusion, and uses a relaxed vertical footprint with scrolling where detail content exceeds the available height.
@@ -96,7 +98,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 - Default path: `~/.codexbar/config.json`.
 - Version: `5`.
 - Provider fields: `id`, `enabled`, `visible`, `showInOverview`, `allowAutoSelect`, `source`.
-- Display fields: `mergeIcons`, `showHighestUsage`, `showUsed`, `resetStyle`, `displayMode`, `metricPreferences`, `overviewProviders`, `selectedProvider`.
+- Display fields: `mergeIcons`, `showHighestUsage`, `showUsed`, `resetStyle`, `displayMode`, `metricPreferences`, `overviewProviders`, `selectedProvider`. `overviewProviders` is an ordering preference for the overview set, not a cap; every enabled, visible provider with `showInOverview` renders.
 - Runtime fields: `refreshSeconds`, `refreshMode`, `notificationCommand`, `stateDir`, `waybarSignal`, `quickShellCommand`, `quickShellShell`.
 - Auxiliary fields: `status`, `notifications`, `history`, `localUsage`, `storage`, `privacy`, `server`.
 
@@ -107,7 +109,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 - Read by QuickShell and Waybar.
 - Contains enabled/visible/hidden/overview/auto-select provider lists, selected/display provider ids, provider results, and rendered view data.
 - Contains auxiliary `serviceStatus`, `localUsage`, `storage`, and `history` payloads.
-- Gemini provider results use `usage.meters`, with keys like `model:gemini-2.5-pro` and labels preserving the raw model id. Gemini local usage and retained history include model maps when Gemini CLI records include model ids.
+- Gemini provider results use `usage.meters`, with keys like `model:gemini-2.5-pro` and labels preserving the raw model id. Gemini local usage and retained history include model maps when Gemini CLI records include model ids; retained history keeps model quota in `modelQuota` and model usage in `modelUsage` and never copies model buckets into the primary/secondary/tertiary lanes.
 
 ### UI State
 
@@ -139,7 +141,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 - `codexbar notifications status|enable|disable`
 - `codexbar privacy status|hide|show`
 - `codexbar cache clear ...`
-- `codexbar open dashboard codex|claude|gemini`
+- `codexbar open dashboard codex|claude|gemini|opencode|zai`
 
 ## Install Flow
 
