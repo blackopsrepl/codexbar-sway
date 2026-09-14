@@ -163,6 +163,8 @@ After install/configure, the live desktop must not depend on the checkout direct
 4. `make check`: canonical preview release gate via `bin/release-check`.
 5. `make check-live`: credentialed stable release gate for Codex, Claude, Gemini, OpenCode, and Z.ai.
 
+Release cutting, deployment, and publication to both remotes follow the step-by-step workflow in `docs/RELEASING.md`.
+
 `make check-live` can fail because credentials or upstream provider auth are missing or invalid. That is a live release-environment blocker, not a regression in the local unit suite.
 
 ## Current Non-Goals
