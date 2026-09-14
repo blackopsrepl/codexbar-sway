@@ -365,11 +365,16 @@ module CodexBar
       end
 
       def provider_history_days(history)
-        Array(history && history[:daily]).last(14).map do |entry|
+        Array(history && history[:daily]).select { |entry| history_day_present?(entry) }.last(14).map do |entry|
           primary = entry[:latestPrimaryUsedPercent].to_f
           secondary = entry[:latestSecondaryUsedPercent].to_f
           tertiary = entry[:latestTertiaryUsedPercent].to_f
-          quota = [primary, secondary, tertiary].max
+          quota, model_based = history_day_quota(entry)
+          if model_based
+            primary = 0.0
+            secondary = 0.0
+            tertiary = 0.0
+          end
           token_text = entry[:totalTokens].to_i.positive? ? "#{format_tokens(entry[:totalTokens])} tok" : nil
           records_text = entry[:records].to_i.positive? ? "#{entry[:records]} records" : nil
           cost_text = entry[:cost] ? "$#{Core::Format.money_string(entry[:cost].to_f)}" : nil
@@ -390,6 +395,24 @@ module CodexBar
             modelDetails: history_day_model_details(entry)
           }
         end
+      end
+
+      def history_day_present?(entry)
+        quota, = history_day_quota(entry)
+        quota.positive? || entry[:totalTokens].to_i.positive? || entry[:records].to_i.positive?
+      end
+
+      def history_day_quota(entry)
+        model_quota = entry[:modelQuota].is_a?(Hash) ? entry[:modelQuota] : {}
+        unless model_quota.empty?
+          return [model_quota.values.map { |model| model[:latestUsedPercent].to_f }.max.to_f, true]
+        end
+
+        [[
+          entry[:latestPrimaryUsedPercent].to_f,
+          entry[:latestSecondaryUsedPercent].to_f,
+          entry[:latestTertiaryUsedPercent].to_f
+        ].max, false]
       end
 
       def history_day_model_text(entry)

@@ -87,10 +87,39 @@ class HistoryTest < Minitest::Test
       history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
       day = history.dig(:providers, "gemini", :daily).last
 
+      assert_equal 0.0, day[:latestPrimaryUsedPercent]
+      assert_equal 0.0, day[:latestSecondaryUsedPercent]
+      assert_equal 0.0, day[:latestTertiaryUsedPercent]
       assert_equal 12.0, day.dig(:modelQuota, "gemini-2.5-flash", :latestUsedPercent)
       assert_equal 34.0, day.dig(:modelQuota, "gemini-2.5-pro", :latestUsedPercent)
       assert_equal 200, day.dig(:modelUsage, "gemini-2.5-pro", :totalTokens)
       assert_equal 5, day.dig(:modelUsage, "gemini-2.5-pro", :toolTokens)
     end
+  end
+
+  def test_presenter_history_days_skip_empty_days_and_use_model_quota
+    history = {
+      daily: [
+        { date: "2026-09-10" },
+        {
+          date: "2026-09-11",
+          modelQuota: {
+            "gemini-2.5-pro" => { modelId: "gemini-2.5-pro", label: "gemini-2.5-pro", latestUsedPercent: 34.0 }
+          }
+        },
+        { date: "2026-09-12", totalTokens: 500, records: 2 }
+      ]
+    }
+
+    days = CodexBar::Runtime::Presenter.provider_history_days(history)
+
+    assert_equal %w[2026-09-11 2026-09-12], days.map { |entry| entry[:date] }
+    assert_equal 34.0, days.first[:barPercent]
+    assert_equal 0.0, days.first[:primaryPercent]
+    assert_equal 500, days.last[:totalTokens]
+  end
+
+  def test_presenter_history_summary_ignores_days_without_samples
+    assert_equal "No retained history", CodexBar::Runtime::Presenter.provider_history_summary(daily: [{ date: "2026-09-10" }])
   end
 end

@@ -80,11 +80,7 @@ module CodexBar
         return unless usage
 
         if Array(usage[:meters]).any?
-          meters = Core::Metric.metric_windows(usage)
-          meters.first(3).each_with_index do |window, index|
-            merge_window!(day, %i[primary secondary tertiary][index], window)
-          end
-          meters.each { |window| merge_model_quota!(day, window) }
+          Core::Metric.metric_windows(usage).each { |window| merge_model_quota!(day, window) }
           return
         end
 
