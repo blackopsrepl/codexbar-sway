@@ -169,6 +169,50 @@ class RuntimeTest < Minitest::Test
     assert_equal "Unavailable", codex_view[:detailCards].find { |card| card[:key] == "primary-unavailable" }[:value]
   end
 
+  def test_overview_summary_is_equivalent_across_providers
+    now = Time.now.utc
+    config = build_config
+    results = {
+      "codex" => provider_result(
+        provider: "codex",
+        usage: usage_payload(
+          provider: "codex",
+          now: now,
+          primary: window(used_percent: 3, window_minutes: 300, now: now, resets_in_minutes: 240),
+          secondary: window(used_percent: 6, window_minutes: 10_080, now: now, resets_in_minutes: 6_000)
+        )
+      ),
+      "opencode" => provider_result(
+        provider: "opencode",
+        usage: usage_payload(
+          provider: "opencode",
+          now: now,
+          primary: window(used_percent: 9, window_minutes: 300, now: now, resets_in_minutes: 240),
+          secondary: window(used_percent: 27, window_minutes: 10_080, now: now, resets_in_minutes: 6_000),
+          tertiary: window(used_percent: 13, window_minutes: 43_200, now: now, resets_in_minutes: 40_000)
+        )
+      ),
+      "gemini" => provider_result(
+        provider: "gemini",
+        usage: usage_payload(
+          provider: "gemini",
+          now: now,
+          meters: [
+            { key: "model:gemini-2.5-flash", label: "gemini-2.5-flash", shortLabel: "2.5-flash", usedPercent: 12.0 },
+            { key: "model:gemini-2.5-pro", label: "gemini-2.5-pro", shortLabel: "2.5-pro", usedPercent: 34.0 }
+          ]
+        )
+      )
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex opencode gemini], results, now)
+    views = snapshot.dig(:view, :providers).each_with_object({}) { |entry, acc| acc[entry[:id]] = entry }
+
+    assert_equal "5h 97% / W 94%", views["codex"][:quotaSummaryText]
+    assert_equal "5h 91% / W 73%", views["opencode"][:quotaSummaryText]
+    assert_equal "2.5-pro 66%", views["gemini"][:quotaSummaryText]
+  end
+
   def test_daemon_retains_cached_usage_after_refresh_failure
     now = Time.now.utc
     cached_usage = usage_payload(

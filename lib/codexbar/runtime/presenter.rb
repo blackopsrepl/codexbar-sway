@@ -632,18 +632,35 @@ module CodexBar
         end
       end
 
-      def quota_summary_text(config, provider, metrics, unavailable_metrics)
-        return nil unless %w[codex zai].include?(provider)
+      LANE_SUMMARY_ORDER = { "primary" => 0, "secondary" => 1, "tertiary" => 2 }.freeze
 
-        entries = (metrics + unavailable_metrics).sort_by do |entry|
-          { "primary" => 0, "secondary" => 1, "tertiary" => 2 }.fetch(entry[:key].to_s, 3)
-        end
-        parts = entries.map do |entry|
-          label = entry[:key] == "primary" ? "5h" : (entry[:key] == "secondary" ? "W" : entry[:label])
-          value = entry[:available] == false ? "--" : compact_metric_percent(config, entry)
-          "#{label} #{value}"
+      def quota_summary_text(config, provider, metrics, unavailable_metrics)
+        lanes, models = (metrics + unavailable_metrics).partition { |entry| LANE_SUMMARY_ORDER.key?(entry[:key].to_s) }
+        parts = lanes
+                .sort_by { |entry| LANE_SUMMARY_ORDER.fetch(entry[:key].to_s, 3) }
+                .filter_map do |entry|
+                  next if entry[:key].to_s == "tertiary"
+
+                  "#{summary_lane_label(entry)} #{summary_lane_value(config, entry)}"
+                end
+        dominant_model = models.max_by { |entry| entry[:usedPercent].to_f }
+        if dominant_model
+          label = dominant_model[:shortLabel] || dominant_model[:label]
+          parts << "#{label} #{compact_metric_percent(config, dominant_model)}"
         end
         parts.empty? ? nil : parts.join(" / ")
+      end
+
+      def summary_lane_label(entry)
+        case entry[:key].to_s
+        when "primary" then "5h"
+        when "secondary" then "W"
+        else entry[:label].to_s
+        end
+      end
+
+      def summary_lane_value(config, entry)
+        entry[:available] == false ? "--" : compact_metric_percent(config, entry)
       end
 
       def metric_identity(provider, usage, window, resolved_metric)
