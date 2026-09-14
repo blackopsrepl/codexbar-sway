@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.2.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.2.0...v1.2.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* **presenter:** give every provider an equivalent overview summary 7d3ce02
+
 ## [1.2.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.1.1...v1.2.0) (2026-09-14)
 
 
