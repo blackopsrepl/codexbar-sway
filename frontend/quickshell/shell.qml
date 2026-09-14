@@ -1521,6 +1521,7 @@ ShellRoot {
                         accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
 
                         ColumnLayout {
+                            id: historyColumn
                             anchors.fill: parent
                             anchors.margins: 16
                             spacing: 12
@@ -1585,7 +1586,7 @@ ShellRoot {
                                     delegate: HistoryDayTile {
                                         required property var modelData
                                         itemData: modelData
-                                        Layout.preferredWidth: (historyGrid.width - (historyGrid.columns - 1) * historyGrid.columnSpacing) / historyGrid.columns
+                                        Layout.preferredWidth: Math.max(0, (historyColumn.width - (historyGrid.columns - 1) * historyGrid.columnSpacing) / historyGrid.columns)
                                     }
                                 }
                             }
