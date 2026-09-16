@@ -58,7 +58,13 @@ module CodexBar
         files.each do |path|
           next unless recent_file?(path, cutoff)
 
+          model_id = nil
           each_json_line(path) do |record|
+            if record[:type].to_s == "turn_context"
+              model = record.dig(:payload, :model).to_s.strip
+              model_id = model unless model.empty?
+              next
+            end
             next unless record[:type].to_s == "event_msg"
 
             usage = record.dig(:payload, :info, :last_token_usage)
@@ -67,7 +73,7 @@ module CodexBar
             timestamp = parse_time(record[:timestamp]) || File.mtime(path)
             next if timestamp < cutoff
 
-            add_usage(summary, timestamp, usage)
+            add_usage(summary, timestamp, usage, model_id: model_id)
           end
         end
         finalize_summary(summary)
@@ -86,7 +92,7 @@ module CodexBar
             timestamp = parse_time(record[:timestamp]) || File.mtime(path)
             next if timestamp < cutoff
 
-            add_usage(summary, timestamp, usage)
+            add_usage(summary, timestamp, usage, model_id: record.dig(:message, :model))
             add_cost(summary, timestamp, exact_cost(record))
           end
         end
@@ -235,7 +241,7 @@ module CodexBar
         )
       end
 
-      def add_usage(summary, timestamp, usage, records: 1)
+      def add_usage(summary, timestamp, usage, records: 1, model_id: nil)
         input = usage[:input_tokens].to_i
         cached = usage[:cached_input_tokens].to_i + usage[:cache_creation_input_tokens].to_i + usage[:cache_read_input_tokens].to_i
         output = usage[:output_tokens].to_i
@@ -257,6 +263,12 @@ module CodexBar
         daily[:outputTokens] += output
         daily[:reasoningOutputTokens] += reasoning
         daily[:totalTokens] += total
+
+        model = model_id.to_s.strip
+        return if model.empty?
+
+        add_model_usage(summary[:models], model, input, cached, output, reasoning, 0, total, records: records)
+        add_model_usage(daily[:models], model, input, cached, output, reasoning, 0, total, records: records)
       end
 
       def add_gemini_usage(summary, timestamp, tokens, model)

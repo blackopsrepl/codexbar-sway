@@ -32,6 +32,65 @@ class LocalUsageTest < Minitest::Test
     end
   end
 
+  def test_scans_codex_attributes_tokens_to_session_model
+    with_temp_home do |home|
+      path = File.join(home, ".codex", "sessions", "2026", "05", "16", "rollout.jsonl")
+      write_jsonl(path, [
+        {
+          timestamp: Time.now.utc.iso8601,
+          type: "turn_context",
+          payload: { model: "gpt-5.6-sol" }
+        },
+        {
+          timestamp: Time.now.utc.iso8601,
+          type: "event_msg",
+          payload: {
+            info: {
+              last_token_usage: {
+                input_tokens: 10,
+                cached_input_tokens: 3,
+                output_tokens: 5,
+                reasoning_output_tokens: 2,
+                total_tokens: 17
+              }
+            }
+          }
+        }
+      ])
+
+      summary = CodexBar::Runtime::LocalUsage.scan_codex(Time.now.utc - 86_400)
+
+      assert_equal ["gpt-5.6-sol"], summary[:models].keys
+      assert_equal 17, summary.dig(:models, "gpt-5.6-sol", :totalTokens)
+      assert_equal 17, summary.dig(:daily, 0, :models, "gpt-5.6-sol", :totalTokens)
+    end
+  end
+
+  def test_scans_claude_attributes_tokens_to_message_model
+    with_temp_home do |home|
+      path = File.join(home, ".claude", "projects", "example", "session.jsonl")
+      write_jsonl(path, [
+        {
+          timestamp: Time.now.utc.iso8601,
+          message: {
+            model: "claude-sonnet-4-5",
+            usage: {
+              input_tokens: 7,
+              cache_read_input_tokens: 11,
+              output_tokens: 13
+            }
+          }
+        }
+      ])
+
+      summary = CodexBar::Runtime::LocalUsage.scan_claude(Time.now.utc - 86_400)
+
+      assert_equal ["claude-sonnet-4-5"], summary[:models].keys
+      assert_equal 31, summary.dig(:models, "claude-sonnet-4-5", :totalTokens)
+      assert_equal 31, summary.dig(:daily, 0, :models, "claude-sonnet-4-5", :totalTokens)
+    end
+  end
+
   def test_scans_claude_project_usage_and_ignores_telemetry
     with_temp_home do |home|
       project_path = File.join(home, ".claude", "projects", "example", "session.jsonl")
