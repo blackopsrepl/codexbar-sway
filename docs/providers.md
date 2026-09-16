@@ -21,7 +21,7 @@ The Linux release supports exactly:
 CodexBar reads the `codex` entry from `rateLimitsByLimitId` when present and falls back to the backward-compatible `rateLimits` snapshot. It identifies the five-hour and weekly windows by their declared 300-minute and 10,080-minute durations instead of assuming that `primary` and `secondary` always retain fixed meanings. A missing weekly window remains absent. For non-Pro ChatGPT plans, an omitted five-hour value is surfaced as unavailable rather than converted into a fabricated percentage; Pro continues to expose only the windows returned for that account.
 
 There is no PTY fallback in the current Ruby implementation.
-Local token summaries are read from Codex session JSONL logs by `codexbar cost`; monetary cost is reported only when an exact cost exists in the source record.
+Local token summaries are read from Codex session JSONL logs by `codexbar cost`; monetary cost is reported only when an exact cost exists in the source record. Token counts are attributed to the model declared by the session's `turn_context` records, so summaries preserve per-model token totals alongside the daily breakdown.
 
 ## Claude
 
@@ -32,7 +32,7 @@ Local token summaries are read from Codex session JSONL logs by `codexbar cost`;
 - Dashboard: `https://claude.ai/`
 
 There is no browser-cookie, secret-store, or CLI scrape in the current Ruby implementation.
-Local token summaries are read from Claude project JSONL logs by `codexbar cost`; telemetry files are ignored.
+Local token summaries are read from Claude project JSONL logs by `codexbar cost`; telemetry files are ignored. Token counts are attributed to each record's `message.model`, so summaries preserve per-model token totals alongside the daily breakdown.
 
 ## Gemini
 
