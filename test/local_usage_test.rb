@@ -232,7 +232,7 @@ class LocalUsageTest < Minitest::Test
       assert_equal 3, summary[:totalTokens]
     end
   end
-  def test_opencode_message_query_filters_zai_provider_rows
+  def test_opencode_message_query_scopes_providers
     calls = []
     result = lambda do |_command, args, **_options|
       calls << args
@@ -244,12 +244,54 @@ class LocalUsageTest < Minitest::Test
     end
 
     CodexBar::Core::Process.stub(:run_command, result) do
-      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :not_zai)
+      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :opencode_go_only)
       CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :zai_only)
     end
 
-    assert_includes calls[1].last, "NOT IN ('zai-coding-plan', 'zai')"
+    assert_includes calls[1].last, "json_extract(data, '$.providerID') = 'opencode-go'"
     assert_includes calls[3].last, "IN ('zai-coding-plan', 'zai')"
+  end
+
+  def test_scan_opencode_counts_only_opencode_go_provider_rows
+    rows = [
+      {
+        date: "2026-09-14",
+        model_id: "deepseek-v4.1-flash",
+        records: 2,
+        input_tokens: 100,
+        cached_input_tokens: 0,
+        output_tokens: 50,
+        reasoning_output_tokens: 0,
+        total_tokens: 150,
+        cost: 0.02
+      }
+    ]
+    queries = []
+    result = lambda do |_command, args, **_options|
+      queries << args.last
+      if args.last.include?("SELECT id FROM session")
+        { exitCode: 0, stdout: JSON.generate([{ id: "session-1" }]) }
+      else
+        { exitCode: 0, stdout: JSON.generate(rows) }
+      end
+    end
+
+    previous = ENV["CODEXBAR_OPENCODE_DB"]
+    Dir.mktmpdir("codexbar-opencode") do |dir|
+      db_path = File.join(dir, "opencode.db")
+      File.write(db_path, "")
+      ENV["CODEXBAR_OPENCODE_DB"] = db_path
+      summary = nil
+      CodexBar::Core::Process.stub(:run_command, result) do
+        summary = CodexBar::Runtime::LocalUsage.scan_opencode(Time.now.utc - 86_400)
+      end
+
+      assert_equal "opencode", summary[:provider]
+      assert_equal 150, summary[:totalTokens]
+      assert_includes queries.last, "json_extract(data, '$.providerID') = 'opencode-go'"
+    ensure
+      ENV["CODEXBAR_OPENCODE_DB"] = previous
+    end
   end
 
   def test_scan_zai_reads_zai_routed_messages_from_opencode_database

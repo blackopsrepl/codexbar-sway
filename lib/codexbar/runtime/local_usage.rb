@@ -8,6 +8,7 @@ module CodexBar
   module Runtime
     module LocalUsage
       ZAI_PROVIDER_IDS = %w[zai-coding-plan zai].freeze
+      OPENCODE_GO_PROVIDER_ID = "opencode-go"
 
       module_function
 
@@ -117,7 +118,7 @@ module CodexBar
         db_path = opencode_db_path
         return empty_summary("opencode", supported: true) unless db_path && File.file?(db_path)
 
-        rows = opencode_messages(db_path, cutoff, providers: :not_zai)
+        rows = opencode_messages(db_path, cutoff, providers: :opencode_go_only)
         return empty_summary("opencode", supported: false).merge(
           note: "The sqlite3 binary is unavailable to read the OpenCode usage database."
         ) if rows.nil?
@@ -207,8 +208,8 @@ module CodexBar
         case mode
         when :zai_only
           "COALESCE(json_extract(data, '$.providerID'), '') IN (#{zai_ids})"
-        when :not_zai
-          "COALESCE(json_extract(data, '$.providerID'), '') NOT IN (#{zai_ids})"
+        when :opencode_go_only
+          "json_extract(data, '$.providerID') = '#{OPENCODE_GO_PROVIDER_ID}'"
         end
       end
 
