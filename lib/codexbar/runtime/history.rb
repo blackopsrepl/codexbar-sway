@@ -28,7 +28,7 @@ module CodexBar
           daily = day_entry(provider_history, date)
           result = results[provider] || results[provider.to_sym]
           merge_usage_day!(daily, result && result[:usage])
-          merge_local_usage_day!(daily, local_usage_day(local_usage, provider, date))
+          merge_local_usage_days!(provider_history, local_usage, provider)
           provider_history[:daily] = provider_history[:daily].select { |entry| entry[:date] >= cutoff }.sort_by { |entry| entry[:date] }
         end
 
@@ -124,9 +124,23 @@ module CodexBar
         day[:modelUsage] = normalize_model_usage(local[:models]) if local[:models]
       end
 
-      def local_usage_day(local_usage, provider, date)
+      def merge_local_usage_days!(provider_history, local_usage, provider)
         provider_usage = local_usage&.dig(:providers, provider) || local_usage&.dig(:providers, provider.to_sym)
-        Array(provider_usage && provider_usage[:daily]).find { |entry| entry[:date] == date }
+        Array(provider_usage && provider_usage[:daily]).each do |local|
+          date = local[:date].to_s
+          next if date.empty?
+
+          existing = provider_history[:daily].find { |entry| entry[:date] == date }
+          next unless existing || local_usage_present?(local)
+
+          merge_local_usage_day!(existing || day_entry(provider_history, date), local)
+        end
+      end
+
+      def local_usage_present?(local)
+        local[:records].to_i.positive? ||
+          local[:totalTokens].to_i.positive? ||
+          (local[:models].is_a?(Hash) && !local[:models].empty?)
       end
 
       def normalize_model_quota(input)

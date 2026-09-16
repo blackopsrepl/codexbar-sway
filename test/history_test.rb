@@ -97,6 +97,53 @@ class HistoryTest < Minitest::Test
     end
   end
 
+  def test_history_replaces_retained_local_usage_for_scanned_days
+    Dir.mktmpdir("codexbar-state") do |dir|
+      now = Time.now.utc
+      past = (now - 86_400).strftime("%Y-%m-%d")
+      config = build_config
+      config[:runtime][:stateDir] = dir
+      CodexBar::Runtime::State.write_history(
+        config,
+        providers: {
+          "opencode" => {
+            provider: "opencode",
+            daily: [
+              {
+                date: past,
+                totalTokens: 999,
+                records: 5,
+                modelUsage: { "gpt-5.6-luna" => { modelId: "gpt-5.6-luna", totalTokens: 999 } }
+              }
+            ]
+          }
+        }
+      )
+      snapshot = CodexBar::Runtime::State.build_snapshot(config, [], {}, now)
+      local_usage = {
+        providers: {
+          "opencode" => {
+            daily: [
+              {
+                date: past,
+                totalTokens: 10,
+                records: 1,
+                models: { "deepseek-v4.1-flash" => { modelId: "deepseek-v4.1-flash", totalTokens: 10, records: 1 } }
+              }
+            ]
+          }
+        }
+      }
+
+      history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
+      day = history.dig(:providers, "opencode", :daily).find { |entry| entry[:date] == past }
+
+      assert_equal 10, day[:totalTokens]
+      assert_equal 1, day[:records]
+      assert_equal ["deepseek-v4.1-flash"], day[:modelUsage].keys
+    end
+  end
+
   def test_presenter_history_days_skip_empty_days_and_use_model_quota
     history = {
       daily: [
