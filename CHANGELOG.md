@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.4.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.3.0...v1.4.0) (2026-09-17)
+
+
+### Features
+
+* **ui:** make heatmap dual-metric and polish panel motion 55cedb7
+
+
+### Bug Fixes
+
+* **ui:** reduce heatmap to one fill ramp and a compact band 2e9b7a2
+
 ## [1.3.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.2.5...v1.3.0) (2026-09-17)
 
 
