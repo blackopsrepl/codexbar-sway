@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "date"
 require "time"
 
 module CodexBar
@@ -142,6 +143,7 @@ module CodexBar
           storageText: storage && storage[:totalBytes] ? Core::Format.bytes_string(storage[:totalBytes]) : nil,
           historySummary: provider_history_summary(history),
           historyDays: provider_history_days(history),
+          historyHeatmap: history_heatmap_view(history),
           error: error,
           notes: notes,
           incident: incident,
@@ -400,6 +402,98 @@ module CodexBar
       def history_day_present?(entry)
         quota, = history_day_quota(entry)
         quota.positive? || entry[:totalTokens].to_i.positive? || entry[:records].to_i.positive?
+      end
+
+      def history_heatmap_view(history)
+        days = Array(history && history[:daily])
+               .select { |entry| history_day_present?(entry) }
+               .sort_by { |entry| entry[:date].to_s }
+        return { available: false, totalTokens: 0, totalText: "0 tok", rows: [], stats: {} } if days.empty?
+
+        by_date = days.each_with_object({}) { |entry, map| map[entry[:date].to_s] = entry }
+        first_date = Date.parse(days.first[:date].to_s)
+        last_date = Date.parse(days.last[:date].to_s)
+        max_tokens = days.map { |entry| entry[:totalTokens].to_i }.max.to_i
+
+        cells = (first_date..last_date).map { |date| heatmap_cell(date, by_date[date.iso8601], max_tokens) }
+        padded = Array.new(first_date.wday) { heatmap_empty_cell } + cells
+        padded.concat(Array.new((7 - (padded.length % 7)) % 7) { heatmap_empty_cell })
+        weeks = padded.each_slice(7).to_a
+        rows = Array.new(7) { |row| { cells: weeks.map { |week| week[row] }.compact } }
+
+        total = days.sum { |entry| entry[:totalTokens].to_i }
+        peak = days.max_by { |entry| entry[:totalTokens].to_i }
+        {
+          available: true,
+          totalTokens: total,
+          totalText: "#{format_tokens(total)} tok",
+          rows: rows,
+          stats: history_heatmap_stats(days, peak, heatmap_streak(cells))
+        }
+      end
+
+      def history_heatmap_stats(days, peak, streak)
+        peak_tokens = peak ? peak[:totalTokens].to_i : 0
+        {
+          activeDays: days.count { |entry| entry[:totalTokens].to_i.positive? },
+          currentStreak: streak,
+          bestDayText: peak ? Core::Format.date_label(peak[:date].to_s) : "none",
+          bestCountText: peak_tokens.positive? ? "#{format_tokens(peak_tokens)} tok" : "0 tok",
+          windowText: "#{Core::Format.date_label(days.first[:date].to_s)} - #{Core::Format.date_label(days.last[:date].to_s)}"
+        }
+      end
+
+      # Consecutive active calendar days counted back from the most recent
+      # active day; a trailing inactive day (today, so far) does not reset it,
+      # but any inactive day between active days does.
+      def heatmap_streak(cells)
+        last_active = cells.rindex { |cell| cell[:intensity].to_i.positive? }
+        return 0 if last_active.nil?
+
+        streak = 0
+        cells[0..last_active].reverse_each do |cell|
+          break unless cell[:intensity].to_i.positive?
+
+          streak += 1
+        end
+        streak
+      end
+
+      def heatmap_cell(date, entry, max_tokens)
+        tokens = entry ? entry[:totalTokens].to_i : 0
+        quota, = entry ? history_day_quota(entry) : [0.0, false]
+        {
+          date: date.iso8601,
+          label: Core::Format.date_label(date.iso8601),
+          empty: false,
+          intensity: heatmap_intensity(tokens, max_tokens),
+          tooltipText: heatmap_cell_tooltip(entry, tokens, quota.to_f)
+        }
+      end
+
+      def heatmap_empty_cell
+        { date: "", label: "", empty: true, intensity: 0, tooltipText: "" }
+      end
+
+      def heatmap_intensity(tokens, max_tokens)
+        return 0 if tokens <= 0 || max_tokens <= 0
+
+        ratio = tokens / max_tokens.to_f
+        return 4 if ratio >= 0.75
+        return 3 if ratio >= 0.5
+        return 2 if ratio >= 0.25
+
+        1
+      end
+
+      def heatmap_cell_tooltip(entry, tokens, quota)
+        return "" unless entry
+
+        parts = [Core::Format.date_label(entry[:date].to_s)]
+        parts << "#{format_tokens(tokens)} tok" if tokens.positive?
+        parts << "#{entry[:records].to_i} records" if entry[:records].to_i.positive?
+        parts << "#{quota.round}% quota" if quota.positive?
+        parts.join(" · ")
       end
 
       def history_day_quota(entry)

@@ -71,6 +71,84 @@ class RuntimeTest < Minitest::Test
     assert_equal "1 retained days / 12.3k local tokens / 42% peak quota", codex_view[:historySummary]
     assert_equal 42.0, codex_view[:historyDays].first[:barPercent]
     assert_equal "12.3k tok / 7 records", codex_view[:historyDays].first[:detail]
+    heatmap = codex_view[:historyHeatmap]
+    assert heatmap[:available]
+    assert_equal 12_345, heatmap[:totalTokens]
+    assert_equal 7, heatmap[:rows].length
+    day_cells = heatmap[:rows].flat_map { |row| row[:cells] }.reject { |cell| cell[:empty] }
+    assert_equal 1, day_cells.length
+    assert_equal 4, day_cells.first[:intensity]
+  end
+
+  def test_history_heatmap_buckets_tokens_and_aligns_week_rows
+    history = {
+      generatedAt: "2026-08-09T12:00:00Z",
+      providers: {
+        "codex" => {
+          daily: [
+            { date: "2026-08-03", totalTokens: 4_000, records: 2 },
+            { date: "2026-08-04", totalTokens: 10_000, records: 3 },
+            { date: "2026-08-06", latestPrimaryUsedPercent: 12.0 },
+            { date: "2026-08-07", totalTokens: 30_000, records: 9 },
+            { date: "2026-08-09", totalTokens: 5_000, records: 1 }
+          ]
+        }
+      }
+    }
+
+    heatmap = CodexBar::Runtime::Presenter.history_heatmap_view(history.dig(:providers, "codex"))
+
+    assert heatmap[:available]
+    assert_equal 49_000, heatmap[:totalTokens]
+    assert_equal "49k tok", heatmap[:totalText]
+    assert_equal 7, heatmap[:rows].length
+    heatmap[:rows].each { |row| assert_equal 2, row[:cells].length }
+
+    sunday_row = heatmap[:rows][0][:cells]
+    assert sunday_row[0][:empty]
+    assert_equal "2026-08-09", sunday_row[1][:date]
+    assert_equal 1, sunday_row[1][:intensity]
+
+    monday_row = heatmap[:rows][1][:cells]
+    assert_equal "2026-08-03", monday_row[0][:date]
+    assert_equal 1, monday_row[0][:intensity]
+    assert monday_row[1][:empty]
+
+    tuesday = heatmap[:rows][2][:cells][0]
+    assert_equal "2026-08-04", tuesday[:date]
+    assert_equal 2, tuesday[:intensity]
+
+    wednesday = heatmap[:rows][3][:cells][0]
+    assert_equal "2026-08-05", wednesday[:date]
+    refute wednesday[:empty]
+    assert_equal 0, wednesday[:intensity]
+    assert_equal "", wednesday[:tooltipText]
+
+    thursday = heatmap[:rows][4][:cells][0]
+    assert_equal "2026-08-06", thursday[:date]
+    assert_equal 0, thursday[:intensity]
+    assert_includes thursday[:tooltipText], "12% quota"
+
+    friday = heatmap[:rows][5][:cells][0]
+    assert_equal "2026-08-07", friday[:date]
+    assert_equal 4, friday[:intensity]
+    assert_includes friday[:tooltipText], "30k tok"
+    assert_includes friday[:tooltipText], "9 records"
+
+    stats = heatmap[:stats]
+    assert_equal 4, stats[:activeDays]
+    assert_equal 1, stats[:currentStreak]
+    assert_equal "Aug 7", stats[:bestDayText]
+    assert_equal "30k tok", stats[:bestCountText]
+    assert_equal "Aug 3 - Aug 9", stats[:windowText]
+  end
+
+  def test_history_heatmap_reports_unavailable_without_days
+    heatmap = CodexBar::Runtime::Presenter.history_heatmap_view({ provider: "codex", daily: [] })
+
+    refute heatmap[:available]
+    assert_equal [], heatmap[:rows]
+    assert_equal "0 tok", heatmap[:totalText]
   end
 
   def test_waybar_payload_contains_provider_metric_and_partial_classes

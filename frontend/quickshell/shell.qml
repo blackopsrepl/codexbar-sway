@@ -85,6 +85,38 @@ ShellRoot {
         return accentColor(provider)
     }
 
+    function historyHeatmap() {
+        var provider = focusProvider()
+        return provider && provider.historyHeatmap && provider.historyHeatmap.available ? provider.historyHeatmap : null
+    }
+
+    function historyHeatmapStats() {
+        var heatmap = historyHeatmap()
+        return heatmap && heatmap.stats ? heatmap.stats : ({})
+    }
+
+    function heatmapColor(cell) {
+        if (!cell) {
+            return "#202848"
+        }
+        if (cell.empty) {
+            return "#0B0C16"
+        }
+        if (cell.intensity >= 4) {
+            return "#50F872"
+        }
+        if (cell.intensity === 3) {
+            return "#4FE88F"
+        }
+        if (cell.intensity === 2) {
+            return "#82FB9C"
+        }
+        if (cell.intensity === 1) {
+            return "#253057"
+        }
+        return "#202848"
+    }
+
     function runCodexbar(args) {
         var command = [root.codexbarBin].concat(args).concat(["--config", root.configPath])
         if (actionRunner.running) {
@@ -327,7 +359,7 @@ ShellRoot {
         implicitWidth: Math.max(minimumWidth, contentItem.implicitWidth + 18)
 
         background: Rectangle {
-            radius: 9
+            radius: 0
             color: control.down ? withAlpha(control.accent, 0.26) : (control.hovered ? withAlpha(control.accent, 0.18) : withAlpha(control.accent, 0.10))
             border.color: control.hovered ? withAlpha(control.accent, 0.60) : withAlpha(control.accent, 0.34)
             border.width: 1
@@ -360,7 +392,7 @@ ShellRoot {
         onClicked: root.setView(view)
 
         background: Rectangle {
-            radius: 10
+            radius: 0
             color: tab.selected ? withAlpha(tab.accent, 0.24) : (tab.hovered ? withAlpha(tab.accent, 0.14) : "#0E1423")
             border.width: 1
             border.color: tab.selected ? withAlpha(tab.accent, 0.70) : withAlpha(tab.accent, 0.24)
@@ -385,7 +417,7 @@ ShellRoot {
         property int minimumWidth: 0
         property int maximumWidth: 220
 
-        radius: 8
+        radius: 0
         implicitHeight: 20
         implicitWidth: Math.min(maximumWidth, Math.max(minimumWidth, contentRow.implicitWidth + 14))
         color: withAlpha(accent, 0.14)
@@ -456,7 +488,7 @@ ShellRoot {
 
         Rectangle {
             anchors.fill: parent
-            radius: height / 2
+            radius: 0
             color: "#131827"
             border.width: 1
             border.color: withAlpha(metricBar.accent, 0.18)
@@ -465,7 +497,7 @@ ShellRoot {
         Rectangle {
             width: Math.max(0, Math.min(metricBar.width, metricBar.width * (metricBar.usedPercent / 100.0)))
             height: metricBar.height
-            radius: height / 2
+            radius: 0
             color: metricBar.accent
             opacity: 0.92
         }
@@ -474,7 +506,7 @@ ShellRoot {
     component CardFrame: Rectangle {
         id: card
         property color accent: "#82FB9C"
-        radius: 16
+        radius: 0
         color: "#101527"
         border.width: 1
         border.color: withAlpha(accent, 0.28)
@@ -539,7 +571,7 @@ ShellRoot {
 
         width: 28
         height: 28
-        radius: 10
+        radius: 0
         color: withAlpha(accent, 0.16)
         border.width: 1
         border.color: withAlpha(accent, 0.34)
@@ -755,7 +787,7 @@ ShellRoot {
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: parent.radius
+                    radius: 0
                     gradient: Gradient {
                         GradientStop { position: 0.0; color: "#12182B" }
                         GradientStop { position: 1.0; color: "#090D18" }
@@ -1342,7 +1374,7 @@ ShellRoot {
                                                     spacing: 8
 
                                                     Text {
-                                                        text: root.glyphs.usage
+                                                        text: root.glyphs.cost
                                                         color: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
                                                         font.family: root.iconFont
                                                         font.pixelSize: 13
@@ -1567,6 +1599,208 @@ ShellRoot {
                                         accent: modelData.id === root.focusProviderId ? statusColor(modelData) : "#6A6E95"
                                         compact: true
                                         onClicked: root.setFocus(modelData.id)
+                                    }
+                                }
+                            }
+
+                            CardFrame {
+                                id: heatmapCard
+                                visible: !!historyHeatmap()
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 128
+                                accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
+                                color: "#0E1423"
+
+                                RowLayout {
+                                    id: heatmapBody
+                                    anchors.fill: parent
+                                    anchors.margins: 12
+                                    spacing: 12
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 6
+
+                                        RowLayout {
+                                            spacing: 8
+
+                                            Text {
+                                                text: root.glyphs.cost
+                                                color: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
+                                                font.family: root.iconFont
+                                                font.pixelSize: 13
+                                            }
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: "Token usage heatmap  " + (historyHeatmap() ? historyHeatmap().totalText : "")
+                                                color: "#F6FBFF"
+                                                font.family: root.textFont
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+
+                                        Flickable {
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: historyHeatmapGrid.implicitHeight
+                                            contentWidth: historyHeatmapGrid.implicitWidth
+                                            contentHeight: historyHeatmapGrid.implicitHeight
+                                            clip: true
+                                            boundsBehavior: Flickable.StopAtBounds
+
+                                            Column {
+                                                id: historyHeatmapGrid
+                                                spacing: 2
+
+                                                Repeater {
+                                                    model: historyHeatmap() ? historyHeatmap().rows : []
+
+                                                    delegate: Row {
+                                                        required property var modelData
+                                                        spacing: 2
+
+                                                        Repeater {
+                                                            model: modelData.cells || []
+
+                                                            delegate: Rectangle {
+                                                                id: heatCell
+                                                                required property var modelData
+                                                                width: 10
+                                                                height: 10
+                                                                radius: 0
+                                                                color: root.heatmapColor(modelData)
+
+                                                                MouseArea {
+                                                                    id: heatCellHover
+                                                                    anchors.fill: parent
+                                                                    hoverEnabled: true
+                                                                    enabled: heatCell.modelData.tooltipText.length > 0
+                                                                }
+
+                                                                ToolTip.visible: heatCellHover.containsMouse
+                                                                ToolTip.delay: 150
+                                                                ToolTip.text: heatCell.modelData.tooltipText
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        Layout.preferredWidth: 220
+                                        Layout.fillHeight: true
+                                        visible: modalFrame.width >= 760
+                                        radius: 0
+                                        color: "#101527"
+                                        border.width: 1
+                                        border.color: withAlpha(heatmapCard.accent, 0.24)
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 10
+                                            spacing: 4
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: "Usage summary"
+                                                color: "#A8B3D7"
+                                                font.family: root.textFont
+                                                font.pixelSize: 10
+                                                font.bold: true
+                                                elide: Text.ElideRight
+                                            }
+
+                                            GridLayout {
+                                                Layout.fillWidth: true
+                                                columns: 2
+                                                rowSpacing: 2
+                                                columnSpacing: 8
+
+                                                Label {
+                                                    text: "Window"
+                                                    color: "#6A6E95"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: root.historyHeatmapStats().windowText || "-"
+                                                    color: "#DDF7FF"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Label {
+                                                    text: "Active"
+                                                    color: "#6A6E95"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: (root.historyHeatmapStats().activeDays || 0) + " days"
+                                                    color: "#DDF7FF"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Label {
+                                                    text: "Streak"
+                                                    color: "#6A6E95"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: (root.historyHeatmapStats().currentStreak || 0) + " days"
+                                                    color: "#DDF7FF"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Label {
+                                                    text: "Best day"
+                                                    color: "#6A6E95"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: root.historyHeatmapStats().bestDayText || "none"
+                                                    color: "#DDF7FF"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Label {
+                                                    text: "Peak"
+                                                    color: "#6A6E95"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: root.historyHeatmapStats().bestCountText || "0 tok"
+                                                    color: "#DDF7FF"
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 10
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
