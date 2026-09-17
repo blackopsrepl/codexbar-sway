@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.3.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.2.5...v1.3.0) (2026-09-17)
+
+
+### Features
+
+* **ui:** square the panel and add a token usage heatmap c95aa71
+
 ## [1.2.5](https://github.com/blackopsrepl/codexbar-sway/compare/v1.2.4...v1.2.5) (2026-09-16)
 
 
