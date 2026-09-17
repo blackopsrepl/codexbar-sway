@@ -19,6 +19,7 @@ module CodexBar
         {
           summary: build_summary_view(config, snapshot, providers, now),
           chip: build_chip_view(config, snapshot, results, providers, now),
+          heatmap: cumulative_heatmap_view(snapshot[:history]),
           providers: providers
         }
       end
@@ -402,6 +403,28 @@ module CodexBar
       def history_day_present?(entry)
         quota, = history_day_quota(entry)
         quota.positive? || entry[:totalTokens].to_i.positive? || entry[:records].to_i.positive?
+      end
+
+      # Aggregates every provider's retained daily entries into one token-total
+      # series for the Overview's cumulative heatmap: tokens and records sum,
+      # the tooltip quota is the peak any single provider reached that day, and
+      # a day counts as retained when any provider has a sample in it.
+      def cumulative_heatmap_view(history)
+        daily = {}
+        providers = history && history[:providers]
+        (providers || {}).each_value do |provider_history|
+          Array(provider_history && provider_history[:daily]).each do |entry|
+            next unless history_day_present?(entry)
+
+            date = entry[:date].to_s
+            merged = daily[date] ||= { date: date, totalTokens: 0, records: 0, latestPrimaryUsedPercent: 0.0 }
+            merged[:totalTokens] += entry[:totalTokens].to_i
+            merged[:records] += entry[:records].to_i
+            quota, = history_day_quota(entry)
+            merged[:latestPrimaryUsedPercent] = [merged[:latestPrimaryUsedPercent], quota.to_f].max
+          end
+        end
+        history_heatmap_view({ daily: daily.values })
       end
 
       def history_heatmap_view(history)

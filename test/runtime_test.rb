@@ -157,6 +157,59 @@ class RuntimeTest < Minitest::Test
     assert_equal "0 tok", heatmap[:totalText]
   end
 
+  def test_cumulative_heatmap_sums_providers_and_keeps_shared_days
+    history = {
+      generatedAt: "2026-08-09T12:00:00Z",
+      providers: {
+        "codex" => {
+          daily: [
+            { date: "2026-08-03", totalTokens: 4_000, records: 2 },
+            { date: "2026-08-04", totalTokens: 10_000, records: 3 }
+          ]
+        },
+        "opencode" => {
+          daily: [
+            { date: "2026-08-03", totalTokens: 9_000, records: 5, latestPrimaryUsedPercent: 44.0 },
+            { date: "2026-08-05", totalTokens: 0, records: 0, latestSecondaryUsedPercent: 81.0 }
+          ]
+        },
+        "zai" => {
+          daily: [
+            { date: "2026-08-06", totalTokens: 2_000, records: 1 }
+          ]
+        }
+      }
+    }
+
+    heatmap = CodexBar::Runtime::Presenter.cumulative_heatmap_view(history)
+
+    assert heatmap[:available]
+    assert_equal 25_000, heatmap[:totalTokens]
+    cells = heatmap[:rows].flat_map { |row| row[:cells] }.reject { |cell| cell[:empty] }
+    by_date = cells.each_with_object({}) { |cell, map| map[cell[:date]] = cell }
+
+    monday = by_date["2026-08-03"]
+    assert_equal 4, monday[:intensity]
+    assert_equal true, monday[:present]
+    assert_includes monday[:tooltipText], "13k tok"
+    assert_includes monday[:tooltipText], "7 records"
+    assert_includes monday[:tooltipText], "44% quota"
+
+    tuesday = by_date["2026-08-04"]
+    assert_equal 4, tuesday[:intensity]
+    assert_equal true, tuesday[:present]
+
+    wednesday = by_date["2026-08-05"]
+    assert_equal 0, wednesday[:intensity]
+    assert_equal true, wednesday[:present]
+    assert_includes wednesday[:tooltipText], "81% quota"
+
+    thursday = by_date["2026-08-06"]
+    assert_equal 1, thursday[:intensity]
+
+    assert_equal 3, heatmap[:stats][:activeDays]
+  end
+
   def test_waybar_payload_contains_provider_metric_and_partial_classes
     now = Time.now.utc
     config = build_config

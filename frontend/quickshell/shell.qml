@@ -90,13 +90,8 @@ ShellRoot {
         return provider && provider.historyHeatmap && provider.historyHeatmap.available ? provider.historyHeatmap : null
     }
 
-    function historyHeatmapStats() {
-        var heatmap = historyHeatmap()
-        return heatmap && heatmap.stats ? heatmap.stats : ({})
-    }
-
-    function heatmapStatsLine() {
-        var stats = historyHeatmapStats()
+    function heatmapStatsLine(heatmap) {
+        var stats = heatmap && heatmap.stats ? heatmap.stats : null
         if (!stats || !stats.windowText) {
             return ""
         }
@@ -542,6 +537,144 @@ ShellRoot {
         border.width: 1
         border.color: withAlpha(accent, 0.28)
         clip: true
+    }
+
+    component UsageHeatmap: CardFrame {
+        id: usageHeatmap
+        property var heatmapData: null
+        property string panelTitle: "Token usage"
+
+        visible: !!usageHeatmap.heatmapData
+        Layout.fillWidth: true
+        Layout.preferredHeight: heatmapColumn.implicitHeight + 28
+        color: "#0E1423"
+
+        ColumnLayout {
+            id: heatmapColumn
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 10
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Text {
+                    text: root.glyphs.cost
+                    color: usageHeatmap.accent
+                    font.family: root.iconFont
+                    font.pixelSize: 13
+                }
+
+                Label {
+                    text: usageHeatmap.panelTitle + "  " + (usageHeatmap.heatmapData ? usageHeatmap.heatmapData.totalText : "")
+                    color: "#F6FBFF"
+                    font.family: root.textFont
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.heatmapStatsLine(usageHeatmap.heatmapData)
+                    color: "#8E97B5"
+                    font.family: root.textFont
+                    font.pixelSize: 10
+                    horizontalAlignment: Text.AlignRight
+                    elide: Text.ElideRight
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 16
+
+                Flickable {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: usageHeatmapGrid.implicitHeight
+                    contentWidth: usageHeatmapGrid.implicitWidth
+                    contentHeight: usageHeatmapGrid.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+
+                    Column {
+                        id: usageHeatmapGrid
+                        spacing: 3
+
+                        Repeater {
+                            model: usageHeatmap.heatmapData ? usageHeatmap.heatmapData.rows : []
+
+                            delegate: Row {
+                                required property var modelData
+                                spacing: 3
+
+                                Repeater {
+                                    model: modelData.cells || []
+
+                                    delegate: Rectangle {
+                                        id: heatCell
+                                        required property var modelData
+                                        width: 12
+                                        height: 12
+                                        radius: 0
+                                        color: root.heatmapColor(modelData)
+                                        scale: heatCellHover.containsMouse ? 1.3 : 1.0
+                                        z: heatCellHover.containsMouse ? 3 : 0
+
+                                        Behavior on scale {
+                                            NumberAnimation { duration: 110 }
+                                        }
+
+                                        MouseArea {
+                                            id: heatCellHover
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            enabled: heatCell.modelData.tooltipText.length > 0
+                                        }
+
+                                        ToolTip.visible: heatCellHover.containsMouse
+                                        ToolTip.delay: 150
+                                        ToolTip.text: heatCell.modelData.tooltipText
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ColumnLayout {
+                    spacing: 4
+
+                    Label {
+                        text: "more"
+                        color: "#6A6E95"
+                        font.family: root.textFont
+                        font.pixelSize: 9
+                    }
+
+                    Repeater {
+                        model: ["#82FB9C", "#45C878", "#237A50", "#1D3B2F", "#232C45", "#10182B"]
+
+                        delegate: Rectangle {
+                            required property string modelData
+                            width: 9
+                            height: 9
+                            radius: 0
+                            color: modelData
+                        }
+                    }
+
+                    Label {
+                        text: "less"
+                        color: "#6A6E95"
+                        font.family: root.textFont
+                        font.pixelSize: 9
+                    }
+                }
+            }
+        }
     }
 
     component HistoryDayTile: CardFrame {
@@ -1091,6 +1224,12 @@ ShellRoot {
                                         }
 
                                         Item { Layout.fillWidth: true }
+                                    }
+
+                                    UsageHeatmap {
+                                        heatmapData: viewData.heatmap && viewData.heatmap.available ? viewData.heatmap : null
+                                        panelTitle: "All providers"
+                                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
                                     }
 
                                     RowLayout {
@@ -1673,140 +1812,10 @@ ShellRoot {
                                 }
                             }
 
-                            CardFrame {
+                            UsageHeatmap {
                                 id: heatmapCard
-                                visible: !!historyHeatmap()
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: heatmapColumn.implicitHeight + 28
+                                heatmapData: historyHeatmap()
                                 accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
-                                color: "#0E1423"
-
-                                ColumnLayout {
-                                    id: heatmapColumn
-                                    anchors.fill: parent
-                                    anchors.margins: 14
-                                    spacing: 10
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 8
-
-                                        Text {
-                                            text: root.glyphs.cost
-                                            color: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
-                                            font.family: root.iconFont
-                                            font.pixelSize: 13
-                                        }
-
-                                        Label {
-                                            text: "Token usage  " + (historyHeatmap() ? historyHeatmap().totalText : "")
-                                            color: "#F6FBFF"
-                                            font.family: root.textFont
-                                            font.pixelSize: 11
-                                            font.bold: true
-                                        }
-
-                                        Item { Layout.fillWidth: true }
-
-                                        Label {
-                                            Layout.fillWidth: true
-                                            text: root.heatmapStatsLine()
-                                            color: "#8E97B5"
-                                            font.family: root.textFont
-                                            font.pixelSize: 10
-                                            horizontalAlignment: Text.AlignRight
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 16
-
-                                        Flickable {
-                                            Layout.fillWidth: true
-                                            Layout.preferredHeight: historyHeatmapGrid.implicitHeight
-                                            contentWidth: historyHeatmapGrid.implicitWidth
-                                            contentHeight: historyHeatmapGrid.implicitHeight
-                                            clip: true
-                                            boundsBehavior: Flickable.StopAtBounds
-
-                                            Column {
-                                                id: historyHeatmapGrid
-                                                spacing: 3
-
-                                                Repeater {
-                                                    model: historyHeatmap() ? historyHeatmap().rows : []
-
-                                                    delegate: Row {
-                                                        required property var modelData
-                                                        spacing: 3
-
-                                                        Repeater {
-                                                            model: modelData.cells || []
-
-                                                            delegate: Rectangle {
-                                                                id: heatCell
-                                                                required property var modelData
-                                                                width: 12
-                                                                height: 12
-                                                                radius: 0
-                                                                color: root.heatmapColor(modelData)
-                                                                scale: heatCellHover.containsMouse ? 1.3 : 1.0
-                                                                z: heatCellHover.containsMouse ? 3 : 0
-
-                                                                Behavior on scale {
-                                                                    NumberAnimation { duration: 110 }
-                                                                }
-
-                                                                MouseArea {
-                                                                    id: heatCellHover
-                                                                    anchors.fill: parent
-                                                                    hoverEnabled: true
-                                                                    enabled: heatCell.modelData.tooltipText.length > 0
-                                                                }
-
-                                                                ToolTip.visible: heatCellHover.containsMouse
-                                                                ToolTip.delay: 150
-                                                                ToolTip.text: heatCell.modelData.tooltipText
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        ColumnLayout {
-                                            spacing: 4
-
-                                            Label {
-                                                text: "more"
-                                                color: "#6A6E95"
-                                                font.family: root.textFont
-                                                font.pixelSize: 9
-                                            }
-
-                                            Repeater {
-                                                model: ["#82FB9C", "#45C878", "#237A50", "#1D3B2F", "#232C45", "#10182B"]
-
-                                                delegate: Rectangle {
-                                                    required property string modelData
-                                                    width: 9
-                                                    height: 9
-                                                    radius: 0
-                                                    color: modelData
-                                                }
-                                            }
-
-                                            Label {
-                                                text: "less"
-                                                color: "#6A6E95"
-                                                font.family: root.textFont
-                                                font.pixelSize: 9
-                                            }
-                                        }
-                                    }
-                                }
                             }
 
                             GridLayout {
