@@ -117,6 +117,25 @@ ShellRoot {
         return "#202848"
     }
 
+    function heatmapBorderColor(cell) {
+        if (!cell || cell.empty) {
+            return "transparent"
+        }
+        if (cell.quotaBand === "critical") {
+            return "#E06C75"
+        }
+        if (cell.quotaBand === "warning") {
+            return "#F2C572"
+        }
+        if (cell.quotaBand === "healthy") {
+            return withAlpha("#82FB9C", 0.55)
+        }
+        if (cell.isToday) {
+            return withAlpha("#F6FBFF", 0.45)
+        }
+        return "transparent"
+    }
+
     function runCodexbar(args) {
         var command = [root.codexbarBin].concat(args).concat(["--config", root.configPath])
         if (actionRunner.running) {
@@ -363,6 +382,14 @@ ShellRoot {
             color: control.down ? withAlpha(control.accent, 0.26) : (control.hovered ? withAlpha(control.accent, 0.18) : withAlpha(control.accent, 0.10))
             border.color: control.hovered ? withAlpha(control.accent, 0.60) : withAlpha(control.accent, 0.34)
             border.width: 1
+
+            Behavior on color {
+                ColorAnimation { duration: 110 }
+            }
+
+            Behavior on border.color {
+                ColorAnimation { duration: 110 }
+            }
         }
 
         contentItem: Label {
@@ -396,6 +423,14 @@ ShellRoot {
             color: tab.selected ? withAlpha(tab.accent, 0.24) : (tab.hovered ? withAlpha(tab.accent, 0.14) : "#0E1423")
             border.width: 1
             border.color: tab.selected ? withAlpha(tab.accent, 0.70) : withAlpha(tab.accent, 0.24)
+
+            Behavior on color {
+                ColorAnimation { duration: 110 }
+            }
+
+            Behavior on border.color {
+                ColorAnimation { duration: 110 }
+            }
         }
 
         contentItem: Label {
@@ -498,8 +533,15 @@ ShellRoot {
             width: Math.max(0, Math.min(metricBar.width, metricBar.width * (metricBar.usedPercent / 100.0)))
             height: metricBar.height
             radius: 0
-            color: metricBar.accent
-            opacity: 0.92
+            Behavior on width {
+                NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+            }
+
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.lighter(metricBar.accent, 1.22) }
+                GradientStop { position: 0.55; color: metricBar.accent }
+                GradientStop { position: 1.0; color: Qt.darker(metricBar.accent, 1.12) }
+            }
         }
     }
 
@@ -646,11 +688,17 @@ ShellRoot {
         property var providerData: ({})
         implicitHeight: 78
         accent: statusColor(providerData)
-        color: providerData.id === root.focusProviderId ? "#141C31" : "#0E1423"
+        color: providerData.id === root.focusProviderId ? "#141C31" : (railHover.containsMouse ? "#131B30" : "#0E1423")
+
+        Behavior on color {
+            ColorAnimation { duration: 110 }
+        }
 
         MouseArea {
+            id: railHover
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
             onClicked: {
                 root.setFocus(providerRow.providerData.id)
                 root.setView("detail")
@@ -759,7 +807,18 @@ ShellRoot {
         onVisibleChanged: {
             if (visible) {
                 root.syncFocus()
+                modalFade.restart()
             }
+        }
+
+        NumberAnimation {
+            id: modalFade
+            target: modalFrame
+            property: "opacity"
+            from: 0
+            to: 1
+            duration: 150
+            easing.type: Easing.OutCubic
         }
 
         Item {
@@ -769,6 +828,22 @@ ShellRoot {
                 anchors.fill: parent
                 color: "#050711"
                 opacity: 0.66
+            }
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: modalFrame.width + 10
+                height: modalFrame.height + 10
+                radius: 0
+                color: Qt.rgba(0, 0, 0, 0.22)
+            }
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: modalFrame.width + 4
+                height: modalFrame.height + 4
+                radius: 0
+                color: Qt.rgba(0, 0, 0, 0.34)
             }
 
             FocusScope {
@@ -1041,11 +1116,17 @@ ShellRoot {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 118
                                                 accent: statusColor(modelData)
-                                                color: modelData.id === root.focusProviderId ? "#141C31" : "#0E1423"
+                                                color: modelData.id === root.focusProviderId ? "#141C31" : (cardHover.containsMouse ? "#121A2D" : "#0E1423")
+
+                                                Behavior on color {
+                                                    ColorAnimation { duration: 110 }
+                                                }
 
                                                 MouseArea {
+                                                    id: cardHover
                                                     anchors.fill: parent
                                                     cursorShape: Qt.PointingHandCursor
+                                                    hoverEnabled: true
                                                     onClicked: {
                                                         root.setFocus(modelData.id)
                                                         root.setView("detail")
@@ -1650,43 +1731,108 @@ ShellRoot {
                                             clip: true
                                             boundsBehavior: Flickable.StopAtBounds
 
-                                            Column {
-                                                id: historyHeatmapGrid
-                                                spacing: 2
+                                                Column {
+                                                    id: historyHeatmapGrid
+                                                    spacing: 2
 
-                                                Repeater {
-                                                    model: historyHeatmap() ? historyHeatmap().rows : []
+                                                    Repeater {
+                                                        model: historyHeatmap() ? historyHeatmap().rows : []
 
-                                                    delegate: Row {
-                                                        required property var modelData
-                                                        spacing: 2
+                                                        delegate: Row {
+                                                            required property var modelData
+                                                            spacing: 2
 
-                                                        Repeater {
-                                                            model: modelData.cells || []
+                                                            Repeater {
+                                                                model: modelData.cells || []
 
-                                                            delegate: Rectangle {
-                                                                id: heatCell
-                                                                required property var modelData
-                                                                width: 10
-                                                                height: 10
-                                                                radius: 0
-                                                                color: root.heatmapColor(modelData)
+                                                                delegate: Rectangle {
+                                                                    id: heatCell
+                                                                    required property var modelData
+                                                                    width: 10
+                                                                    height: 10
+                                                                    radius: 0
+                                                                    color: root.heatmapColor(modelData)
+                                                                    border.width: 1
+                                                                    border.color: root.heatmapBorderColor(modelData)
+                                                                    scale: heatCellHover.containsMouse ? 1.45 : 1.0
+                                                                    z: heatCellHover.containsMouse ? 3 : 0
 
-                                                                MouseArea {
-                                                                    id: heatCellHover
-                                                                    anchors.fill: parent
-                                                                    hoverEnabled: true
-                                                                    enabled: heatCell.modelData.tooltipText.length > 0
+                                                                    Behavior on scale {
+                                                                        NumberAnimation { duration: 110 }
+                                                                    }
+
+                                                                    Behavior on border.color {
+                                                                        ColorAnimation { duration: 120 }
+                                                                    }
+
+                                                                    MouseArea {
+                                                                        id: heatCellHover
+                                                                        anchors.fill: parent
+                                                                        hoverEnabled: true
+                                                                        enabled: heatCell.modelData.tooltipText.length > 0
+                                                                    }
+
+                                                                    ToolTip.visible: heatCellHover.containsMouse
+                                                                    ToolTip.delay: 150
+                                                                    ToolTip.text: heatCell.modelData.tooltipText
                                                                 }
-
-                                                                ToolTip.visible: heatCellHover.containsMouse
-                                                                ToolTip.delay: 150
-                                                                ToolTip.text: heatCell.modelData.tooltipText
                                                             }
                                                         }
                                                     }
                                                 }
-                                            }
+
+                                                RowLayout {
+                                                    spacing: 4
+
+                                                    Label {
+                                                        text: "less"
+                                                        color: "#6A6E95"
+                                                        font.family: root.textFont
+                                                        font.pixelSize: 9
+                                                    }
+
+                                                    Repeater {
+                                                        model: ["#202848", "#253057", "#82FB9C", "#4FE88F", "#50F872"]
+
+                                                        delegate: Rectangle {
+                                                            required property string modelData
+                                                            width: 8
+                                                            height: 8
+                                                            radius: 0
+                                                            color: modelData
+                                                        }
+                                                    }
+
+                                                    Label {
+                                                        text: "more"
+                                                        color: "#6A6E95"
+                                                        font.family: root.textFont
+                                                        font.pixelSize: 9
+                                                    }
+
+                                                    Item { Layout.preferredWidth: 8 }
+
+                                                    Label {
+                                                        text: "peak quota"
+                                                        color: "#6A6E95"
+                                                        font.family: root.textFont
+                                                        font.pixelSize: 9
+                                                    }
+
+                                                    Repeater {
+                                                        model: ["#82FB9C", "#F2C572", "#E06C75"]
+
+                                                        delegate: Rectangle {
+                                                            required property string modelData
+                                                            width: 8
+                                                            height: 8
+                                                            radius: 0
+                                                            color: "transparent"
+                                                            border.width: 1
+                                                            border.color: modelData
+                                                        }
+                                                    }
+                                                }
                                         }
                                     }
 

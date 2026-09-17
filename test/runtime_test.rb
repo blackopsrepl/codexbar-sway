@@ -78,6 +78,9 @@ class RuntimeTest < Minitest::Test
     day_cells = heatmap[:rows].flat_map { |row| row[:cells] }.reject { |cell| cell[:empty] }
     assert_equal 1, day_cells.length
     assert_equal 4, day_cells.first[:intensity]
+    assert_equal "healthy", day_cells.first[:quotaBand]
+    assert_equal 42, day_cells.first[:quotaPercent]
+    assert_equal true, day_cells.first[:isToday]
   end
 
   def test_history_heatmap_buckets_tokens_and_aligns_week_rows
@@ -86,17 +89,17 @@ class RuntimeTest < Minitest::Test
       providers: {
         "codex" => {
           daily: [
-            { date: "2026-08-03", totalTokens: 4_000, records: 2 },
+            { date: "2026-08-03", totalTokens: 4_000, records: 2, latestSecondaryUsedPercent: 78.0 },
             { date: "2026-08-04", totalTokens: 10_000, records: 3 },
             { date: "2026-08-06", latestPrimaryUsedPercent: 12.0 },
-            { date: "2026-08-07", totalTokens: 30_000, records: 9 },
+            { date: "2026-08-07", totalTokens: 30_000, records: 9, latestPrimaryUsedPercent: 91.0 },
             { date: "2026-08-09", totalTokens: 5_000, records: 1 }
           ]
         }
       }
     }
 
-    heatmap = CodexBar::Runtime::Presenter.history_heatmap_view(history.dig(:providers, "codex"))
+    heatmap = CodexBar::Runtime::Presenter.history_heatmap_view(history.dig(:providers, "codex"), today: "2026-08-09")
 
     assert heatmap[:available]
     assert_equal 49_000, heatmap[:totalTokens]
@@ -108,30 +111,42 @@ class RuntimeTest < Minitest::Test
     assert sunday_row[0][:empty]
     assert_equal "2026-08-09", sunday_row[1][:date]
     assert_equal 1, sunday_row[1][:intensity]
+    assert_nil sunday_row[1][:quotaBand]
+    assert_equal true, sunday_row[1][:isToday]
 
     monday_row = heatmap[:rows][1][:cells]
     assert_equal "2026-08-03", monday_row[0][:date]
     assert_equal 1, monday_row[0][:intensity]
+    assert_equal "warning", monday_row[0][:quotaBand]
+    assert_equal 78, monday_row[0][:quotaPercent]
+    assert_equal false, monday_row[0][:isToday]
     assert monday_row[1][:empty]
 
     tuesday = heatmap[:rows][2][:cells][0]
     assert_equal "2026-08-04", tuesday[:date]
     assert_equal 2, tuesday[:intensity]
+    assert_nil tuesday[:quotaBand]
 
     wednesday = heatmap[:rows][3][:cells][0]
     assert_equal "2026-08-05", wednesday[:date]
     refute wednesday[:empty]
     assert_equal 0, wednesday[:intensity]
     assert_equal "", wednesday[:tooltipText]
+    assert_nil wednesday[:quotaBand]
+    assert_equal false, wednesday[:isToday]
 
     thursday = heatmap[:rows][4][:cells][0]
     assert_equal "2026-08-06", thursday[:date]
     assert_equal 0, thursday[:intensity]
+    assert_equal "healthy", thursday[:quotaBand]
+    assert_equal 12, thursday[:quotaPercent]
     assert_includes thursday[:tooltipText], "12% quota"
 
     friday = heatmap[:rows][5][:cells][0]
     assert_equal "2026-08-07", friday[:date]
     assert_equal 4, friday[:intensity]
+    assert_equal "critical", friday[:quotaBand]
+    assert_equal 91, friday[:quotaPercent]
     assert_includes friday[:tooltipText], "30k tok"
     assert_includes friday[:tooltipText], "9 records"
 
