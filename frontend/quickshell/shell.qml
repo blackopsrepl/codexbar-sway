@@ -95,45 +95,34 @@ ShellRoot {
         return heatmap && heatmap.stats ? heatmap.stats : ({})
     }
 
-    function heatmapColor(cell) {
-        if (!cell) {
-            return "#202848"
+    function heatmapStatsLine() {
+        var stats = historyHeatmapStats()
+        if (!stats || !stats.windowText) {
+            return ""
         }
-        if (cell.empty) {
-            return "#0B0C16"
-        }
-        if (cell.intensity >= 4) {
-            return "#50F872"
-        }
-        if (cell.intensity === 3) {
-            return "#4FE88F"
-        }
-        if (cell.intensity === 2) {
-            return "#82FB9C"
-        }
-        if (cell.intensity === 1) {
-            return "#253057"
-        }
-        return "#202848"
+        return stats.windowText + "  ·  " + (stats.activeDays || 0) + " active  ·  streak " + (stats.currentStreak || 0) + "  ·  best " + (stats.bestDayText || "none") + " · " + (stats.bestCountText || "0 tok")
     }
 
-    function heatmapBorderColor(cell) {
+    function heatmapColor(cell) {
         if (!cell || cell.empty) {
-            return "transparent"
+            return "#10182B"
         }
-        if (cell.quotaBand === "critical") {
-            return "#E06C75"
+        if (!cell.present) {
+            return "#232C45"
         }
-        if (cell.quotaBand === "warning") {
-            return "#F2C572"
+        if (cell.intensity >= 4) {
+            return "#82FB9C"
         }
-        if (cell.quotaBand === "healthy") {
-            return withAlpha("#82FB9C", 0.55)
+        if (cell.intensity === 3) {
+            return "#45C878"
         }
-        if (cell.isToday) {
-            return withAlpha("#F6FBFF", 0.45)
+        if (cell.intensity === 2) {
+            return "#237A50"
         }
-        return "transparent"
+        if (cell.intensity === 1) {
+            return "#1D3B2F"
+        }
+        return "#232C45"
     }
 
     function runCodexbar(args) {
@@ -1688,40 +1677,51 @@ ShellRoot {
                                 id: heatmapCard
                                 visible: !!historyHeatmap()
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 128
+                                Layout.preferredHeight: heatmapColumn.implicitHeight + 28
                                 accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
                                 color: "#0E1423"
 
-                                RowLayout {
-                                    id: heatmapBody
+                                ColumnLayout {
+                                    id: heatmapColumn
                                     anchors.fill: parent
-                                    anchors.margins: 12
-                                    spacing: 12
+                                    anchors.margins: 14
+                                    spacing: 10
 
-                                    ColumnLayout {
+                                    RowLayout {
                                         Layout.fillWidth: true
-                                        spacing: 6
+                                        spacing: 8
 
-                                        RowLayout {
-                                            spacing: 8
-
-                                            Text {
-                                                text: root.glyphs.cost
-                                                color: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
-                                                font.family: root.iconFont
-                                                font.pixelSize: 13
-                                            }
-
-                                            Label {
-                                                Layout.fillWidth: true
-                                                text: "Token usage heatmap  " + (historyHeatmap() ? historyHeatmap().totalText : "")
-                                                color: "#F6FBFF"
-                                                font.family: root.textFont
-                                                font.pixelSize: 11
-                                                font.bold: true
-                                                elide: Text.ElideRight
-                                            }
+                                        Text {
+                                            text: root.glyphs.cost
+                                            color: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
+                                            font.family: root.iconFont
+                                            font.pixelSize: 13
                                         }
+
+                                        Label {
+                                            text: "Token usage  " + (historyHeatmap() ? historyHeatmap().totalText : "")
+                                            color: "#F6FBFF"
+                                            font.family: root.textFont
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                        }
+
+                                        Item { Layout.fillWidth: true }
+
+                                        Label {
+                                            Layout.fillWidth: true
+                                            text: root.heatmapStatsLine()
+                                            color: "#8E97B5"
+                                            font.family: root.textFont
+                                            font.pixelSize: 10
+                                            horizontalAlignment: Text.AlignRight
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 16
 
                                         Flickable {
                                             Layout.fillWidth: true
@@ -1731,220 +1731,78 @@ ShellRoot {
                                             clip: true
                                             boundsBehavior: Flickable.StopAtBounds
 
-                                                Column {
-                                                    id: historyHeatmapGrid
-                                                    spacing: 2
+                                            Column {
+                                                id: historyHeatmapGrid
+                                                spacing: 3
 
-                                                    Repeater {
-                                                        model: historyHeatmap() ? historyHeatmap().rows : []
+                                                Repeater {
+                                                    model: historyHeatmap() ? historyHeatmap().rows : []
 
-                                                        delegate: Row {
-                                                            required property var modelData
-                                                            spacing: 2
+                                                    delegate: Row {
+                                                        required property var modelData
+                                                        spacing: 3
 
-                                                            Repeater {
-                                                                model: modelData.cells || []
+                                                        Repeater {
+                                                            model: modelData.cells || []
 
-                                                                delegate: Rectangle {
-                                                                    id: heatCell
-                                                                    required property var modelData
-                                                                    width: 10
-                                                                    height: 10
-                                                                    radius: 0
-                                                                    color: root.heatmapColor(modelData)
-                                                                    border.width: 1
-                                                                    border.color: root.heatmapBorderColor(modelData)
-                                                                    scale: heatCellHover.containsMouse ? 1.45 : 1.0
-                                                                    z: heatCellHover.containsMouse ? 3 : 0
+                                                            delegate: Rectangle {
+                                                                id: heatCell
+                                                                required property var modelData
+                                                                width: 12
+                                                                height: 12
+                                                                radius: 0
+                                                                color: root.heatmapColor(modelData)
+                                                                scale: heatCellHover.containsMouse ? 1.3 : 1.0
+                                                                z: heatCellHover.containsMouse ? 3 : 0
 
-                                                                    Behavior on scale {
-                                                                        NumberAnimation { duration: 110 }
-                                                                    }
-
-                                                                    Behavior on border.color {
-                                                                        ColorAnimation { duration: 120 }
-                                                                    }
-
-                                                                    MouseArea {
-                                                                        id: heatCellHover
-                                                                        anchors.fill: parent
-                                                                        hoverEnabled: true
-                                                                        enabled: heatCell.modelData.tooltipText.length > 0
-                                                                    }
-
-                                                                    ToolTip.visible: heatCellHover.containsMouse
-                                                                    ToolTip.delay: 150
-                                                                    ToolTip.text: heatCell.modelData.tooltipText
+                                                                Behavior on scale {
+                                                                    NumberAnimation { duration: 110 }
                                                                 }
+
+                                                                MouseArea {
+                                                                    id: heatCellHover
+                                                                    anchors.fill: parent
+                                                                    hoverEnabled: true
+                                                                    enabled: heatCell.modelData.tooltipText.length > 0
+                                                                }
+
+                                                                ToolTip.visible: heatCellHover.containsMouse
+                                                                ToolTip.delay: 150
+                                                                ToolTip.text: heatCell.modelData.tooltipText
                                                             }
                                                         }
                                                     }
                                                 }
-
-                                                RowLayout {
-                                                    spacing: 4
-
-                                                    Label {
-                                                        text: "less"
-                                                        color: "#6A6E95"
-                                                        font.family: root.textFont
-                                                        font.pixelSize: 9
-                                                    }
-
-                                                    Repeater {
-                                                        model: ["#202848", "#253057", "#82FB9C", "#4FE88F", "#50F872"]
-
-                                                        delegate: Rectangle {
-                                                            required property string modelData
-                                                            width: 8
-                                                            height: 8
-                                                            radius: 0
-                                                            color: modelData
-                                                        }
-                                                    }
-
-                                                    Label {
-                                                        text: "more"
-                                                        color: "#6A6E95"
-                                                        font.family: root.textFont
-                                                        font.pixelSize: 9
-                                                    }
-
-                                                    Item { Layout.preferredWidth: 8 }
-
-                                                    Label {
-                                                        text: "peak quota"
-                                                        color: "#6A6E95"
-                                                        font.family: root.textFont
-                                                        font.pixelSize: 9
-                                                    }
-
-                                                    Repeater {
-                                                        model: ["#82FB9C", "#F2C572", "#E06C75"]
-
-                                                        delegate: Rectangle {
-                                                            required property string modelData
-                                                            width: 8
-                                                            height: 8
-                                                            radius: 0
-                                                            color: "transparent"
-                                                            border.width: 1
-                                                            border.color: modelData
-                                                        }
-                                                    }
-                                                }
+                                            }
                                         }
-                                    }
-
-                                    Rectangle {
-                                        Layout.preferredWidth: 220
-                                        Layout.fillHeight: true
-                                        visible: modalFrame.width >= 760
-                                        radius: 0
-                                        color: "#101527"
-                                        border.width: 1
-                                        border.color: withAlpha(heatmapCard.accent, 0.24)
 
                                         ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 10
                                             spacing: 4
 
                                             Label {
-                                                Layout.fillWidth: true
-                                                text: "Usage summary"
-                                                color: "#A8B3D7"
+                                                text: "more"
+                                                color: "#6A6E95"
                                                 font.family: root.textFont
-                                                font.pixelSize: 10
-                                                font.bold: true
-                                                elide: Text.ElideRight
+                                                font.pixelSize: 9
                                             }
 
-                                            GridLayout {
-                                                Layout.fillWidth: true
-                                                columns: 2
-                                                rowSpacing: 2
-                                                columnSpacing: 8
+                                            Repeater {
+                                                model: ["#82FB9C", "#45C878", "#237A50", "#1D3B2F", "#232C45", "#10182B"]
 
-                                                Label {
-                                                    text: "Window"
-                                                    color: "#6A6E95"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
+                                                delegate: Rectangle {
+                                                    required property string modelData
+                                                    width: 9
+                                                    height: 9
+                                                    radius: 0
+                                                    color: modelData
                                                 }
+                                            }
 
-                                                Label {
-                                                    Layout.fillWidth: true
-                                                    text: root.historyHeatmapStats().windowText || "-"
-                                                    color: "#DDF7FF"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                    elide: Text.ElideRight
-                                                }
-
-                                                Label {
-                                                    text: "Active"
-                                                    color: "#6A6E95"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                }
-
-                                                Label {
-                                                    Layout.fillWidth: true
-                                                    text: (root.historyHeatmapStats().activeDays || 0) + " days"
-                                                    color: "#DDF7FF"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                    elide: Text.ElideRight
-                                                }
-
-                                                Label {
-                                                    text: "Streak"
-                                                    color: "#6A6E95"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                }
-
-                                                Label {
-                                                    Layout.fillWidth: true
-                                                    text: (root.historyHeatmapStats().currentStreak || 0) + " days"
-                                                    color: "#DDF7FF"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                    elide: Text.ElideRight
-                                                }
-
-                                                Label {
-                                                    text: "Best day"
-                                                    color: "#6A6E95"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                }
-
-                                                Label {
-                                                    Layout.fillWidth: true
-                                                    text: root.historyHeatmapStats().bestDayText || "none"
-                                                    color: "#DDF7FF"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                    elide: Text.ElideRight
-                                                }
-
-                                                Label {
-                                                    text: "Peak"
-                                                    color: "#6A6E95"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                }
-
-                                                Label {
-                                                    Layout.fillWidth: true
-                                                    text: root.historyHeatmapStats().bestCountText || "0 tok"
-                                                    color: "#DDF7FF"
-                                                    font.family: root.textFont
-                                                    font.pixelSize: 10
-                                                    elide: Text.ElideRight
-                                                }
+                                            Label {
+                                                text: "less"
+                                                color: "#6A6E95"
+                                                font.family: root.textFont
+                                                font.pixelSize: 9
                                             }
                                         }
                                     }

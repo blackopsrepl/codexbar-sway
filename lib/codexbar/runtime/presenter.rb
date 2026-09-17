@@ -404,7 +404,7 @@ module CodexBar
         quota.positive? || entry[:totalTokens].to_i.positive? || entry[:records].to_i.positive?
       end
 
-      def history_heatmap_view(history, today: Date.today.iso8601)
+      def history_heatmap_view(history)
         days = Array(history && history[:daily])
                .select { |entry| history_day_present?(entry) }
                .sort_by { |entry| entry[:date].to_s }
@@ -415,7 +415,7 @@ module CodexBar
         last_date = Date.parse(days.last[:date].to_s)
         max_tokens = days.map { |entry| entry[:totalTokens].to_i }.max.to_i
 
-        cells = (first_date..last_date).map { |date| heatmap_cell(date, by_date[date.iso8601], max_tokens, today) }
+        cells = (first_date..last_date).map { |date| heatmap_cell(date, by_date[date.iso8601], max_tokens) }
         padded = Array.new(first_date.wday) { heatmap_empty_cell } + cells
         padded.concat(Array.new((7 - (padded.length % 7)) % 7) { heatmap_empty_cell })
         weeks = padded.each_slice(7).to_a
@@ -459,35 +459,21 @@ module CodexBar
         streak
       end
 
-      def heatmap_cell(date, entry, max_tokens, today = Date.today.iso8601)
+      def heatmap_cell(date, entry, max_tokens)
         tokens = entry ? entry[:totalTokens].to_i : 0
         quota, = entry ? history_day_quota(entry) : [0.0, false]
-        quota_percent = quota.to_f
         {
           date: date.iso8601,
           label: Core::Format.date_label(date.iso8601),
           empty: false,
+          present: !entry.nil?,
           intensity: heatmap_intensity(tokens, max_tokens),
-          quotaPercent: quota_percent.round,
-          quotaBand: heatmap_quota_band(quota_percent),
-          isToday: date.iso8601 == today,
-          tooltipText: heatmap_cell_tooltip(entry, tokens, quota_percent)
+          tooltipText: heatmap_cell_tooltip(entry, tokens, quota.to_f)
         }
       end
 
       def heatmap_empty_cell
-        { date: "", label: "", empty: true, intensity: 0, quotaPercent: 0, quotaBand: nil, isToday: false, tooltipText: "" }
-      end
-
-      # Mirrors Core::Format.window_severity thresholds (remaining <= 10%
-      # critical, <= 25% warning) applied to the day's peak quota usage, so a
-      # heatmap outline agrees with the status colors used across the panel.
-      def heatmap_quota_band(quota_percent)
-        return nil unless quota_percent.positive?
-        return "critical" if quota_percent >= 90.0
-        return "warning" if quota_percent >= 75.0
-
-        "healthy"
+        { date: "", label: "", empty: true, present: false, intensity: 0, tooltipText: "" }
       end
 
       def heatmap_intensity(tokens, max_tokens)

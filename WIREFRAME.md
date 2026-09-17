@@ -85,7 +85,7 @@ The QuickShell panel has four views:
 
 - Overview: active display provider, state badges, and compact cards for enabled, visible providers that are in overview. Every overview member renders; there is no fixed provider cap.
 - Provider Detail: focused provider quota, status, local usage, history/storage summaries, alerts, provider rail, and provider actions.
-- History: presenter-rendered retained daily history for the focused provider, including a token usage heatmap (week-aligned day grid: fill intensity from daily local token totals, cell outline from the day's peak-quota band, today marker, legend) and per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view falls back to its empty state.
+- History: presenter-rendered retained daily history for the focused provider, including a token usage heatmap (week-aligned day grid with a single fill ramp for daily local token totals and inline usage stats) and per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view falls back to its empty state.
 - Settings: cadence, display, notification, privacy, scan, and cache-clear controls.
 
 The QuickShell panel is a modal overlay. It stays above application windows, ignores layer-shell exclusion, and uses a relaxed vertical footprint with scrolling where detail content exceeds the available height.
