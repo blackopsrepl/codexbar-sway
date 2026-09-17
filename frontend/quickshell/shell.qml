@@ -95,7 +95,8 @@ ShellRoot {
         if (!stats || !stats.windowText) {
             return ""
         }
-        return stats.windowText + " · " + (stats.activeDays || 0) + " active · streak " + (stats.currentStreak || 0) + " · best " + (stats.bestDayText || "none") + " · " + (stats.bestCountText || "0 tok")
+        var peak = String(stats.bestCountText || "0 tok").replace(" tok", "")
+        return stats.windowText + " · " + (stats.activeDays || 0) + " active · streak " + (stats.currentStreak || 0) + " · best " + (stats.bestDayText || "none") + " · " + peak
     }
 
     function heatmapColor(cell) {
