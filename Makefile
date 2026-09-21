@@ -73,6 +73,7 @@ INSTALL_FILES := \
 	lib/codexbar/runtime/history.rb \
 	lib/codexbar/runtime/local_usage.rb \
 	lib/codexbar/runtime/notifications.rb \
+	lib/codexbar/runtime/omarchy.rb \
 	lib/codexbar/runtime/presenter.rb \
 	lib/codexbar/runtime/quickshell.rb \
 	lib/codexbar/runtime/server.rb \
