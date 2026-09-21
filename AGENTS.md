@@ -21,7 +21,7 @@
 - `bin/release-check`: canonical release validation script used by `make check`.
 - `lib/codexbar/core`: config, types, formatting, process, HTTP, and metric logic.
 - `lib/codexbar/providers`: Codex, Claude, Gemini, OpenCode, and Z.ai fetchers and registry.
-- `lib/codexbar/runtime`: daemon, snapshot state, presenter, QuickShell control, Waybar JSON, and the bounded legacy direct-bar command.
+- `lib/codexbar/runtime`: daemon, snapshot state, presenter, QuickShell control, Waybar JSON, Omarchy shell bar installer, and the bounded legacy direct-bar command.
 - `frontend/quickshell/shell.qml`: the only human-facing UI.
 - `packaging/solverforge-linux`: reproducible SolverForge Linux Waybar wrapper integration.
 - `docs`: current Linux release documentation only.
@@ -51,6 +51,7 @@
 - `codexbar daemon` fetches enabled providers and writes cached snapshots.
 - `codexbar refresh` performs an explicit fetch and signals Waybar.
 - `codexbar waybar render` reads cached state only and emits Waybar JSON.
+- `codexbar omarchy install|remove|status` manages the Omarchy shell bar module in `~/.config/omarchy/shell.json`; all shell config edits go through `Runtime::Omarchy`, never ad hoc file edits.
 - `codexbar panel` opens QuickShell through `runtime.quickShellCommand` and `runtime.quickShellShell`.
 - `codexbar ui open|close|toggle|status` mutates or reports `ui.json`.
 - `codexbar serve` exposes cached state through read-only localhost JSON endpoints; request handlers must not fetch providers.

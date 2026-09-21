@@ -25,6 +25,7 @@ require_relative "codexbar/runtime/server"
 require_relative "codexbar/runtime/quickshell"
 require_relative "codexbar/runtime/waybar"
 require_relative "codexbar/runtime/swaybar"
+require_relative "codexbar/runtime/omarchy"
 require_relative "codexbar/cli"
 
 module CodexBar

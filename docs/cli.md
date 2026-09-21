@@ -35,6 +35,7 @@ codexbar daemon
 codexbar panel
 codexbar ui open|close|toggle|status
 codexbar waybar render|refresh|panel|cycle-next|cycle-prev
+codexbar omarchy install|remove|status
 codexbar providers list
 codexbar providers activate <id>
 codexbar providers deactivate <id>
@@ -68,6 +69,8 @@ codexbar serve [--host 127.0.0.1] [--port 8765]
 ```
 
 `codexbar bar` still exists as legacy direct-bar compatibility. The release path is QuickShell plus Waybar.
+
+`codexbar omarchy install` mounts the Waybar chip as an Omarchy shell bar command module in `~/.config/omarchy/shell.json`, by default after `omarchy.weather`; it seeds the user file from the Omarchy defaults when missing. Flags: `--after ID`, `--section left|center|right`, `--index N`, `--interval SECONDS` (default 10), `--exec PATH`. `omarchy status` reports the installed module, and `omarchy remove` drops it.
 
 `codexbar serve` is read-only and serves cached state at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`.
 

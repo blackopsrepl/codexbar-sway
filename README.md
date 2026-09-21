@@ -45,6 +45,24 @@ Waybar does not refresh Codex, Claude, Gemini, OpenCode, or Z.ai by itself. If t
 
 On SolverForge Linux, the managed Waybar integration starts companion daemons through `solverforge-waybar-companions-start`, launched from Sway `exec_always` beside Waybar. That launcher restarts `codexbar daemon` if an early boot-time refresh failure makes it exit.
 
+## Hyprland + Omarchy
+
+On a Hyprland desktop running the Omarchy shell, the Waybar chip mounts as a bar command module:
+
+```bash
+codexbar omarchy install   # adds the codexbar module next to omarchy.weather
+codexbar omarchy status
+codexbar omarchy remove
+```
+
+`omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults when the user file does not exist yet, inserts a `type: command` module (default placement: `--after omarchy.weather`), and asks the running shell to reload its config. The module polls `codexbar waybar render` on an interval (`--interval`, default 10), opens the QuickShell panel on left click, and triggers a daemon refresh on middle click. The daemon itself is not started by the module; launch it at session startup, for example from Hyprland:
+
+```ini
+exec-once = codexbar daemon
+```
+
+The `waybar` chip contract is unchanged: Waybar on sway and the Omarchy shell on Hyprland both render the same cached-state JSON.
+
 ## Install
 
 ```bash
@@ -79,6 +97,9 @@ codexbar refresh
 codexbar usage --provider codex,claude,gemini,opencode,zai --format json --pretty
 codexbar config validate
 codexbar waybar render
+codexbar omarchy install
+codexbar omarchy status
+codexbar omarchy remove
 codexbar panel
 codexbar ui open|close|toggle|status
 ```
