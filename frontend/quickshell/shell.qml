@@ -16,6 +16,60 @@ ShellRoot {
     property string uiPath: stateDir + "/ui.json"
     property string textFont: "Fira Code"
     property string iconFont: "Symbols Nerd Font Mono"
+
+    // Omarchy theme wiring: live-follows the active Omarchy theme palette
+    // (the same colors.toml the Omarchy shell reads). Falls back to the
+    // built-in palette where a key is absent or Omarchy is not running.
+    property string themeColorsPath: Quickshell.env("OMARCHY_THEME_COLORS") || ((Quickshell.env("HOME") || "") + "/.local/state/omarchy/current/theme/colors.toml")
+    property var themePalette: ({})
+
+    function applyThemeColors(raw) {
+        var parsed = {}
+        var lines = String(raw || "").split("\n")
+        for (var i = 0; i < lines.length; i++) {
+            var match = lines[i].match(/^\s*([A-Za-z0-9_-]+)\s*=\s*["']?(#[0-9A-Fa-f]{6})/)
+            if (match)
+                parsed[match[1]] = match[2]
+        }
+        root.themePalette = parsed
+    }
+
+    function themeColor(key, fallback) {
+        var value = root.themePalette[key]
+        return (typeof value === "string" && value.length > 0) ? value : fallback
+    }
+
+    readonly property QtObject theme: QtObject {
+        readonly property color bg: root.themeColor("background", "#0B0F1E")
+        readonly property color bgDeep: root.themeColor("dark_background", "#050711")
+        readonly property color surface: root.themeColor("selection", "#0E1423")
+        readonly property color surfaceHi: root.themeColor("lighter_background", "#12182B")
+        readonly property color surfaceDeep: root.themeColor("dark_background", "#101726")
+        readonly property color border: root.themeColor("muted", "#232C45")
+        readonly property color text: root.themeColor("bright_foreground", "#F6FBFF")
+        readonly property color textSoft: root.themeColor("bright_foreground", "#DDF7FF")
+        readonly property color textBody: root.themeColor("foreground", "#C4D2ED")
+        readonly property color textDim: root.themeColor("foreground", "#8E97B5")
+        readonly property color textMuted: root.themeColor("dark_foreground", "#6A6E95")
+        readonly property color good: root.themeColor("green", "#82FB9C")
+        readonly property color goodDeep: root.themeColor("green", "#237A50")
+        readonly property color goodBg: root.themeColor("green", "#1D3B2F")
+        readonly property color info: root.themeColor("accent", "#82A7F4")
+        readonly property color warn: root.themeColor("yellow", "#F2C572")
+        readonly property color bad: root.themeColor("red", "#E06C75")
+        readonly property color badSoft: root.themeColor("red", "#F6B7BF")
+    }
+
+    FileView {
+        id: themeFile
+        path: root.themeColorsPath
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.applyThemeColors(text())
+        onFileChanged: reload()
+        onLoadFailed: root.applyThemeColors("")
+    }
+
     property var glyphs: ({
         refresh: "",
         close: "",
@@ -46,7 +100,7 @@ ShellRoot {
     property string activeView: "overview"
 
     function accentColor(provider) {
-        return provider && provider.accent ? provider.accent : "#82FB9C"
+        return provider && provider.accent ? provider.accent : root.theme.good
     }
 
     function withAlpha(hex, alpha) {
@@ -67,19 +121,19 @@ ShellRoot {
 
     function statusColor(provider) {
         if (!provider) {
-            return "#6A6E95"
+            return root.theme.textMuted
         }
         if (provider.status === "error" || provider.status === "critical") {
-            return "#E06C75"
+            return root.theme.bad
         }
         if (provider.status === "warning") {
-            return "#F2C572"
+            return root.theme.warn
         }
         if (provider.status === "incident") {
-            return "#82A7F4"
+            return root.theme.info
         }
         if (provider.status === "stale" || provider.status === "loading") {
-            return "#6A6E95"
+            return root.theme.textMuted
         }
 
         return accentColor(provider)
@@ -101,24 +155,24 @@ ShellRoot {
 
     function heatmapColor(cell) {
         if (!cell || cell.empty) {
-            return "#10182B"
+            return root.theme.surface
         }
         if (!cell.present) {
-            return "#232C45"
+            return root.theme.border
         }
         if (cell.intensity >= 4) {
-            return "#82FB9C"
+            return root.theme.good
         }
         if (cell.intensity === 3) {
-            return "#45C878"
+            return root.theme.good
         }
         if (cell.intensity === 2) {
-            return "#237A50"
+            return root.theme.goodDeep
         }
         if (cell.intensity === 1) {
-            return "#1D3B2F"
+            return root.theme.goodBg
         }
-        return "#232C45"
+        return root.theme.border
     }
 
     function runCodexbar(args) {
@@ -350,7 +404,7 @@ ShellRoot {
 
     component CodexButton: Button {
         id: control
-        property color accent: "#82FB9C"
+        property color accent: root.theme.good
         property string glyph: ""
         property bool compact: false
         property int minimumWidth: compact ? 74 : 92
@@ -381,7 +435,7 @@ ShellRoot {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: control.glyph ? (control.glyph + (control.text ? "  " + control.text : "")) : control.text
-            color: "#DDF7FF"
+            color: root.theme.textSoft
             font: control.font
             elide: Text.ElideRight
         }
@@ -391,7 +445,7 @@ ShellRoot {
         id: tab
         property string view: ""
         property string glyph: ""
-        property color accent: "#82FB9C"
+        property color accent: root.theme.good
         property bool selected: root.activeView === view
 
         font.family: root.textFont
@@ -405,7 +459,7 @@ ShellRoot {
 
         background: Rectangle {
             radius: 0
-            color: tab.selected ? withAlpha(tab.accent, 0.24) : (tab.hovered ? withAlpha(tab.accent, 0.14) : "#0E1423")
+            color: tab.selected ? withAlpha(tab.accent, 0.24) : (tab.hovered ? withAlpha(tab.accent, 0.14) : root.theme.surface)
             border.width: 1
             border.color: tab.selected ? withAlpha(tab.accent, 0.70) : withAlpha(tab.accent, 0.24)
 
@@ -422,7 +476,7 @@ ShellRoot {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: tab.glyph ? (tab.glyph + "  " + tab.text) : tab.text
-            color: tab.selected ? "#F6FBFF" : "#A8B3D7"
+            color: tab.selected ? root.theme.text : root.theme.textBody
             font: tab.font
             elide: Text.ElideRight
         }
@@ -432,8 +486,8 @@ ShellRoot {
         id: pill
         property string text: ""
         property string icon: ""
-        property color accent: "#6A6E95"
-        property color foreground: "#DDF7FF"
+        property color accent: root.theme.textMuted
+        property color foreground: root.theme.textSoft
         property int minimumWidth: 0
         property int maximumWidth: 220
 
@@ -477,7 +531,7 @@ ShellRoot {
         id: sectionHeader
         property string text: ""
         property string icon: ""
-        property color accent: "#8E97B5"
+        property color accent: root.theme.textDim
 
         spacing: 6
 
@@ -501,7 +555,7 @@ ShellRoot {
     component MetricBar: Item {
         id: metricBar
         property real usedPercent: 0
-        property color accent: "#82FB9C"
+        property color accent: root.theme.good
 
         implicitHeight: 6
         implicitWidth: 220
@@ -509,7 +563,7 @@ ShellRoot {
         Rectangle {
             anchors.fill: parent
             radius: 0
-            color: "#131827"
+            color: root.theme.surfaceHi
             border.width: 1
             border.color: withAlpha(metricBar.accent, 0.18)
         }
@@ -532,9 +586,9 @@ ShellRoot {
 
     component CardFrame: Rectangle {
         id: card
-        property color accent: "#82FB9C"
+        property color accent: root.theme.good
         radius: 0
-        color: "#101527"
+        color: root.theme.surfaceHi
         border.width: 1
         border.color: withAlpha(accent, 0.28)
         clip: true
@@ -548,7 +602,7 @@ ShellRoot {
         visible: !!usageHeatmap.heatmapData
         Layout.fillWidth: true
         Layout.preferredHeight: heatmapColumn.implicitHeight + 28
-        color: "#0E1423"
+        color: root.theme.surface
 
         ColumnLayout {
             id: heatmapColumn
@@ -569,7 +623,7 @@ ShellRoot {
 
                 Label {
                     text: usageHeatmap.panelTitle + "  " + (usageHeatmap.heatmapData ? usageHeatmap.heatmapData.totalText : "")
-                    color: "#F6FBFF"
+                    color: root.theme.text
                     font.family: root.textFont
                     font.pixelSize: 11
                     font.bold: true
@@ -580,7 +634,7 @@ ShellRoot {
                 Label {
                     Layout.fillWidth: true
                     text: root.heatmapStatsLine(usageHeatmap.heatmapData)
-                    color: "#8E97B5"
+                    color: root.theme.textDim
                     font.family: root.textFont
                     font.pixelSize: 10
                     horizontalAlignment: Text.AlignRight
@@ -650,13 +704,13 @@ ShellRoot {
 
                     Label {
                         text: "more"
-                        color: "#6A6E95"
+                        color: root.theme.textMuted
                         font.family: root.textFont
                         font.pixelSize: 9
                     }
 
                     Repeater {
-                        model: ["#82FB9C", "#45C878", "#237A50", "#1D3B2F", "#232C45", "#10182B"]
+                        model: [root.theme.good, root.theme.good, root.theme.goodDeep, root.theme.goodBg, root.theme.border, root.theme.surface]
 
                         delegate: Rectangle {
                             required property string modelData
@@ -669,7 +723,7 @@ ShellRoot {
 
                     Label {
                         text: "less"
-                        color: "#6A6E95"
+                        color: root.theme.textMuted
                         font.family: root.textFont
                         font.pixelSize: 9
                     }
@@ -682,8 +736,8 @@ ShellRoot {
         id: dayTile
         property var itemData: ({})
         Layout.preferredHeight: 86
-        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
-        color: "#0E1423"
+        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
+        color: root.theme.surface
 
         ColumnLayout {
             anchors.fill: parent
@@ -697,7 +751,7 @@ ShellRoot {
                 Label {
                     Layout.fillWidth: true
                     text: itemData.label || itemData.date || "--"
-                    color: "#F6FBFF"
+                    color: root.theme.text
                     font.family: root.textFont
                     font.pixelSize: 11
                     font.bold: true
@@ -721,7 +775,7 @@ ShellRoot {
             Label {
                 Layout.fillWidth: true
                 text: itemData.detail || "No local token summary"
-                color: "#8E97B5"
+                color: root.theme.textDim
                 font.family: root.textFont
                 font.pixelSize: 10
                 elide: Text.ElideRight
@@ -732,7 +786,7 @@ ShellRoot {
     component ProviderIconBubble: Rectangle {
         id: bubble
         property string icon: ""
-        property color accent: "#82FB9C"
+        property color accent: root.theme.good
 
         width: 28
         height: 28
@@ -755,8 +809,8 @@ ShellRoot {
         property var itemData: ({})
         Layout.fillWidth: true
         Layout.preferredHeight: 72
-        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
-        color: "#0E1423"
+        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
+        color: root.theme.surface
 
         ColumnLayout {
             anchors.fill: parent
@@ -777,7 +831,7 @@ ShellRoot {
                 Label {
                     Layout.fillWidth: true
                     text: itemData.label || ""
-                    color: "#AEB8D9"
+                    color: root.theme.textBody
                     font.family: root.textFont
                     font.pixelSize: 10
                     font.bold: true
@@ -787,7 +841,7 @@ ShellRoot {
             Label {
                 Layout.fillWidth: true
                 text: itemData.value || "--"
-                color: "#F6FBFF"
+                color: root.theme.text
                 font.family: root.textFont
                 font.pixelSize: 15
                 font.bold: true
@@ -797,7 +851,7 @@ ShellRoot {
             Label {
                 Layout.fillWidth: true
                 text: itemData.detail || ""
-                color: "#7F89A8"
+                color: root.theme.textDim
                 font.family: root.textFont
                 font.pixelSize: 10
                 elide: Text.ElideRight
@@ -811,7 +865,7 @@ ShellRoot {
         property var providerData: ({})
         implicitHeight: 78
         accent: statusColor(providerData)
-        color: providerData.id === root.focusProviderId ? "#141C31" : (railHover.containsMouse ? "#131B30" : "#0E1423")
+        color: providerData.id === root.focusProviderId ? root.theme.surface : (railHover.containsMouse ? root.theme.surfaceHi : root.theme.surface)
 
         Behavior on color {
             ColorAnimation { duration: 110 }
@@ -848,7 +902,7 @@ ShellRoot {
 
                     Label {
                         text: providerRow.providerData.label
-                        color: "#F6FBFF"
+                        color: root.theme.text
                         font.family: root.textFont
                         font.pixelSize: 12
                         font.bold: true
@@ -880,14 +934,14 @@ ShellRoot {
                         BadgePill {
                             text: providerRow.providerData.enabled ? "active" : "off"
                             icon: providerRow.providerData.enabled ? root.glyphs.status : root.glyphs.close
-                            accent: providerRow.providerData.enabled ? "#82FB9C" : "#6A6E95"
+                            accent: providerRow.providerData.enabled ? root.theme.good : root.theme.textMuted
                             minimumWidth: 68
                         }
 
                         BadgePill {
                             text: providerRow.providerData.visible ? "shown" : "hidden"
                             icon: providerRow.providerData.visible ? root.glyphs.shown : root.glyphs.hidden
-                            accent: providerRow.providerData.visible ? "#82A7F4" : "#6A6E95"
+                            accent: providerRow.providerData.visible ? root.theme.info : root.theme.textMuted
                             minimumWidth: 72
                         }
                     }
@@ -949,7 +1003,7 @@ ShellRoot {
 
             Rectangle {
                 anchors.fill: parent
-                color: "#050711"
+                color: root.theme.bgDeep
                 opacity: 0.66
             }
 
@@ -980,15 +1034,15 @@ ShellRoot {
 
                 CardFrame {
                     anchors.fill: parent
-                    accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
-                    color: "#0B0F1E"
+                    accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
+                    color: root.theme.bg
 
                 Rectangle {
                     anchors.fill: parent
                     radius: 0
                     gradient: Gradient {
-                        GradientStop { position: 0.0; color: "#12182B" }
-                        GradientStop { position: 1.0; color: "#090D18" }
+                        GradientStop { position: 0.0; color: root.theme.surfaceHi }
+                        GradientStop { position: 1.0; color: root.theme.bgDeep }
                     }
                     opacity: 1.0
                 }
@@ -1001,7 +1055,7 @@ ShellRoot {
                     CardFrame {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 78
-                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                         RowLayout {
                             anchors.fill: parent
@@ -1017,7 +1071,7 @@ ShellRoot {
 
                                     ProviderIconBubble {
                                         icon: focusProvider() ? focusProvider().icon : root.glyphs.provider
-                                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                     }
 
                                     ColumnLayout {
@@ -1025,7 +1079,7 @@ ShellRoot {
 
                                         Label {
                                             text: viewData.summary && viewData.summary.displayLabel ? ("CodexBar / " + viewData.summary.displayLabel) : "CodexBar"
-                                            color: "#F6FBFF"
+                                            color: root.theme.text
                                             font.family: root.textFont
                                             font.pixelSize: 18
                                             font.bold: true
@@ -1033,7 +1087,7 @@ ShellRoot {
 
                                         Label {
                                             text: viewData.summary && viewData.summary.displayText ? viewData.summary.displayText : "Waiting for provider cache"
-                                            color: focusProvider() ? statusColor(focusProvider()) : "#DDF7FF"
+                                            color: focusProvider() ? statusColor(focusProvider()) : root.theme.textSoft
                                             font.family: root.textFont
                                             font.pixelSize: 12
                                         }
@@ -1042,7 +1096,7 @@ ShellRoot {
 
                                 Label {
                                     text: (viewData.summary.updatedText || "Waiting for cached data") + "  •  " + (viewData.summary.activeCount || 0) + " active  •  " + (viewData.summary.visibleCount || 0) + " visible"
-                                    color: "#8E97B5"
+                                    color: root.theme.textDim
                                     font.family: root.textFont
                                     font.pixelSize: 10
                                 }
@@ -1055,42 +1109,42 @@ ShellRoot {
                                 BadgePill {
                                     text: viewData.summary.modeLabel || "Highest usage"
                                     icon: root.glyphs.status
-                                    accent: "#82FB9C"
+                                    accent: root.theme.good
                                     maximumWidth: 126
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.showUsedLabel || "Remaining"
                                     icon: root.glyphs.meter
-                                    accent: "#82A7F4"
+                                    accent: root.theme.info
                                     maximumWidth: 106
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.metricModeLabel || "both"
                                     icon: root.glyphs.overview
-                                    accent: "#F2C572"
+                                    accent: root.theme.warn
                                     maximumWidth: 78
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.refreshModeLabel || "120s refresh"
                                     icon: root.glyphs.refresh
-                                    accent: "#82FB9C"
+                                    accent: root.theme.good
                                     maximumWidth: 124
                                 }
 
                                 BadgePill {
                                     text: viewData.summary.notificationsLabel || "Notify off"
                                     icon: root.glyphs.bell
-                                    accent: viewData.summary.notificationsLabel === "Notify on" ? "#82A7F4" : "#6A6E95"
+                                    accent: viewData.summary.notificationsLabel === "Notify on" ? root.theme.info : root.theme.textMuted
                                     maximumWidth: 108
                                 }
 
                                 CodexButton {
                                     text: ""
                                     glyph: root.glyphs.refresh
-                                    accent: "#82FB9C"
+                                    accent: root.theme.good
                                     compact: true
                                     minimumWidth: 34
                                     onClicked: root.runCodexbar(["refresh"])
@@ -1099,7 +1153,7 @@ ShellRoot {
                                 CodexButton {
                                     text: ""
                                     glyph: root.glyphs.close
-                                    accent: "#E06C75"
+                                    accent: root.theme.bad
                                     compact: true
                                     minimumWidth: 34
                                     onClicked: root.closePanel()
@@ -1116,28 +1170,28 @@ ShellRoot {
                             text: "Overview"
                             view: "overview"
                             glyph: root.glyphs.overview
-                            accent: "#82FB9C"
+                            accent: root.theme.good
                         }
 
                         ViewTab {
                             text: "Provider Detail"
                             view: "detail"
                             glyph: root.glyphs.provider
-                            accent: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
+                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.info
                         }
 
                         ViewTab {
                             text: "History"
                             view: "history"
                             glyph: root.glyphs.history
-                            accent: "#F2C572"
+                            accent: root.theme.warn
                         }
 
                         ViewTab {
                             text: "Settings"
                             view: "settings"
                             glyph: root.glyphs.settings
-                            accent: "#C4D2ED"
+                            accent: root.theme.textBody
                         }
 
                         Item { Layout.fillWidth: true }
@@ -1145,7 +1199,7 @@ ShellRoot {
                         BadgePill {
                             text: focusProvider() ? focusProvider().status : "loading"
                             icon: root.glyphs.status
-                            accent: focusProvider() ? statusColor(focusProvider()) : "#6A6E95"
+                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.textMuted
                         }
                     }
 
@@ -1164,7 +1218,7 @@ ShellRoot {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 visible: root.activeView === "overview"
-                                accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                                 ColumnLayout {
                                     anchors.fill: parent
@@ -1176,14 +1230,14 @@ ShellRoot {
 
                                         Text {
                                             text: root.glyphs.overview
-                                            color: "#82A7F4"
+                                            color: root.theme.info
                                             font.family: root.iconFont
                                             font.pixelSize: 13
                                         }
 
                                         Label {
                                             text: "Overview"
-                                            color: "#F6FBFF"
+                                            color: root.theme.text
                                             font.family: root.textFont
                                             font.pixelSize: 12
                                             font.bold: true
@@ -1197,31 +1251,31 @@ ShellRoot {
                                         BadgePill {
                                             text: viewData.summary.updatedText || "Waiting for cached data"
                                             icon: root.glyphs.refresh
-                                            accent: viewData.summary.stale ? "#F2C572" : "#82FB9C"
+                                            accent: viewData.summary.stale ? root.theme.warn : root.theme.good
                                         }
 
                                         BadgePill {
                                             text: (viewData.summary.activeCount || 0) + " active"
                                             icon: root.glyphs.status
-                                            accent: "#82FB9C"
+                                            accent: root.theme.good
                                         }
 
                                         BadgePill {
                                             text: viewData.summary.statusLabel || "Status off"
                                             icon: root.glyphs.status
-                                            accent: viewData.summary.statusLabel === "Status on" ? "#82A7F4" : "#6A6E95"
+                                            accent: viewData.summary.statusLabel === "Status on" ? root.theme.info : root.theme.textMuted
                                         }
 
                                         BadgePill {
                                             text: viewData.summary.refreshModeLabel || "120s refresh"
                                             icon: root.glyphs.refresh
-                                            accent: "#F2C572"
+                                            accent: root.theme.warn
                                         }
 
                                         BadgePill {
                                             text: viewData.summary.privacyLabel || "Privacy off"
                                             icon: root.glyphs.privacy
-                                            accent: viewData.summary.privacyLabel === "Privacy on" ? "#F2C572" : "#6A6E95"
+                                            accent: viewData.summary.privacyLabel === "Privacy on" ? root.theme.warn : root.theme.textMuted
                                         }
 
                                         Item { Layout.fillWidth: true }
@@ -1230,7 +1284,7 @@ ShellRoot {
                                     UsageHeatmap {
                                         heatmapData: viewData.heatmap && viewData.heatmap.available ? viewData.heatmap : null
                                         panelTitle: "All providers"
-                                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                     }
 
                                     RowLayout {
@@ -1245,7 +1299,7 @@ ShellRoot {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 118
                                                 accent: statusColor(modelData)
-                                                color: modelData.id === root.focusProviderId ? "#141C31" : (cardHover.containsMouse ? "#121A2D" : "#0E1423")
+                                                color: modelData.id === root.focusProviderId ? root.theme.surface : (cardHover.containsMouse ? root.theme.surfaceHi : root.theme.surface)
 
                                                 Behavior on color {
                                                     ColorAnimation { duration: 110 }
@@ -1283,7 +1337,7 @@ ShellRoot {
 
                                                             Label {
                                                                 text: modelData.label
-                                                                color: "#F6FBFF"
+                                                                color: root.theme.text
                                                                 font.family: root.textFont
                                                                 font.pixelSize: 11
                                                                 font.bold: true
@@ -1327,7 +1381,7 @@ ShellRoot {
                                                     Label {
                                                         Layout.fillWidth: true
                                                         text: modelData.localUsageText || "Local usage pending"
-                                                        color: "#8E97B5"
+                                                        color: root.theme.textDim
                                                         font.family: root.textFont
                                                         font.pixelSize: 10
                                                         elide: Text.ElideRight
@@ -1336,7 +1390,7 @@ ShellRoot {
                                                     Label {
                                                         Layout.fillWidth: true
                                                         text: modelData.freshnessText || "Waiting for cached data"
-                                                        color: "#8E97B5"
+                                                        color: root.theme.textDim
                                                         font.family: root.textFont
                                                         font.pixelSize: 10
                                                         elide: Text.ElideRight
@@ -1351,8 +1405,8 @@ ShellRoot {
                                     CardFrame {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 96
-                                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
-                                        color: "#0E1423"
+                                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
+                                        color: root.theme.surface
 
                                         RowLayout {
                                             anchors.fill: parent
@@ -1361,7 +1415,7 @@ ShellRoot {
 
                                             ProviderIconBubble {
                                                 icon: displayProvider() ? displayProvider().icon : root.glyphs.provider
-                                                accent: displayProvider() ? statusColor(displayProvider()) : "#82FB9C"
+                                                accent: displayProvider() ? statusColor(displayProvider()) : root.theme.good
                                             }
 
                                             ColumnLayout {
@@ -1370,7 +1424,7 @@ ShellRoot {
 
                                                 Label {
                                                     text: displayProvider() ? ("Active display: " + displayProvider().label) : "Active display pending"
-                                                    color: "#F6FBFF"
+                                                    color: root.theme.text
                                                     font.family: root.textFont
                                                     font.pixelSize: 15
                                                     font.bold: true
@@ -1379,7 +1433,7 @@ ShellRoot {
                                                 Label {
                                                     Layout.fillWidth: true
                                                     text: displayProvider() ? root.compactJoin([displayProvider().chipText, displayProvider().serviceStatusText, displayProvider().historySummary]) : "Waiting for cached data"
-                                                    color: "#A8B3D7"
+                                                    color: root.theme.textBody
                                                     font.family: root.textFont
                                                     font.pixelSize: 11
                                                     elide: Text.ElideRight
@@ -1389,7 +1443,7 @@ ShellRoot {
                                             CodexButton {
                                                 text: "Refresh"
                                                 glyph: root.glyphs.refresh
-                                                accent: "#82FB9C"
+                                                accent: root.theme.good
                                                 compact: true
                                                 onClicked: root.runCodexbar(["refresh"])
                                             }
@@ -1402,7 +1456,7 @@ ShellRoot {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 visible: root.activeView === "detail"
-                                accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                                 ScrollView {
                                     id: detailScroll
@@ -1438,7 +1492,7 @@ ShellRoot {
 
                                                     ProviderIconBubble {
                                                         icon: focusProvider() ? focusProvider().icon : ""
-                                                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                                     }
 
                                                     ColumnLayout {
@@ -1446,7 +1500,7 @@ ShellRoot {
 
                                                         Label {
                                                             text: focusProvider() ? focusProvider().label : "No provider selected"
-                                                            color: "#F6FBFF"
+                                                            color: root.theme.text
                                                             font.family: root.textFont
                                                             font.pixelSize: 18
                                                             font.bold: true
@@ -1454,14 +1508,14 @@ ShellRoot {
 
                                                         Label {
                                                             text: focusProvider() ? focusProvider().identityText : "Waiting for provider data"
-                                                            color: "#9FA8C6"
+                                                            color: root.theme.textBody
                                                             font.family: root.textFont
                                                             font.pixelSize: 11
                                                         }
 
                                                         Label {
                                                             text: focusProvider() ? ((focusProvider().serviceStatusText || "Status unknown") + (focusProvider().localUsageText ? ("  •  " + focusProvider().localUsageText) : "")) : ""
-                                                            color: focusProvider() ? statusColor(focusProvider()) : "#8E97B5"
+                                                            color: focusProvider() ? statusColor(focusProvider()) : root.theme.textDim
                                                             font.family: root.textFont
                                                             font.pixelSize: 10
                                                             elide: Text.ElideRight
@@ -1485,8 +1539,8 @@ ShellRoot {
                                         CardFrame {
                                             Layout.fillWidth: true
                                             Layout.preferredHeight: 132
-                                            accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
-                                            color: "#111829"
+                                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
+                                            color: root.theme.surfaceHi
 
                                             ColumnLayout {
                                                 anchors.fill: parent
@@ -1498,14 +1552,14 @@ ShellRoot {
 
                                                     Text {
                                                         text: focusProvider() && focusProvider().hero ? focusProvider().hero.icon : ""
-                                                        color: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                                        color: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                                         font.family: root.iconFont
                                                         font.pixelSize: 13
                                                     }
 
                                                     Label {
                                                         text: focusProvider() && focusProvider().hero ? focusProvider().hero.title : "Status"
-                                                        color: "#A8B3D7"
+                                                        color: root.theme.textBody
                                                         font.family: root.textFont
                                                         font.pixelSize: 11
                                                         font.bold: true
@@ -1517,7 +1571,7 @@ ShellRoot {
 
                                                     Label {
                                                         text: focusProvider() && focusProvider().hero ? focusProvider().hero.value : (focusProvider() ? focusProvider().chipText : "--")
-                                                        color: focusProvider() ? statusColor(focusProvider()) : "#DDF7FF"
+                                                        color: focusProvider() ? statusColor(focusProvider()) : root.theme.textSoft
                                                         font.family: root.textFont
                                                         font.pixelSize: 24
                                                         font.bold: true
@@ -1528,7 +1582,7 @@ ShellRoot {
                                                     BadgePill {
                                                         visible: !!(focusProvider() && focusProvider().hero && focusProvider().hero.supporting)
                                                         text: focusProvider() && focusProvider().hero ? focusProvider().hero.supporting : ""
-                                                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                                     }
                                                 }
 
@@ -1536,12 +1590,12 @@ ShellRoot {
                                                     Layout.fillWidth: true
                                                     visible: !!(focusProvider() && focusProvider().hero && focusProvider().hero.progressVisible)
                                                     usedPercent: focusProvider() && focusProvider().hero ? focusProvider().hero.progressPercent : 0
-                                                    accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                                    accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                                 }
 
                                                 Label {
                                                     text: focusProvider() && focusProvider().hero && focusProvider().hero.detail ? focusProvider().hero.detail : "No additional quota detail"
-                                                    color: "#9FA8C6"
+                                                    color: root.theme.textBody
                                                     font.family: root.textFont
                                                     font.pixelSize: 10
                                                     wrapMode: Text.Wrap
@@ -1570,8 +1624,8 @@ ShellRoot {
                                             visible: !!(focusProvider() && focusProvider().localUsageModels && focusProvider().localUsageModels.length)
                                             Layout.fillWidth: true
                                             Layout.preferredHeight: geminiUsageColumn.implicitHeight + 24
-                                            accent: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
-                                            color: "#101726"
+                                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.info
+                                            color: root.theme.surfaceDeep
 
                                             ColumnLayout {
                                                 id: geminiUsageColumn
@@ -1585,7 +1639,7 @@ ShellRoot {
 
                                                     Text {
                                                         text: root.glyphs.cost
-                                                        color: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
+                                                        color: focusProvider() ? statusColor(focusProvider()) : root.theme.info
                                                         font.family: root.iconFont
                                                         font.pixelSize: 13
                                                     }
@@ -1593,7 +1647,7 @@ ShellRoot {
                                                     Label {
                                                         Layout.fillWidth: true
                                                         text: "Model local usage"
-                                                        color: "#F6FBFF"
+                                                        color: root.theme.text
                                                         font.family: root.textFont
                                                         font.pixelSize: 11
                                                         font.bold: true
@@ -1611,7 +1665,7 @@ ShellRoot {
                                                         Label {
                                                             Layout.fillWidth: true
                                                             text: modelData.label || "--"
-                                                            color: "#A8B3D7"
+                                                            color: root.theme.textBody
                                                             font.family: root.textFont
                                                             font.pixelSize: 10
                                                             elide: Text.ElideRight
@@ -1619,7 +1673,7 @@ ShellRoot {
 
                                                         Label {
                                                             text: modelData.tokensText || "--"
-                                                            color: focusProvider() ? statusColor(focusProvider()) : "#82A7F4"
+                                                            color: focusProvider() ? statusColor(focusProvider()) : root.theme.info
                                                             font.family: root.textFont
                                                             font.pixelSize: 10
                                                             font.bold: true
@@ -1627,7 +1681,7 @@ ShellRoot {
 
                                                         Label {
                                                             text: modelData.recordsText || ""
-                                                            color: "#8E97B5"
+                                                            color: root.theme.textDim
                                                             font.family: root.textFont
                                                             font.pixelSize: 10
                                                         }
@@ -1640,8 +1694,8 @@ ShellRoot {
                                             visible: !!(focusProvider() && (focusProvider().error || focusProvider().notes.length || focusProvider().incident))
                                             Layout.fillWidth: true
                                             Layout.preferredHeight: notesColumn.implicitHeight + 24
-                                            accent: focusProvider() ? statusColor(focusProvider()) : "#E06C75"
-                                            color: "#17111A"
+                                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.bad
+                                            color: root.theme.surfaceDeep
 
                                             ColumnLayout {
                                                 id: notesColumn
@@ -1654,14 +1708,14 @@ ShellRoot {
 
                                                     Text {
                                                         text: root.glyphs.alert
-                                                        color: focusProvider() ? statusColor(focusProvider()) : "#E06C75"
+                                                        color: focusProvider() ? statusColor(focusProvider()) : root.theme.bad
                                                         font.family: root.iconFont
                                                         font.pixelSize: 13
                                                     }
 
                                                     Label {
                                                         text: "Provider notes"
-                                                        color: "#F6FBFF"
+                                                        color: root.theme.text
                                                         font.family: root.textFont
                                                         font.pixelSize: 11
                                                         font.bold: true
@@ -1671,7 +1725,7 @@ ShellRoot {
                                                 Label {
                                                     visible: !!(focusProvider() && focusProvider().error)
                                                     text: focusProvider() ? focusProvider().error : ""
-                                                    color: "#F6B7BF"
+                                                    color: root.theme.badSoft
                                                     font.family: root.textFont
                                                     font.pixelSize: 11
                                                     wrapMode: Text.Wrap
@@ -1681,7 +1735,7 @@ ShellRoot {
                                                 Label {
                                                     visible: !!(focusProvider() && focusProvider().incident)
                                                     text: focusProvider() ? focusProvider().incident : ""
-                                                    color: "#BFD2FF"
+                                                    color: root.theme.info
                                                     font.family: root.textFont
                                                     font.pixelSize: 11
                                                     wrapMode: Text.Wrap
@@ -1694,7 +1748,7 @@ ShellRoot {
                                                     delegate: Label {
                                                         required property string modelData
                                                         text: root.glyphs.note + "  " + modelData
-                                                        color: "#DDF7FF"
+                                                        color: root.theme.textSoft
                                                         font.family: root.textFont
                                                         font.pixelSize: 10
                                                         wrapMode: Text.Wrap
@@ -1706,7 +1760,7 @@ ShellRoot {
 
                                         Label {
                                             text: focusProvider() ? ("Source " + focusProvider().source + "  •  " + focusProvider().freshnessText) : ""
-                                            color: "#8E97B5"
+                                            color: root.theme.textDim
                                             font.family: root.textFont
                                             font.pixelSize: 10
                                         }
@@ -1719,7 +1773,7 @@ ShellRoot {
                         CardFrame {
                             Layout.preferredWidth: 260
                             Layout.fillHeight: true
-                            accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                             ColumnLayout {
                                 anchors.fill: parent
@@ -1728,7 +1782,7 @@ ShellRoot {
 
                                 Label {
                                     text: root.glyphs.provider + " Providers"
-                                    color: "#F6FBFF"
+                                    color: root.theme.text
                                     font.family: root.textFont
                                     font.pixelSize: 12
                                     font.bold: true
@@ -1760,7 +1814,7 @@ ShellRoot {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         visible: root.activeView === "history"
-                        accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
+                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.warn
 
                         ColumnLayout {
                             id: historyColumn
@@ -1774,7 +1828,7 @@ ShellRoot {
 
                                 ProviderIconBubble {
                                     icon: focusProvider() ? focusProvider().icon : root.glyphs.history
-                                    accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
+                                    accent: focusProvider() ? statusColor(focusProvider()) : root.theme.warn
                                 }
 
                                 ColumnLayout {
@@ -1783,7 +1837,7 @@ ShellRoot {
 
                                     Label {
                                         text: focusProvider() ? (focusProvider().label + " history") : "History"
-                                        color: "#F6FBFF"
+                                        color: root.theme.text
                                         font.family: root.textFont
                                         font.pixelSize: 18
                                         font.bold: true
@@ -1792,7 +1846,7 @@ ShellRoot {
                                     Label {
                                         Layout.fillWidth: true
                                         text: focusProvider() ? (focusProvider().historySummary || "No retained history") : "Waiting for provider data"
-                                        color: "#A8B3D7"
+                                        color: root.theme.textBody
                                         font.family: root.textFont
                                         font.pixelSize: 11
                                         elide: Text.ElideRight
@@ -1806,7 +1860,7 @@ ShellRoot {
                                         required property var modelData
                                         text: modelData.shortLabel
                                         glyph: modelData.icon
-                                        accent: modelData.id === root.focusProviderId ? statusColor(modelData) : "#6A6E95"
+                                        accent: modelData.id === root.focusProviderId ? statusColor(modelData) : root.theme.textMuted
                                         compact: true
                                         onClicked: root.setFocus(modelData.id)
                                     }
@@ -1816,7 +1870,7 @@ ShellRoot {
                             UsageHeatmap {
                                 id: heatmapCard
                                 heatmapData: historyHeatmap()
-                                accent: focusProvider() ? statusColor(focusProvider()) : "#F2C572"
+                                accent: focusProvider() ? statusColor(focusProvider()) : root.theme.warn
                             }
 
                             GridLayout {
@@ -1843,8 +1897,8 @@ ShellRoot {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 visible: root.providerHistory().length === 0
-                                accent: "#6A6E95"
-                                color: "#0E1423"
+                                accent: root.theme.textMuted
+                                color: root.theme.surface
 
                                 ColumnLayout {
                                     anchors.centerIn: parent
@@ -1853,7 +1907,7 @@ ShellRoot {
                                     Text {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: root.glyphs.history
-                                        color: "#6A6E95"
+                                        color: root.theme.textMuted
                                         font.family: root.iconFont
                                         font.pixelSize: 30
                                     }
@@ -1861,7 +1915,7 @@ ShellRoot {
                                     Label {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: "No retained history yet"
-                                        color: "#F6FBFF"
+                                        color: root.theme.text
                                         font.family: root.textFont
                                         font.pixelSize: 16
                                         font.bold: true
@@ -1870,7 +1924,7 @@ ShellRoot {
                                     Label {
                                         Layout.alignment: Qt.AlignHCenter
                                         text: "History appears after the daemon writes daily quota or local usage snapshots."
-                                        color: "#8E97B5"
+                                        color: root.theme.textDim
                                         font.family: root.textFont
                                         font.pixelSize: 11
                                     }
@@ -1883,7 +1937,7 @@ ShellRoot {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         visible: root.activeView === "settings"
-                        accent: "#C4D2ED"
+                        accent: root.theme.textBody
 
                         ColumnLayout {
                             anchors.fill: parent
@@ -1896,7 +1950,7 @@ ShellRoot {
 
                                 ProviderIconBubble {
                                     icon: root.glyphs.settings
-                                    accent: "#C4D2ED"
+                                    accent: root.theme.textBody
                                 }
 
                                 ColumnLayout {
@@ -1905,7 +1959,7 @@ ShellRoot {
 
                                     Label {
                                         text: "Settings"
-                                        color: "#F6FBFF"
+                                        color: root.theme.text
                                         font.family: root.textFont
                                         font.pixelSize: 18
                                         font.bold: true
@@ -1914,7 +1968,7 @@ ShellRoot {
                                     Label {
                                         Layout.fillWidth: true
                                         text: root.compactJoin([viewData.summary.refreshModeLabel, viewData.summary.notificationsLabel, viewData.summary.privacyLabel])
-                                        color: "#A8B3D7"
+                                        color: root.theme.textBody
                                         font.family: root.textFont
                                         font.pixelSize: 11
                                         elide: Text.ElideRight
@@ -1925,7 +1979,7 @@ ShellRoot {
                             SectionHeader {
                                 text: "Runtime Cadence"
                                 icon: root.glyphs.refresh
-                                accent: "#8E97B5"
+                                accent: root.theme.textDim
                             }
 
                             GridLayout {
@@ -1934,12 +1988,12 @@ ShellRoot {
                                 columnSpacing: 8
                                 rowSpacing: 8
 
-                                CodexButton { Layout.fillWidth: true; text: "Manual"; glyph: root.glyphs.pin; accent: viewData.summary.refreshModeLabel === "Manual refresh" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.runtimeCommand("manual") }
-                                CodexButton { Layout.fillWidth: true; text: "1m"; accent: viewData.summary.refreshModeLabel === "60s refresh" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.runtimeCommand("interval", "60") }
-                                CodexButton { Layout.fillWidth: true; text: "2m"; accent: viewData.summary.refreshModeLabel === "120s refresh" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.runtimeCommand("interval", "120") }
-                                CodexButton { Layout.fillWidth: true; text: "5m"; accent: viewData.summary.refreshModeLabel === "300s refresh" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.runtimeCommand("interval", "300") }
-                                CodexButton { Layout.fillWidth: true; text: "15m"; accent: viewData.summary.refreshModeLabel === "900s refresh" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.runtimeCommand("interval", "900") }
-                                CodexButton { Layout.fillWidth: true; text: "30m"; accent: viewData.summary.refreshModeLabel === "1800s refresh" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.runtimeCommand("interval", "1800") }
+                                CodexButton { Layout.fillWidth: true; text: "Manual"; glyph: root.glyphs.pin; accent: viewData.summary.refreshModeLabel === "Manual refresh" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.runtimeCommand("manual") }
+                                CodexButton { Layout.fillWidth: true; text: "1m"; accent: viewData.summary.refreshModeLabel === "60s refresh" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.runtimeCommand("interval", "60") }
+                                CodexButton { Layout.fillWidth: true; text: "2m"; accent: viewData.summary.refreshModeLabel === "120s refresh" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.runtimeCommand("interval", "120") }
+                                CodexButton { Layout.fillWidth: true; text: "5m"; accent: viewData.summary.refreshModeLabel === "300s refresh" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.runtimeCommand("interval", "300") }
+                                CodexButton { Layout.fillWidth: true; text: "15m"; accent: viewData.summary.refreshModeLabel === "900s refresh" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.runtimeCommand("interval", "900") }
+                                CodexButton { Layout.fillWidth: true; text: "30m"; accent: viewData.summary.refreshModeLabel === "1800s refresh" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.runtimeCommand("interval", "1800") }
                             }
 
                             RowLayout {
@@ -1950,7 +2004,7 @@ ShellRoot {
                                     Layout.fillWidth: true
                                     spacing: 8
 
-                                    SectionHeader { text: "Display"; icon: root.glyphs.meter; accent: "#8E97B5" }
+                                    SectionHeader { text: "Display"; icon: root.glyphs.meter; accent: root.theme.textDim }
 
                                     GridLayout {
                                         Layout.fillWidth: true
@@ -1958,11 +2012,11 @@ ShellRoot {
                                         columnSpacing: 8
                                         rowSpacing: 8
 
-                                        CodexButton { Layout.fillWidth: true; text: "Remaining"; accent: viewData.summary.showUsedLabel === "Remaining" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.displayCommand("remaining") }
-                                        CodexButton { Layout.fillWidth: true; text: "Used"; accent: viewData.summary.showUsedLabel === "Used" ? "#82A7F4" : "#6A6E95"; compact: true; onClicked: root.displayCommand("used") }
-                                        CodexButton { Layout.fillWidth: true; text: "Both"; accent: viewData.summary.metricModeLabel === "both" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.displayCommand("mode", "both") }
-                                        CodexButton { Layout.fillWidth: true; text: "Percent"; accent: viewData.summary.metricModeLabel === "percent" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.displayCommand("mode", "percent") }
-                                        CodexButton { Layout.fillWidth: true; text: "Pace"; accent: viewData.summary.metricModeLabel === "pace" ? "#82FB9C" : "#6A6E95"; compact: true; onClicked: root.displayCommand("mode", "pace") }
+                                        CodexButton { Layout.fillWidth: true; text: "Remaining"; accent: viewData.summary.showUsedLabel === "Remaining" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.displayCommand("remaining") }
+                                        CodexButton { Layout.fillWidth: true; text: "Used"; accent: viewData.summary.showUsedLabel === "Used" ? root.theme.info : root.theme.textMuted; compact: true; onClicked: root.displayCommand("used") }
+                                        CodexButton { Layout.fillWidth: true; text: "Both"; accent: viewData.summary.metricModeLabel === "both" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.displayCommand("mode", "both") }
+                                        CodexButton { Layout.fillWidth: true; text: "Percent"; accent: viewData.summary.metricModeLabel === "percent" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.displayCommand("mode", "percent") }
+                                        CodexButton { Layout.fillWidth: true; text: "Pace"; accent: viewData.summary.metricModeLabel === "pace" ? root.theme.good : root.theme.textMuted; compact: true; onClicked: root.displayCommand("mode", "pace") }
                                     }
                                 }
 
@@ -1970,7 +2024,7 @@ ShellRoot {
                                     Layout.fillWidth: true
                                     spacing: 8
 
-                                    SectionHeader { text: "Privacy And Notifications"; icon: root.glyphs.bell; accent: "#8E97B5" }
+                                    SectionHeader { text: "Privacy And Notifications"; icon: root.glyphs.bell; accent: root.theme.textDim }
 
                                     GridLayout {
                                         Layout.fillWidth: true
@@ -1978,9 +2032,9 @@ ShellRoot {
                                         columnSpacing: 8
                                         rowSpacing: 8
 
-                                        CodexButton { Layout.fillWidth: true; text: viewData.summary.notificationsLabel === "Notify on" ? "Notify Off" : "Notify On"; glyph: root.glyphs.bell; accent: viewData.summary.notificationsLabel === "Notify on" ? "#82A7F4" : "#6A6E95"; compact: true; onClicked: root.notificationCommand(viewData.summary.notificationsLabel !== "Notify on") }
-                                        CodexButton { Layout.fillWidth: true; text: viewData.summary.privacyLabel === "Privacy on" ? "Show ID" : "Hide ID"; glyph: root.glyphs.privacy; accent: viewData.summary.privacyLabel === "Privacy on" ? "#F2C572" : "#6A6E95"; compact: true; onClicked: root.privacyCommand(viewData.summary.privacyLabel !== "Privacy on") }
-                                        CodexButton { Layout.fillWidth: true; text: "Status"; glyph: root.glyphs.status; accent: "#82A7F4"; compact: true; onClicked: root.runCodexbar(["status"]) }
+                                        CodexButton { Layout.fillWidth: true; text: viewData.summary.notificationsLabel === "Notify on" ? "Notify Off" : "Notify On"; glyph: root.glyphs.bell; accent: viewData.summary.notificationsLabel === "Notify on" ? root.theme.info : root.theme.textMuted; compact: true; onClicked: root.notificationCommand(viewData.summary.notificationsLabel !== "Notify on") }
+                                        CodexButton { Layout.fillWidth: true; text: viewData.summary.privacyLabel === "Privacy on" ? "Show ID" : "Hide ID"; glyph: root.glyphs.privacy; accent: viewData.summary.privacyLabel === "Privacy on" ? root.theme.warn : root.theme.textMuted; compact: true; onClicked: root.privacyCommand(viewData.summary.privacyLabel !== "Privacy on") }
+                                        CodexButton { Layout.fillWidth: true; text: "Status"; glyph: root.glyphs.status; accent: root.theme.info; compact: true; onClicked: root.runCodexbar(["status"]) }
                                     }
                                 }
                             }
@@ -1988,7 +2042,7 @@ ShellRoot {
                             SectionHeader {
                                 text: "Local Scans"
                                 icon: root.glyphs.cost
-                                accent: "#8E97B5"
+                                accent: root.theme.textDim
                             }
 
                             GridLayout {
@@ -1997,15 +2051,15 @@ ShellRoot {
                                 columnSpacing: 8
                                 rowSpacing: 8
 
-                                CodexButton { Layout.fillWidth: true; text: "Usage Scan"; glyph: root.glyphs.cost; accent: "#F2C572"; compact: true; onClicked: root.runCodexbar(["cost"]) }
-                                CodexButton { Layout.fillWidth: true; text: "Storage Scan"; glyph: root.glyphs.storage; accent: "#82A7F4"; compact: true; onClicked: root.runCodexbar(["storage"]) }
-                                CodexButton { Layout.fillWidth: true; text: "Refresh Now"; glyph: root.glyphs.refresh; accent: "#82FB9C"; compact: true; onClicked: root.runCodexbar(["refresh"]) }
+                                CodexButton { Layout.fillWidth: true; text: "Usage Scan"; glyph: root.glyphs.cost; accent: root.theme.warn; compact: true; onClicked: root.runCodexbar(["cost"]) }
+                                CodexButton { Layout.fillWidth: true; text: "Storage Scan"; glyph: root.glyphs.storage; accent: root.theme.info; compact: true; onClicked: root.runCodexbar(["storage"]) }
+                                CodexButton { Layout.fillWidth: true; text: "Refresh Now"; glyph: root.glyphs.refresh; accent: root.theme.good; compact: true; onClicked: root.runCodexbar(["refresh"]) }
                             }
 
                             SectionHeader {
                                 text: "Clear Cache"
                                 icon: root.glyphs.close
-                                accent: "#8E97B5"
+                                accent: root.theme.textDim
                             }
 
                             GridLayout {
@@ -2014,11 +2068,11 @@ ShellRoot {
                                 columnSpacing: 8
                                 rowSpacing: 8
 
-                                CodexButton { Layout.fillWidth: true; text: "Status"; accent: "#82A7F4"; compact: true; onClicked: root.cacheCommand("status") }
-                                CodexButton { Layout.fillWidth: true; text: "History"; accent: "#F2C572"; compact: true; onClicked: root.cacheCommand("history") }
-                                CodexButton { Layout.fillWidth: true; text: "Usage"; accent: "#F2C572"; compact: true; onClicked: root.cacheCommand("cost") }
-                                CodexButton { Layout.fillWidth: true; text: "Storage"; accent: "#82A7F4"; compact: true; onClicked: root.cacheCommand("storage") }
-                                CodexButton { Layout.fillWidth: true; text: "All"; accent: "#E06C75"; compact: true; onClicked: root.cacheCommand("all") }
+                                CodexButton { Layout.fillWidth: true; text: "Status"; accent: root.theme.info; compact: true; onClicked: root.cacheCommand("status") }
+                                CodexButton { Layout.fillWidth: true; text: "History"; accent: root.theme.warn; compact: true; onClicked: root.cacheCommand("history") }
+                                CodexButton { Layout.fillWidth: true; text: "Usage"; accent: root.theme.warn; compact: true; onClicked: root.cacheCommand("cost") }
+                                CodexButton { Layout.fillWidth: true; text: "Storage"; accent: root.theme.info; compact: true; onClicked: root.cacheCommand("storage") }
+                                CodexButton { Layout.fillWidth: true; text: "All"; accent: root.theme.bad; compact: true; onClicked: root.cacheCommand("all") }
                             }
 
                             Item { Layout.fillHeight: true }
@@ -2029,7 +2083,7 @@ ShellRoot {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 230
                         visible: root.activeView === "detail"
-                        accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                        accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                         ColumnLayout {
                             anchors.fill: parent
@@ -2047,7 +2101,7 @@ ShellRoot {
                                     SectionHeader {
                                         text: "Focus"
                                         icon: root.glyphs.pin
-                                        accent: "#8E97B5"
+                                        accent: root.theme.textDim
                                     }
 
                                     GridLayout {
@@ -2060,7 +2114,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: focusProvider() ? ("Pin " + focusProvider().shortLabel) : "Pin"
                                             glyph: root.glyphs.pin
-                                            accent: focusProvider() ? statusColor(focusProvider()) : "#82FB9C"
+                                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                                             compact: true
                                             enabled: !!(focusProvider() && focusProvider().enabled)
                                             onClicked: {
@@ -2074,7 +2128,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: "Auto"
                                             glyph: root.glyphs.auto
-                                            accent: "#82A7F4"
+                                            accent: root.theme.info
                                             compact: true
                                             onClicked: root.runCodexbar(["providers", "auto"])
                                         }
@@ -2083,7 +2137,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: "Dashboard"
                                             glyph: root.glyphs.dashboard
-                                            accent: "#F2C572"
+                                            accent: root.theme.warn
                                             compact: true
                                             enabled: !!(focusProvider() && focusProvider().dashboardUrl)
                                             onClicked: {
@@ -2102,7 +2156,7 @@ ShellRoot {
                                     SectionHeader {
                                         text: "Provider"
                                         icon: root.glyphs.provider
-                                        accent: "#8E97B5"
+                                        accent: root.theme.textDim
                                     }
 
                                     GridLayout {
@@ -2115,7 +2169,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: focusProvider() && focusProvider().enabled ? "Deactivate" : "Activate"
                                             glyph: focusProvider() && focusProvider().enabled ? root.glyphs.close : root.glyphs.display
-                                            accent: focusProvider() && focusProvider().enabled ? "#E06C75" : "#82FB9C"
+                                            accent: focusProvider() && focusProvider().enabled ? root.theme.bad : root.theme.good
                                             compact: true
                                             enabled: !!focusProvider()
                                             onClicked: {
@@ -2129,7 +2183,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: focusProvider() && focusProvider().visible ? "Hide" : "Show"
                                             glyph: focusProvider() && focusProvider().visible ? root.glyphs.hidden : root.glyphs.shown
-                                            accent: "#82A7F4"
+                                            accent: root.theme.info
                                             compact: true
                                             enabled: !!focusProvider()
                                             onClicked: {
@@ -2143,7 +2197,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: focusProvider() && focusProvider().showInOverview ? "Drop Overview" : "Add Overview"
                                             glyph: root.glyphs.overview
-                                            accent: "#F2C572"
+                                            accent: root.theme.warn
                                             compact: true
                                             enabled: !!focusProvider()
                                             onClicked: {
@@ -2157,7 +2211,7 @@ ShellRoot {
                                             Layout.fillWidth: true
                                             text: focusProvider() && focusProvider().allowAutoSelect ? "Block Auto" : "Allow Auto"
                                             glyph: root.glyphs.auto
-                                            accent: "#C4D2ED"
+                                            accent: root.theme.textBody
                                             compact: true
                                             enabled: !!focusProvider()
                                             onClicked: {
@@ -2177,7 +2231,7 @@ ShellRoot {
                                 SectionHeader {
                                     text: "Display"
                                     icon: root.glyphs.meter
-                                    accent: "#8E97B5"
+                                    accent: root.theme.textDim
                                 }
 
                                 GridLayout {
@@ -2189,7 +2243,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "Remaining"
-                                        accent: viewData.summary.showUsedLabel === "Remaining" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.showUsedLabel === "Remaining" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.displayCommand("remaining")
                                     }
@@ -2197,7 +2251,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "Used"
-                                        accent: viewData.summary.showUsedLabel === "Used" ? "#82A7F4" : "#6A6E95"
+                                        accent: viewData.summary.showUsedLabel === "Used" ? root.theme.info : root.theme.textMuted
                                         compact: true
                                         onClicked: root.displayCommand("used")
                                     }
@@ -2205,7 +2259,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "Both"
-                                        accent: viewData.summary.metricModeLabel === "both" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.metricModeLabel === "both" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.displayCommand("mode", "both")
                                     }
@@ -2213,7 +2267,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "Percent"
-                                        accent: viewData.summary.metricModeLabel === "percent" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.metricModeLabel === "percent" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.displayCommand("mode", "percent")
                                     }
@@ -2221,7 +2275,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "Pace"
-                                        accent: viewData.summary.metricModeLabel === "pace" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.metricModeLabel === "pace" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.displayCommand("mode", "pace")
                                     }
@@ -2235,7 +2289,7 @@ ShellRoot {
                                 SectionHeader {
                                     text: "Runtime"
                                     icon: root.glyphs.settings
-                                    accent: "#8E97B5"
+                                    accent: root.theme.textDim
                                 }
 
                                 GridLayout {
@@ -2248,7 +2302,7 @@ ShellRoot {
                                         Layout.fillWidth: true
                                         text: "Manual"
                                         glyph: root.glyphs.pin
-                                        accent: viewData.summary.refreshModeLabel === "Manual refresh" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.refreshModeLabel === "Manual refresh" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.runtimeCommand("manual")
                                     }
@@ -2256,7 +2310,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "1m"
-                                        accent: viewData.summary.refreshModeLabel === "60s refresh" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.refreshModeLabel === "60s refresh" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.runtimeCommand("interval", "60")
                                     }
@@ -2264,7 +2318,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "2m"
-                                        accent: viewData.summary.refreshModeLabel === "120s refresh" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.refreshModeLabel === "120s refresh" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.runtimeCommand("interval", "120")
                                     }
@@ -2272,7 +2326,7 @@ ShellRoot {
                                     CodexButton {
                                         Layout.fillWidth: true
                                         text: "5m"
-                                        accent: viewData.summary.refreshModeLabel === "300s refresh" ? "#82FB9C" : "#6A6E95"
+                                        accent: viewData.summary.refreshModeLabel === "300s refresh" ? root.theme.good : root.theme.textMuted
                                         compact: true
                                         onClicked: root.runtimeCommand("interval", "300")
                                     }
@@ -2281,7 +2335,7 @@ ShellRoot {
                                         Layout.fillWidth: true
                                         text: viewData.summary.notificationsLabel === "Notify on" ? "Notify Off" : "Notify On"
                                         glyph: root.glyphs.bell
-                                        accent: viewData.summary.notificationsLabel === "Notify on" ? "#82A7F4" : "#6A6E95"
+                                        accent: viewData.summary.notificationsLabel === "Notify on" ? root.theme.info : root.theme.textMuted
                                         compact: true
                                         onClicked: root.notificationCommand(viewData.summary.notificationsLabel !== "Notify on")
                                     }
@@ -2290,7 +2344,7 @@ ShellRoot {
                                         Layout.fillWidth: true
                                         text: viewData.summary.privacyLabel === "Privacy on" ? "Show ID" : "Hide ID"
                                         glyph: root.glyphs.privacy
-                                        accent: viewData.summary.privacyLabel === "Privacy on" ? "#F2C572" : "#6A6E95"
+                                        accent: viewData.summary.privacyLabel === "Privacy on" ? root.theme.warn : root.theme.textMuted
                                         compact: true
                                         onClicked: root.privacyCommand(viewData.summary.privacyLabel !== "Privacy on")
                                     }
@@ -2299,7 +2353,7 @@ ShellRoot {
                                         Layout.fillWidth: true
                                         text: "Status"
                                         glyph: root.glyphs.status
-                                        accent: "#82A7F4"
+                                        accent: root.theme.info
                                         compact: true
                                         onClicked: root.runCodexbar(["status"])
                                     }
@@ -2308,7 +2362,7 @@ ShellRoot {
                                         Layout.fillWidth: true
                                         text: "Usage"
                                         glyph: root.glyphs.cost
-                                        accent: "#F2C572"
+                                        accent: root.theme.warn
                                         compact: true
                                         onClicked: root.runCodexbar(["cost"])
                                     }
