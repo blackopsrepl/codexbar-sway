@@ -1220,10 +1220,26 @@ ShellRoot {
                                 visible: root.activeView === "overview"
                                 accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
-                                ColumnLayout {
+                                ScrollView {
+                                    id: overviewScroll
                                     anchors.fill: parent
-                                    anchors.margins: 12
-                                    spacing: 10
+                                    anchors.margins: 2
+                                    clip: true
+                                    contentWidth: availableWidth
+                                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+                                    Item {
+                                        width: overviewScroll.availableWidth
+                                        height: overviewContent.implicitHeight + 24
+
+                                        ColumnLayout {
+                                            id: overviewContent
+                                            anchors.top: parent.top
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.margins: 12
+                                            spacing: 10
 
                                     RowLayout {
                                         spacing: 8
@@ -1447,6 +1463,8 @@ ShellRoot {
                                                 compact: true
                                                 onClicked: root.runCodexbar(["refresh"])
                                             }
+                                        }
+                                    }
                                         }
                                     }
                                 }
