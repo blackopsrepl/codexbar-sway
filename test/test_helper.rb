@@ -85,6 +85,16 @@ module CodexBarTestHelpers
   ensure
     $stdout = original
   end
+
+  def capture_stderr
+    original = $stderr
+    output = StringIO.new
+    $stderr = output
+    yield
+    output.string
+  ensure
+    $stderr = original
+  end
 end
 
 class Minitest::Test

@@ -66,6 +66,40 @@ class OmarchyTest < Minitest::Test
     refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
   end
 
+  def test_install_rejects_after_and_section_together
+    error = assert_raises(ArgumentError) do
+      CodexBar::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.weather", section: "right")
+    end
+
+    assert_match(/either after: or section:/, error.message)
+    refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
+  end
+
+  def test_install_rejects_index_without_section
+    error = assert_raises(ArgumentError) do
+      CodexBar::Runtime::Omarchy.install(bin: fake_bin, index: 1)
+    end
+
+    assert_match(/index requires section:/, error.message)
+    refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
+  end
+
+  def test_cli_rejects_placement_flags_on_status
+    error = capture_stderr do
+      CodexBar::CLI.run(["omarchy", "status", "--interval", "5"])
+    end
+
+    assert_match(/omarchy status does not accept --interval/, error)
+  end
+
+  def test_cli_rejects_placement_flags_on_remove
+    error = capture_stderr do
+      CodexBar::CLI.run(["omarchy", "remove", "--section", "right"])
+    end
+
+    assert_match(/omarchy remove does not accept --section/, error)
+  end
+
   def test_install_falls_back_to_center_end_for_unknown_anchor
     result = CodexBar::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.does-not-exist")
 

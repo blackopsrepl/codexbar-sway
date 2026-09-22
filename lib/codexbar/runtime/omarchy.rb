@@ -120,6 +120,9 @@ module CodexBar
       end
 
       def place!(document, entry, after:, section:, index:)
+        raise ArgumentError, "placement accepts either after: or section:, not both" if after && section
+        raise ArgumentError, "index requires section:" if index && !section
+
         delete_module_entries!(document)
 
         if section

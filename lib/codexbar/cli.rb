@@ -492,8 +492,10 @@ module CodexBar
                    bin: args[:exec]
                  )
                when "remove"
+                 reject_omarchy_flags!(args, subcommand)
                  Runtime::Omarchy.remove
                when "status"
+                 reject_omarchy_flags!(args, subcommand)
                  Runtime::Omarchy.status
                else
                  raise ArgumentError, "Unknown omarchy subcommand: #{subcommand}"
@@ -501,6 +503,13 @@ module CodexBar
       print_json_if_requested(result, args)
       puts describe_omarchy_result(subcommand, result) unless args[:format] == "json"
       0
+    end
+
+    def reject_omarchy_flags!(args, subcommand)
+      present = %i[after section index interval exec].select { |key| args.key?(key) }
+      return if present.empty?
+
+      raise ArgumentError, "omarchy #{subcommand} does not accept #{present.map { |key| "--#{key}" }.join(", ")}"
     end
 
     def describe_omarchy_result(subcommand, result)
