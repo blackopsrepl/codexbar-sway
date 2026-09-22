@@ -39,6 +39,13 @@ ShellRoot {
         return (typeof value === "string" && value.length > 0) ? value : fallback
     }
 
+    // Derives a darker step of a theme color so multi-level fills (the token
+    // heatmaps) keep distinct shades. Falls back to the built-in literal.
+    function themeShade(key, fallback, factor) {
+        var value = root.themePalette[key]
+        return (typeof value === "string" && value.length > 0) ? Qt.darker(value, factor) : fallback
+    }
+
     readonly property QtObject theme: QtObject {
         readonly property color bg: root.themeColor("background", "#0B0F1E")
         readonly property color bgDeep: root.themeColor("dark_background", "#050711")
@@ -52,8 +59,9 @@ ShellRoot {
         readonly property color textDim: root.themeColor("foreground", "#8E97B5")
         readonly property color textMuted: root.themeColor("dark_foreground", "#6A6E95")
         readonly property color good: root.themeColor("green", "#82FB9C")
-        readonly property color goodDeep: root.themeColor("green", "#237A50")
-        readonly property color goodBg: root.themeColor("green", "#1D3B2F")
+        readonly property color goodMid: root.themeShade("green", "#45C878", 1.5)
+        readonly property color goodDeep: root.themeShade("green", "#237A50", 2.1)
+        readonly property color goodBg: root.themeShade("green", "#1D3B2F", 3.0)
         readonly property color info: root.themeColor("accent", "#82A7F4")
         readonly property color warn: root.themeColor("yellow", "#F2C572")
         readonly property color bad: root.themeColor("red", "#E06C75")
@@ -164,7 +172,7 @@ ShellRoot {
             return root.theme.good
         }
         if (cell.intensity === 3) {
-            return root.theme.good
+            return root.theme.goodMid
         }
         if (cell.intensity === 2) {
             return root.theme.goodDeep
@@ -710,7 +718,7 @@ ShellRoot {
                     }
 
                     Repeater {
-                        model: [root.theme.good, root.theme.good, root.theme.goodDeep, root.theme.goodBg, root.theme.border, root.theme.surface]
+                        model: [root.theme.good, root.theme.goodMid, root.theme.goodDeep, root.theme.goodBg, root.theme.border, root.theme.surface]
 
                         delegate: Rectangle {
                             required property string modelData
