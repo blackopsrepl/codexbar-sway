@@ -57,6 +57,15 @@ class OmarchyTest < Minitest::Test
     assert_equal %w[omarchy.tray codexbar], ids(right)
   end
 
+  def test_install_rejects_index_beyond_section_length
+    error = assert_raises(ArgumentError) do
+      CodexBar::Runtime::Omarchy.install(bin: fake_bin, section: "right", index: 5)
+    end
+
+    assert_match(/out of range/, error.message)
+    refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
+  end
+
   def test_install_falls_back_to_center_end_for_unknown_anchor
     result = CodexBar::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.does-not-exist")
 
