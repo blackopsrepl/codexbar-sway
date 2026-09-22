@@ -98,6 +98,38 @@ Shape:
 
 Ruby CLI commands write this file when opening, closing, or focusing the panel.
 
+## Omarchy Shell Config
+
+CodexBar can mount its cached-state chip as an Omarchy shell bar module so the same contract works on Hyprland.
+
+Command:
+
+```bash
+codexbar omarchy install|remove|status
+```
+
+Location:
+
+```text
+~/.config/omarchy/shell.json
+```
+
+`Runtime::Omarchy` is the only CodexBar writer of this file. `install` seeds the user file from the Omarchy defaults (`$OMARCHY_PATH/config/omarchy/shell.json`, defaulting to `/usr/share/omarchy/config/omarchy/shell.json`) when it is missing, then inserts one `codexbar` entry of `type: command` into `bar.layout`:
+
+```json
+{
+  "id": "codexbar",
+  "type": "command",
+  "exec": "<codexbar> waybar render",
+  "interval": 10,
+  "onClick": "<codexbar> panel",
+  "onMiddleClick": "<codexbar> refresh",
+  "tooltip": "CodexBar agent quota chip (left: panel, middle: refresh)"
+}
+```
+
+Default placement is immediately after `omarchy.weather`; `--after`, `--section`, and `--index` override it, and an unresolved anchor falls back to the end of the center section. Reinstalling replaces the existing entry instead of duplicating it. Writes are atomic (temp file + rename), preserve unrelated user keys, and are followed by a best-effort `omarchy-shell shell reloadConfig`. The module renders the same cached-state JSON as the Waybar payload below; the bar never fetches providers.
+
 ## Waybar Payload
 
 Command:

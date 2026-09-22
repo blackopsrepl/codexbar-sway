@@ -10,6 +10,7 @@ This repository ships an independent Linux implementation inspired by [the origi
 - Waybar JSON renderer for the compact bar chip.
 - Deterministic user-prefix install through `Makefile`.
 - Optional SolverForge Linux wrapper for the existing Waybar module.
+- Optional Omarchy shell bar module on Hyprland, mounting the same cached-state chip.
 
 Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
 
@@ -37,6 +38,7 @@ Retained history follows the same provider shape. Window providers keep their pr
 - `lib/codexbar/runtime/presenter.rb`: normalized view model for QuickShell and Waybar.
 - `lib/codexbar/runtime/quickshell.rb`: QuickShell process and UI-state control.
 - `lib/codexbar/runtime/waybar.rb`: cached Waybar render/action commands.
+- `lib/codexbar/runtime/omarchy.rb`: sole writer of the Omarchy shell bar module in `~/.config/omarchy/shell.json`.
 - `lib/codexbar/runtime/swaybar.rb`: bounded legacy direct-bar command, not the release UI.
 - `frontend/quickshell/shell.qml`: panel UI.
 
@@ -76,6 +78,8 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 8. Waybar calls `codexbar waybar render` and reads cached state only.
 9. Waybar clicks call the wrapper, which opens the QuickShell panel or refreshes.
 10. QuickShell reads `snapshot.json` and `ui.json`, then sends mutations back through CLI commands.
+
+On a Hyprland/Omarchy desktop, step 8 runs through the `codexbar` module that `codexbar omarchy install` places in `~/.config/omarchy/shell.json`; the Omarchy shell invokes the same `codexbar waybar render` cached-state contract, and `Runtime::Omarchy` is the sole writer of that config.
 
 Provider visibility, activation, overview membership, and auto-select commands update local config and rebuild cached snapshot state immediately. They do not synchronously fetch provider quota.
 
@@ -129,6 +133,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 - `codexbar panel`: open QuickShell.
 - `codexbar ui open|close|toggle|status`: control or inspect panel state.
 - `codexbar waybar render|refresh|panel|cycle-next|cycle-prev`: Waybar render and action hooks.
+- `codexbar omarchy install|remove|status`: mount or drop the cached-state chip as an Omarchy shell bar module.
 - `codexbar status|cost|history|storage`: auxiliary cached status and local intelligence.
 - `codexbar serve`: read-only local JSON endpoints.
 
@@ -151,7 +156,8 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 3. `make configure-user` creates config if missing.
 4. `make configure-user` preserves user provider/display settings and updates only `runtime.quickShellShell`.
 5. `make install-solverforge-linux-integration` installs the SolverForge wrapper only when explicitly requested.
-6. Restart `codexbar daemon` and the QuickShell panel after installing: the install swaps the installed directory, so running processes keep executing the previous code and file watchers do not fire (see "Restart After Install" in `docs/installation.md`).
+6. `make install` does not touch the Omarchy shell config. On a Hyprland/Omarchy desktop, `codexbar omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults if needed and inserts the `codexbar` command module; `codexbar omarchy remove` drops it.
+7. Restart `codexbar daemon` and the QuickShell panel after installing: the install swaps the installed directory, so running processes keep executing the previous code and file watchers do not fire (see "Restart After Install" in `docs/installation.md`).
 
 After install/configure, the live desktop must not depend on the checkout directory path.
 

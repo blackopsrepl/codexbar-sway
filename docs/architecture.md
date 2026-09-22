@@ -17,6 +17,7 @@ CodexBar has four active layers:
 - `codexbar daemon`: resident refresh loop.
 - `codexbar waybar render`: Waybar JSON payload.
 - `codexbar panel`: opens the QuickShell panel.
+- `codexbar omarchy install|remove|status`: mounts or drops the cached-state chip as an Omarchy shell bar module.
 
 ## Data Flow
 

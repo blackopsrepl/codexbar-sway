@@ -44,6 +44,8 @@ The panel renders:
 
 The panel styling is square-cornered: every frame, button, badge, bar, and heatmap cell renders with zero corner radius. Panel polish uses QuickShell primitives only: gradient metric bars with animated fills, hover transitions on buttons, tabs, rail rows, and heatmap cells, a layered square modal shadow, and a fade-in on panel open.
 
+On a Hyprland/Omarchy desktop the panel watches `~/.local/state/omarchy/current/theme/colors.toml` (override via `OMARCHY_THEME_COLORS`) and resolves its semantic colors from the active theme's foundational keys, so `omarchy theme set` restyles the open panel live. Missing keys and non-Omarchy systems fall back to the built-in palette.
+
 The panel sends mutations back through the Ruby CLI. It does not fetch provider usage directly.
 
 Provider action controls queue CLI mutations instead of killing in-flight commands. Provider on/off, show/hide, overview, and auto-select changes update local config/snapshot state immediately; quota refresh remains daemon/refresh owned.

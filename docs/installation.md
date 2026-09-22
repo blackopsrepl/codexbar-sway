@@ -78,6 +78,22 @@ The wrapper delegates to `~/.local/bin/codexbar` by default and supports:
 - `details`
 - `refresh`
 
+## Omarchy Shell Bar
+
+On a Hyprland desktop running the Omarchy shell, mount the same chip as an Omarchy bar module:
+
+```bash
+codexbar omarchy install
+codexbar omarchy status
+codexbar omarchy remove
+```
+
+`omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults when it does not exist, inserts the `codexbar` command module (default: directly after `omarchy.weather`), and asks the running shell to reload. `--after ID`, `--section left|center|right`, `--index N`, `--interval SECONDS`, and `--exec PATH` override placement and the poll interval. The module polls `codexbar waybar render`; it does not start the daemon, so launch that at session startup, for example from Hyprland:
+
+```ini
+exec-once = codexbar daemon
+```
+
 ## Rename Safety
 
 Before renaming or moving the checkout, verify live integration no longer points at the checkout:
