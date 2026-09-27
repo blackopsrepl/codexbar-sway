@@ -18,6 +18,8 @@ Codex and Claude expose named quota windows. Codex five-hour and weekly windows 
 
 Retained history follows the same provider shape. Window providers keep their primary/secondary/tertiary samples, model-meter providers keep per-model quota without copying model buckets into window lanes, and local-usage fields are re-merged from the current scan window so a corrected local scanner repairs already-retained days. Days with neither a quota sample nor local usage are omitted from the History view.
 
+Peak/off-peak rate state is declared per model in `lib/codexbar/core/peak.rb` from vendor-documented UTC schedules, because no provider API exposes the schedule: Z.ai is provider-wide, and Ollama Cloud and OpenCode Go apply only to their `deepseek-*` models. Providers and models without time-of-day pricing report no state rather than a guess. Only standing recurring schedules are encoded; limited-time promotions are not, so the label never reports a discount after it expires. Peak state surfaces on Overview cards, Provider Detail, model usage rows, model metric cards, and the Waybar tooltip, and never in the compact Waybar text or CSS classes.
+
 ## Repository Map
 
 ### Runtime
@@ -25,7 +27,7 @@ Retained history follows the same provider shape. Window providers keep their pr
 - `bin/codexbar`: executable Ruby entrypoint.
 - `lib/codexbar.rb`: top-level load file.
 - `lib/codexbar/cli.rb`: command dispatcher and config mutation surface.
-- `lib/codexbar/core/`: config version 5, provider metadata, formatting, metrics, process, HTTP.
+- `lib/codexbar/core/`: config version 5, provider metadata, formatting, metrics, peak/off-peak schedules, process, HTTP.
 - `lib/codexbar/providers/`: Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama fetchers and registry.
 - `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
 - `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.

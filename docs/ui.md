@@ -16,7 +16,7 @@ The payload includes:
 - `tooltip`: multiline detail.
 - `class`: CSS classes for provider, health, and display mode.
 
-Waybar does not render pace/reserve/hot text or pace classes. Pace detail remains available in the QuickShell panel.
+Waybar does not render pace/reserve/hot text or pace classes. It also does not render peak/off-peak text or classes; peak detail remains in the QuickShell panel and the Waybar tooltip. Pace detail remains available in the QuickShell panel.
 
 The compact Codex chip renders every quota window present in the cached provider response. When a non-Pro ChatGPT account omits its expected five-hour value, the chip keeps that lane visible as `--` beside the real weekly percentage; the modal labels it unavailable. A missing weekly window stays absent, and the UI never turns a missing value into a fabricated percentage.
 
@@ -37,8 +37,8 @@ The panel renders:
 
 - summary band
 - view tabs for Overview, Provider Detail, History, and Settings
-- Overview: active display provider, freshness, service/runtime/privacy state, a cumulative token usage heatmap (single week grid summing local tokens across every provider), and compact cards for enabled, visible overview providers; every overview member renders with no fixed provider cap, and each card shows an equivalent compact summary (five-hour and weekly lanes for window providers, dominant model for model-meter providers, and the provider's own lane label where it declares one, such as Ollama Cloud's monthly `mo` allowance)
-- Provider Detail: focused provider identity, quota hero, service/local/history/storage detail cards, model local usage rows when present, alerts, provider rail, and provider actions
+- Overview: active display provider, freshness, service/runtime/privacy state, a cumulative token usage heatmap (single week grid summing local tokens across every provider), and compact cards for enabled, visible overview providers; every overview member renders with no fixed provider cap, and each card shows an equivalent compact summary (five-hour and weekly lanes for window providers, dominant model for model-meter providers, and the provider's own lane label where it declares one, such as Ollama Cloud's monthly `mo` allowance) plus a peak/off-peak badge when the provider has time-of-day pricing
+- Provider Detail: focused provider identity, quota hero with a peak/off-peak badge, a peak card, service/local/history/storage detail cards, model local usage rows with per-model peak markers when present, alerts, provider rail, and provider actions
 - History: retained presenter history for the focused provider, including a daily token usage heatmap (GitHub-style week grid with a single green fill ramp for local token totals, a neutral slate for retained days without local tokens, and inline window/active/streak/best stats), quota bars, local token summaries, and per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view shows its empty state when no day remains
 - Settings: cadence, display mode, notification, privacy, scan, and cache-clear controls
 

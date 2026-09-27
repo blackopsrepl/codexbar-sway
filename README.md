@@ -26,7 +26,7 @@ Provider fetches do not run inside Waybar. Waybar is only a render/action surfac
 
 The QuickShell panel is split into Overview, Provider Detail, History, and Settings views. It reads presenter data from `snapshot.json` and sends mutations back through the Ruby CLI. Provider toggles update config and the cached snapshot immediately; provider quota fetches happen through `codexbar daemon`, `codexbar refresh`, or `codexbar usage`.
 
-The Waybar chip shows compact provider quota percentages and health classes only. Pace labels such as `reserve` and `hot` stay in the QuickShell panel and provider detail cards.
+The Waybar chip shows compact provider quota percentages and health classes only. Pace labels such as `reserve` and `hot`, and peak/off-peak labels, stay out of the bar; they appear in the QuickShell panel, provider detail cards, and the Waybar tooltip.
 
 Gemini quota is represented as separate model meters exactly as returned by the Gemini CLI-backed quota API, not as a single blended Pro/Flash pair. Gemini local usage is read from Gemini CLI chat JSONL records under `~/.gemini/tmp/**/chats/`. The provider-level Gemini status aggregates quota model meters: exhausted model buckets are still visible as critical meters, while mixed healthy and exhausted buckets make the provider warning rather than critical.
 
@@ -197,6 +197,8 @@ Z.ai exposes the GLM Coding Plan subscription allowance as used-percentage windo
 Ollama Cloud exposes the account allowance as normalized used fractions from `https://ollama.com/api/usage`. A migrated account reports a single `monthly` allowance mapped to the primary lane; an unmigrated account reports the legacy `session` (five-hour) and `weekly` allowances mapped to the primary and secondary lanes. Missing windows stay absent. The API key is read from `OLLAMA_API_KEY`, or from the `ollama-cloud` entry in `~/.local/share/opencode/auth.json`. The endpoint returns no reset timestamps, so Ollama windows carry no reset countdown or pace. Local usage is read from `ollama-cloud`-routed assistant messages in the OpenCode usage database, kept separate from the OpenCode Go and Z.ai totals.
 
 Retained history keeps each provider's shape: window providers store their primary/secondary/tertiary samples, Gemini stores per-model quota in `modelQuota` and model usage in `modelUsage`, and days with neither a quota sample nor local usage are omitted so the History view falls back to its empty state. The Overview renders every enabled, visible provider marked `showInOverview`; there is no fixed provider cap.
+
+Some providers bill by time of day. CodexBar labels the current peak/off-peak period per model from a static schedule table, because no provider API exposes the schedule. Z.ai's GLM Coding Plan is provider-wide (peak Mon-Fri 14:00-18:00 UTC+8, off-peak at 50% credits). Ollama Cloud and OpenCode Go are model-scoped: only their `deepseek-*` models are time-priced (Ollama peak Mon-Fri 12:00-18:00 UTC; DeepSeek peak Mon-Fri 01:00-04:00 and 06:00-10:00 UTC). Providers and models without time-of-day pricing report no peak state rather than a guess. Only standing recurring schedules are encoded; limited-time promotions are intentionally not tracked so a discount is never reported after it expires. See `docs/providers.md` for the schedule table.
 
 Other providers are not part of this Linux release.
 

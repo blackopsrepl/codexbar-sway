@@ -92,3 +92,17 @@ Ollama Cloud exposes an authenticated account usage endpoint that reports allowa
 Ollama Cloud local usage is read from assistant messages in the OpenCode usage database whose `providerID` is `ollama-cloud`, so usage routed through other providers in the same harness is not attributed to the account. Each message contributes its input, cached read/write, output, reasoning, and total tokens plus monetary cost to the message's activity date and model id. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
 
 Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama` are out of scope for this release line.
+
+## Peak / Off-Peak Rate Windows
+
+Some providers bill by time of day. CodexBar labels the current period per model from a static schedule table in `lib/codexbar/core/peak.rb`, because none of the supported provider APIs expose the schedule at runtime: the Ollama usage endpoint returns only fraction windows and the Z.ai quota endpoint only `limits[]`.
+
+| Provider | Time-priced models | Peak window (UTC) | Off-peak |
+| --- | --- | --- | --- |
+| Z.ai GLM Coding Plan | all models | Mon-Fri 14:00-18:00 UTC+8 (`06:00-10:00` UTC) | 50% credit consumption |
+| Ollama Cloud | `deepseek-*` only | Mon-Fri 12:00-18:00 | outside the window, all weekend |
+| OpenCode Go | `deepseek-*` only | Mon-Fri 01:00-04:00 and 06:00-10:00 | outside the windows, all weekend |
+
+Providers without time-of-day pricing (`codex`, `claude`, `gemini`) and models without a schedule (for example `opencode`'s Kimi, GLM, or Qwen models, or any non-DeepSeek Ollama Cloud model) report no peak state rather than a guess. The state appears as a badge on Overview cards and Provider Detail, a peak card in the detail grid, a per-model marker on local usage rows and model metrics, and a suffix in the Waybar tooltip. It never appears in the compact Waybar text or CSS classes.
+
+Only the standing recurring schedules are encoded; limited-time vendor promotions are intentionally not tracked, because a hardcoded promotion would keep reporting a discount after it expired. When a vendor changes a standing schedule, update `Core::Peak::SCHEDULES` and this table together.
