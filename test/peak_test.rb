@@ -66,4 +66,102 @@ class PeakTest < Minitest::Test
     assert_equal "peak", rows.find { |row| row[:modelId] == "deepseek-v4-pro" }[:peak][:state]
     assert_nil rows.find { |row| row[:modelId] == "glm-5.3" }[:peak]
   end
+
+  def test_window_text_is_rendered_in_the_local_zone
+    with_zone("America/Los_Angeles") do
+      state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 7, 0))
+
+      # Mon 06:00-10:00Z is Sun 23:00 - Mon 03:00 in Los Angeles.
+      assert_equal "Sun 23:00\u2013Mon 03:00", state[:windowText]
+    end
+
+    with_zone("Asia/Kolkata") do
+      state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 7, 0))
+
+      assert_equal "Mon 11:30\u201315:30", state[:windowText]
+    end
+  end
+
+  def test_window_text_applies_dst_for_the_window_instant
+    with_zone("Europe/Rome") do
+      winter = PEAK.model_state("zai", nil, Time.utc(2026, 1, 15, 7, 0))
+      summer = PEAK.model_state("zai", nil, Time.utc(2026, 7, 15, 7, 0))
+
+      # Same UTC window, but CET (+1) in January and CEST (+2) in July.
+      assert_equal "Thu 07:00\u201311:00", winter[:windowText]
+      assert_equal "Wed 08:00\u201312:00", summer[:windowText]
+    end
+  end
+
+  def test_state_is_identical_across_local_zones
+    instant = Time.utc(2026, 9, 28, 7, 0)
+    states = %w[UTC America/Los_Angeles Asia/Kolkata Pacific/Auckland].map do |zone|
+      with_zone(zone) { PEAK.model_state("zai", nil, instant)[:state] }
+    end
+
+    assert_equal ["peak"], states.uniq
+  end
+
+  def test_schedule_timeline_resolves_boundaries_exactly
+    now = Time.utc(2026, 9, 28, 7, 0)
+    timeline = PEAK.schedule_timeline("zai", now)
+
+    assert_equal 0, resolve(timeline, Time.utc(2026, 9, 28, 5, 59))
+    assert_equal 1, resolve(timeline, Time.utc(2026, 9, 28, 6, 0))
+    assert_equal 1, resolve(timeline, Time.utc(2026, 9, 28, 9, 59))
+    assert_equal 0, resolve(timeline, Time.utc(2026, 9, 28, 10, 0))
+    assert_equal 0, resolve(timeline, Time.utc(2026, 10, 3, 7, 0))
+  end
+
+  def test_schedule_timeline_is_ordered_and_brackets_now
+    now = Time.utc(2026, 9, 28, 7, 0)
+    transitions = PEAK.schedule_timeline("zai", now)[:transitions]
+
+    assert transitions.each_cons(2).all? { |(a, _), (b, _)| a < b }
+    assert transitions.first[0] < now.to_i
+    assert transitions.last[0] > now.to_i + (7 * 86_400)
+  end
+
+  def test_schedule_timeline_unknown_id_is_nil
+    assert_nil PEAK.schedule_timeline("nonexistent")
+  end
+
+  def test_presenter_peak_card_includes_local_window
+    state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 7, 0))
+
+    with_zone("Europe/Rome") do
+      card = CodexBar::Runtime::Presenter.peak_card(state)
+
+      assert_equal "Rate period", card[:label]
+      assert_equal "Peak", card[:value]
+      assert_includes card[:detail], "local"
+      assert_includes card[:detail], "\u2013"
+    end
+  end
+
+  def test_presenter_view_exposes_compiled_schedules
+    view = CodexBar::Runtime::Presenter.build_snapshot_view(build_config, { results: {}, overviewProviders: [] }, Time.utc(2026, 9, 28, 7, 0))
+    schedules = view[:peakSchedules]
+
+    assert schedules.key?("zai")
+    assert schedules.key?("ollama:deepseek")
+    assert schedules.key?("opencode:deepseek")
+    assert schedules["zai"][:transitions].length.positive?
+  end
+
+  private
+
+  def resolve(timeline, time)
+    state = timeline[:transitions].first[1]
+    timeline[:transitions].each { |(at, value)| state = value if at <= time.to_i }
+    state
+  end
+
+  def with_zone(zone)
+    previous = ENV["TZ"]
+    ENV["TZ"] = zone
+    yield
+  ensure
+    previous.nil? ? ENV.delete("TZ") : ENV["TZ"] = previous
+  end
 end

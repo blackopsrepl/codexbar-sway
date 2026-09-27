@@ -14,10 +14,21 @@ module CodexBar
     # hardcoded promotion would keep reporting a discount after it expires. When
     # a provider changes a schedule this table must be updated; see
     # docs/providers.md.
+    #
+    # Everything this module emits is timezone-absolute. Windows are anchored to
+    # UTC calendar days, state is evaluated against UTC, and each schedule is
+    # serialized as an alternating transition timeline of Unix epochs. A consumer
+    # therefore resolves the current state and formats the current/next window in
+    # its own local zone, with DST applied from the zone database, without
+    # reimplementing the schedule and without knowing the machine's zone.
     module Peak
       WEEKDAYS = (1..5).freeze
       OFF_PEAK = "offpeak"
       PEAK = "peak"
+      # Days of context emitted on each side of "now" so every consumer always
+      # has a transition at or before the current instant plus a full recurring
+      # week ahead.
+      TIMELINE_DAYS = 8
 
       # Each schedule lists peak windows as [weekday_range, start_minute,
       # end_minute] in UTC minutes from midnight; everything outside the windows
@@ -25,18 +36,21 @@ module CodexBar
       # nil applies it to every model the provider serves.
       SCHEDULES = [
         {
+          id: "zai",
           provider: "zai",
           model: nil,
           peak: [[WEEKDAYS, 360, 600]],
           detail: "GLM Coding Plan peaks Mon-Fri 14:00-18:00 (UTC+8); off-peak usage is charged at 50% credits."
         },
         {
+          id: "ollama:deepseek",
           provider: "ollama",
           model: /\Adeepseek-/,
           peak: [[WEEKDAYS, 720, 1080]],
           detail: "Ollama Cloud off-peak pricing applies outside Mon-Fri 12:00-18:00 UTC."
         },
         {
+          id: "opencode:deepseek",
           provider: "opencode",
           model: /\Adeepseek-/,
           peak: [[WEEKDAYS, 60, 240], [WEEKDAYS, 360, 600]],
@@ -45,6 +59,10 @@ module CodexBar
       ].freeze
 
       module_function
+
+      def schedule_by_id(schedule_id)
+        SCHEDULES.find { |schedule| schedule[:id] == schedule_id.to_s }
+      end
 
       def schedule_for(provider, model_id = nil)
         SCHEDULES.find do |schedule|
@@ -59,13 +77,7 @@ module CodexBar
         schedule = schedule_for(provider, model_id)
         return nil unless schedule
 
-        peak = peak_now?(schedule, now)
-        {
-          modelId: model_id.to_s,
-          state: peak ? PEAK : OFF_PEAK,
-          label: peak ? "Peak" : "Off-peak",
-          detail: schedule[:detail]
-        }
+        state_for(schedule, model_id, now)
       end
 
       # Aggregate for a provider's known model ids. Every matching model shares
@@ -75,25 +87,55 @@ module CodexBar
       def provider_state(provider, model_ids, now = Time.now.utc)
         ids = Array(model_ids).map(&:to_s).reject(&:empty?)
         schedule = schedule_for(provider)
-        matching = if schedule.nil?
-                     ids.select { |id| schedule_for(provider, id) }
-                   elsif schedule[:model].nil?
+        matching = if schedule&.dig(:model).nil? && !schedule.nil?
                      ids.empty? ? [nil] : ids
                    else
                      ids.select { |id| schedule_for(provider, id) }
                    end
         return nil if matching.empty?
 
-        state_for = model_state(provider, matching.first, now)
-        return nil unless state_for
+        state = state_for(schedule_for(provider, matching.first), matching.first, now)
+        return nil unless state
 
+        state.merge(provider: provider.to_s, models: matching.reject(&:nil?))
+      end
+
+      def state_for(schedule, model_id, now)
+        window = current_or_next_window(schedule, now)
+        return nil unless window
+
+        active = peak_now?(schedule, now)
+        start_time, end_time = window
         {
-          provider: provider.to_s,
-          state: state_for[:state],
-          label: state_for[:label],
-          detail: state_for[:detail],
-          models: matching.reject(&:nil?).filter_map { |id| model_state(provider, id, now) }
+          scheduleId: schedule[:id],
+          modelId: model_id.to_s,
+          state: active ? PEAK : OFF_PEAK,
+          label: active ? "Peak" : "Off-peak",
+          detail: schedule[:detail],
+          windowStartAt: start_time.to_i,
+          windowEndAt: end_time.to_i,
+          windowText: local_span(start_time, end_time)
         }
+      end
+
+      # Serialized schedule for consumers that resolve state against their own
+      # clock: the vendor detail plus an ordered `[epoch, 1|0]` transition list
+      # (1 = peak). The first entry is the state in effect before the first
+      # transition, so a simple scan yields the correct state at any instant.
+      def schedule_timeline(schedule_id, now = Time.now.utc)
+        schedule = schedule_by_id(schedule_id)
+        return nil unless schedule
+
+        events = []
+        intervals(schedule, now).each do |start, finish|
+          events << [start.to_i, 1]
+          events << [finish.to_i, 0]
+        end
+        return { detail: schedule[:detail], transitions: [] } if events.empty?
+
+        anchor = events.first[0] - 1
+        timeline = [[anchor, 0]] + events
+        { detail: schedule[:detail], transitions: timeline.sort_by(&:first).uniq { |at, _state| at } }
       end
 
       def peak_now?(schedule, now)
@@ -102,6 +144,45 @@ module CodexBar
         wday = utc.wday
         schedule[:peak].any? do |days, start_minute, end_minute|
           days.cover?(wday) && minutes >= start_minute && minutes < end_minute
+        end
+      end
+
+      # Concrete peak intervals across a window around now, as [start, end] UTC
+      # Times. Anchored to UTC calendar days so the result is independent of the
+      # evaluating machine's zone.
+      def intervals(schedule, now, days: TIMELINE_DAYS)
+        base = now.utc.to_date
+        ((base - days)..(base + days)).flat_map do |date|
+          schedule[:peak].filter_map do |dows, start_minute, end_minute|
+            next unless dows.cover?(date.wday)
+
+            [time_at(date, start_minute), time_at(date, end_minute)]
+          end
+        end.sort_by(&:first)
+      end
+
+      def time_at(date, minute_of_day)
+        Time.utc(date.year, date.month, date.day, minute_of_day / 60, minute_of_day % 60)
+      end
+
+      def current_or_next_window(schedule, now)
+        windows = intervals(schedule, now)
+        current = windows.find { |start, finish| start <= now && now < finish }
+        return current if current
+
+        windows.find { |start, _finish| start > now }
+      end
+
+      # Renders a peak window in the evaluating machine's local zone, correct at
+      # the window's own instant (so DST is applied from the zone database, not
+      # from a fixed offset).
+      def local_span(start_time, finish_time)
+        start_local = start_time.getlocal
+        finish_local = finish_time.getlocal
+        if start_local.to_date == finish_local.to_date
+          "#{start_local.strftime('%a %H:%M')}\u2013#{finish_local.strftime('%H:%M')}"
+        else
+          "#{start_local.strftime('%a %H:%M')}\u2013#{finish_local.strftime('%a %H:%M')}"
         end
       end
     end

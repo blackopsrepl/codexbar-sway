@@ -20,8 +20,20 @@ module CodexBar
           summary: build_summary_view(config, snapshot, providers, now),
           chip: build_chip_view(config, snapshot, results, providers, now),
           heatmap: cumulative_heatmap_view(snapshot[:history]),
+          peakSchedules: peak_schedules_view,
           providers: providers
         }
+      end
+
+      # Compiled transition timelines for every declared peak schedule, keyed by
+      # schedule id. The QuickShell panel resolves peak state against its own
+      # clock from these, so the badge flips exactly at each boundary regardless
+      # of when the daemon last refreshed, and windows render in the user's local
+      # zone without duplicating the schedule or the zone logic in QML.
+      def peak_schedules_view
+        Core::Peak::SCHEDULES.each_with_object({}) do |schedule, output|
+          output[schedule[:id]] = Core::Peak.schedule_timeline(schedule[:id])
+        end
       end
 
       def supported_provider_order(config)
@@ -285,12 +297,15 @@ module CodexBar
       def peak_card(peak)
         return nil unless peak
 
+        window = clean(peak[:windowText])
+        detail = [window ? "#{window} local" : nil, clean(peak[:detail])].compact.join(" · ")
         {
           key: "peak",
           icon: "",
           label: "Rate period",
           value: peak[:label],
-          detail: peak[:detail]
+          detail: detail.empty? ? nil : detail,
+          scheduleId: peak[:scheduleId]
         }
       end
 
@@ -943,12 +958,17 @@ module CodexBar
                   end
 
         model_peak = provider_view[:metrics].any? { |metric| metric[:peak] }
-        peak_suffix = provider_view[:peak] && !model_peak ? " · #{provider_view[:peak][:label]}" : ""
+        peak_suffix = provider_view[:peak] && !model_peak ? " · #{peak_tooltip_text(provider_view[:peak])}" : ""
         "#{provider_view[:icon]} #{provider_view[:label]}: #{summary}#{peak_suffix}"
       end
 
+      def peak_tooltip_text(peak)
+        window = clean(peak[:windowText])
+        window ? "#{peak[:label]} (#{window} local)" : peak[:label].to_s
+      end
+
       def metric_tooltip_text(config, metric)
-        peak = metric[:peak] ? " #{metric[:peak][:label]}" : ""
+        peak = metric[:peak] ? " · #{peak_tooltip_text(metric[:peak])}" : ""
         "#{metric_icon(metric[:key])} #{metric[:label]} #{metric_summary_text(config, metric)}#{peak}"
       end
 
