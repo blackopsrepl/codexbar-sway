@@ -103,6 +103,17 @@ Some providers bill by time of day. CodexBar labels the current period per model
 | Ollama Cloud | `deepseek-*` only | Mon-Fri 12:00-18:00 | outside the window, all weekend |
 | OpenCode Go | `deepseek-*` only | Mon-Fri 01:00-04:00 and 06:00-10:00 | outside the windows, all weekend |
 
-Providers without time-of-day pricing (`codex`, `claude`, `gemini`) and models without a schedule (for example `opencode`'s Kimi, GLM, or Qwen models, or any non-DeepSeek Ollama Cloud model) report no peak state rather than a guess. The state appears as a badge on Overview cards and Provider Detail, a peak card in the detail grid, a per-model marker on local usage rows and model metrics, and a suffix in the Waybar tooltip. It never appears in the compact Waybar text or CSS classes.
+Providers without time-of-day pricing (`codex`, `claude`, `gemini`) and models without a schedule (for example `opencode`'s Kimi, GLM, or Qwen models, or any non-DeepSeek Ollama Cloud model) report no peak state rather than a guess. The state appears as a badge on Overview cards and Provider Detail, a peak card in the detail grid, a per-model marker on local usage rows and model metrics, and a suffix in the Waybar tooltip; the tooltip and detail card also show the current window in the machine's local zone. Peak never appears in the compact Waybar text or CSS classes.
 
 Only the standing recurring schedules are encoded; limited-time vendor promotions are intentionally not tracked, because a hardcoded promotion would keep reporting a discount after it expired. When a vendor changes a standing schedule, update `Core::Peak::SCHEDULES` and this table together.
+
+### Timezone handling
+
+Windows are declared in UTC and everything downstream is timezone-absolute:
+
+- State is evaluated against UTC, so the badge is identical from every zone.
+- Each schedule is serialized into the presenter view as a `peakSchedules` map of alternating `[epoch, state]` transitions compiled around now. The QuickShell panel resolves the current state and formats the current window from those epochs against its own clock, so it is exact at every boundary even when the snapshot is stale, and it never reimplements the schedule or the zone logic.
+- The window boundaries are converted to the display zone from the zone database at the window's own instant, so DST and non-hour offsets (for example a half-hour or 45-minute zone) render correctly; a window that crosses local midnight shows both weekdays.
+- The panel arms a single timer to the next transition instead of polling, so there is no per-second work while the state holds.
+
+The daemon's emitted `windowText` is only a fallback; the panel and Waybar tooltip resolve live. `windowText` follows the system zone of the process that rendered the snapshot, which is correct for the desktop it serves.
