@@ -9,6 +9,7 @@ module CodexBar
         gemini
         opencode
         zai
+        ollama
       ].freeze
 
       PROVIDER_METADATA = {
@@ -16,7 +17,8 @@ module CodexBar
         "claude" => { label: "Claude", shortLabel: "CL", sessionLabel: "Session", weeklyLabel: "Weekly", tertiaryLabel: "Sonnet", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#F2C572", icon: "", dashboardUrl: "https://claude.ai/" },
         "gemini" => { label: "Gemini", shortLabel: "GM", sessionLabel: "Pro", weeklyLabel: "Flash", defaultEnabled: false, supportsAverage: true, supportsTertiary: false, accent: "#82A7F4", icon: "", dashboardUrl: "https://gemini.google.com/" },
         "opencode" => { label: "OpenCode Go", shortLabel: "OC", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Monthly", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#C792EA", icon: "", dashboardUrl: "https://opencode.ai/" },
-        "zai" => { label: "Z.ai", shortLabel: "Z", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Tools", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#4ECDC4", icon: "󰉁", dashboardUrl: "https://z.ai/manage-apikey/coding-plan/personal/my-plan" }
+        "zai" => { label: "Z.ai", shortLabel: "Z", sessionLabel: "5-hour", weeklyLabel: "Weekly", tertiaryLabel: "Tools", defaultEnabled: false, supportsAverage: false, supportsTertiary: true, accent: "#4ECDC4", icon: "󰉁", dashboardUrl: "https://z.ai/manage-apikey/coding-plan/personal/my-plan" },
+        "ollama" => { label: "Ollama Cloud", shortLabel: "OL", sessionLabel: "Monthly", weeklyLabel: "Weekly", defaultEnabled: false, supportsAverage: false, supportsTertiary: false, accent: "#8AB4F8", icon: "", dashboardUrl: "https://ollama.com/settings" },
       }.freeze
 
       STATUS_METADATA = {
@@ -49,7 +51,13 @@ module CodexBar
           url: nil,
           sourceUrl: "https://z.ai/",
           components: []
-        }
+},
+"ollama" => {
+  source: "ollama-cloud-usage",
+  url: nil,
+  sourceUrl: "https://ollama.com/",
+  components: []
+}
       }.freeze
 
       module_function

@@ -83,6 +83,15 @@ module CodexBar
             url: Providers::Zai::QUOTA_URL,
             service: "Z.ai"
           )
+        when "ollama"
+          fetch_usage_endpoint_status(
+            metadata,
+            now: now,
+            key: Providers::Ollama.resolve_api_key,
+            key_error: "Ollama Cloud API key not found. Set OLLAMA_API_KEY or add an ollama-cloud entry to #{Providers::Ollama.auth_path}.",
+            url: Providers::Ollama::USAGE_URL,
+            service: "Ollama Cloud"
+          )
         else
           fetch_statuspage(metadata, now: now)
         end.merge(provider: provider)

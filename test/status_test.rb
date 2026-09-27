@@ -51,4 +51,20 @@ class StatusTest < Minitest::Test
       assert_equal "boom", status[:error]
     end
   end
+
+  def test_ollama_status_uses_the_usage_endpoint
+    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(limits: {}), headers: {})
+    previous = ENV["OLLAMA_API_KEY"]
+    ENV["OLLAMA_API_KEY"] = "sk-test"
+
+    CodexBar::Core::Http.stub(:request, response) do
+      status = CodexBar::Runtime::Status.fetch_provider("ollama")
+
+      assert_equal "ok", status[:state]
+      assert_equal "ollama", status[:provider]
+      assert_equal "ollama-cloud-usage", status[:source]
+    end
+  ensure
+    previous.nil? ? ENV.delete("OLLAMA_API_KEY") : ENV["OLLAMA_API_KEY"] = previous
+  end
 end

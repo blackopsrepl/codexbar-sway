@@ -67,6 +67,7 @@ INSTALL_FILES := \
 	lib/codexbar/providers/codex.rb \
 	lib/codexbar/providers/gemini.rb \
 	lib/codexbar/providers/index.rb \
+	lib/codexbar/providers/ollama.rb \
 	lib/codexbar/providers/opencode.rb \
 	lib/codexbar/providers/zai.rb \
 	lib/codexbar/runtime/daemon.rb \

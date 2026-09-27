@@ -524,4 +524,36 @@ class RuntimeTest < Minitest::Test
     assert_includes payload[:class], "codexbar"
     assert_includes payload[:tooltip], "no providers enabled"
   end
+
+  def test_ollama_monthly_window_summarizes_with_its_own_short_label
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "ollama", enabled: true, visible: true)
+    results = {
+      "ollama" => provider_result(
+        provider: "ollama",
+        usage: usage_payload(
+          provider: "ollama",
+          now: now,
+          primary: { label: "Monthly", shortLabel: "mo", usedPercent: 88.0, windowMinutes: 43_200, resetsAt: nil, resetDescription: nil }
+        ),
+        source: "ollama-cloud"
+      )
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[ollama], results, now)
+    ollama = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "ollama" }
+    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+
+    assert_equal "mo 12%", ollama[:quotaSummaryText]
+    assert_equal "Monthly", ollama[:dominantMetric][:label]
+    assert_equal "mo", ollama[:dominantMetric][:shortLabel]
+    assert_includes payload[:tooltip], "Ollama Cloud"
+  end
+
+  def test_history_and_storage_include_the_ollama_provider
+    history = CodexBar::Runtime::History.normalize_history({}, 30)
+    refute_nil history[:providers]
+    assert_includes CodexBar::Runtime::Storage::PROVIDER_PATHS.keys, "ollama"
+  end
 end

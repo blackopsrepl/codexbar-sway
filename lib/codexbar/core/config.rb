@@ -24,7 +24,7 @@ module CodexBar
             resetStyle: "countdown",
             displayMode: "both",
             metricPreferences: {},
-            overviewProviders: %w[codex claude gemini opencode zai],
+            overviewProviders: %w[codex claude gemini opencode zai ollama],
             selectedProvider: "codex"
           },
           runtime: {
@@ -468,7 +468,7 @@ module CodexBar
       end
 
       def default_overview_providers
-        %w[codex claude gemini opencode zai]
+        %w[codex claude gemini opencode zai ollama]
       end
 
       def default_quickshell_shell

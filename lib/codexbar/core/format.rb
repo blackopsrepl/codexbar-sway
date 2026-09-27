@@ -150,6 +150,11 @@ module CodexBar
         format("%.1fM", amount / 1_000_000.0).sub(".0M", "M")
       end
 
+      def window_label(window, fallback)
+        text = window[:label].to_s.strip
+        text.empty? ? fallback : text
+      end
+
       def render_provider_text(provider, snapshot, credits, show_used, reset_style)
         metadata = Types::PROVIDER_METADATA.fetch(provider)
         lines = []
@@ -167,13 +172,13 @@ module CodexBar
             lines << reset if reset
           end
         elsif primary
-          lines << "#{metadata[:sessionLabel]}: #{usage_line(primary, show_used)}"
+          lines << "#{window_label(primary, metadata[:sessionLabel])}: #{usage_line(primary, show_used)}"
           reset = reset_line(primary, reset_style)
           lines << reset if reset
         end
 
         if secondary
-          lines << "#{metadata[:weeklyLabel]}: #{usage_line(secondary, show_used)}"
+          lines << "#{window_label(secondary, metadata[:weeklyLabel])}: #{usage_line(secondary, show_used)}"
           reset = reset_line(secondary, reset_style)
           lines << reset if reset
           pace = Metric.pace_summary_text(secondary)
@@ -181,7 +186,7 @@ module CodexBar
         end
 
         if tertiary
-          lines << "#{metadata[:tertiaryLabel] || 'Tertiary'}: #{usage_line(tertiary, show_used)}"
+          lines << "#{window_label(tertiary, metadata[:tertiaryLabel] || 'Tertiary')}: #{usage_line(tertiary, show_used)}"
           reset = reset_line(tertiary, reset_style)
           lines << reset if reset
         end

@@ -6,7 +6,7 @@ require "time"
 module CodexBar
   module Runtime
     module Presenter
-      TARGET_PROVIDERS = %w[codex claude gemini opencode zai].freeze
+      TARGET_PROVIDERS = %w[codex claude gemini opencode zai ollama].freeze
 
       module_function
 
@@ -725,12 +725,18 @@ module CodexBar
         metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
         active_key, = metric_identity(provider, usage, resolved_metric[:window], resolved_metric)
         [
-          ["primary", metadata[:sessionLabel] || "Primary", usage[:primary]],
-          ["secondary", metadata[:weeklyLabel] || "Secondary", usage[:secondary]],
-          ["tertiary", metadata[:tertiaryLabel] || "Tertiary", usage[:tertiary]]
+          ["primary", lane_label(metadata[:sessionLabel] || "Primary", usage[:primary]), usage[:primary]],
+          ["secondary", lane_label(metadata[:weeklyLabel] || "Secondary", usage[:secondary]), usage[:secondary]],
+          ["tertiary", lane_label(metadata[:tertiaryLabel] || "Tertiary", usage[:tertiary]), usage[:tertiary]]
         ].filter_map do |key, label, window|
           build_metric_view(config, key, label, window, active_key, resolved_metric[:pace], now)
         end
+      end
+
+      # A provider may return more than one lane shape for the same provider id,
+      # so a window's own label wins over the static provider metadata when present.
+      def lane_label(metadata_label, window)
+        clean(window && window[:label]) || metadata_label
       end
 
       def unavailable_metric_views(provider, usage)
@@ -770,6 +776,9 @@ module CodexBar
       end
 
       def summary_lane_label(entry)
+        short = clean(entry[:shortLabel])
+        return short if short
+
         case entry[:key].to_s
         when "primary" then "5h"
         when "secondary" then "W"
@@ -787,11 +796,11 @@ module CodexBar
           return [meter[:key], meter[:label]] if same_window?(meter, window)
         end
         return ["average", "Average"] if resolved_metric[:effective] == "average" && !same_window?(usage && usage[:primary], window) && !same_window?(usage && usage[:secondary], window)
-        return ["primary", metadata[:sessionLabel] || "Primary"] if same_window?(usage && usage[:primary], window)
-        return ["secondary", metadata[:weeklyLabel] || "Secondary"] if same_window?(usage && usage[:secondary], window)
-        return ["tertiary", metadata[:tertiaryLabel] || "Tertiary"] if same_window?(usage && usage[:tertiary], window)
+        return ["primary", lane_label(metadata[:sessionLabel] || "Primary", window)] if same_window?(usage && usage[:primary], window)
+        return ["secondary", lane_label(metadata[:weeklyLabel] || "Secondary", window)] if same_window?(usage && usage[:secondary], window)
+        return ["tertiary", lane_label(metadata[:tertiaryLabel] || "Tertiary", window)] if same_window?(usage && usage[:tertiary], window)
 
-        ["primary", metadata[:sessionLabel] || "Primary"]
+        ["primary", lane_label(metadata[:sessionLabel] || "Primary", window)]
       end
 
       def same_window?(left, right)
