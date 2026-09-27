@@ -1522,24 +1522,32 @@ ShellRoot {
                                                                 font.bold: true
                                                             }
 
-                                                            Label {
-                                                                text: modelData.quotaSummaryText || modelData.chipText || "--"
-                                                                color: statusColor(modelData)
-                                                                font.family: root.textFont
-                                                                font.pixelSize: 11
-                                                                font.bold: true
+                                                            RowLayout {
+                                                                Layout.fillWidth: true
+                                                                spacing: 4
+
+                                                                Label {
+                                                                    Layout.fillWidth: true
+                                                                    text: modelData.quotaSummaryText || modelData.chipText || "--"
+                                                                    color: statusColor(modelData)
+                                                                    font.family: root.textFont
+                                                                    font.pixelSize: 11
+                                                                    font.bold: true
+                                                                    elide: Text.ElideRight
+                                                                }
+
+                                                                Text {
+                                                                    visible: !!(modelData.peak)
+                                                                    text: root.peakBadgeLabel(modelData.peak)
+                                                                    color: root.peakBadgeAccent(modelData.peak)
+                                                                    font.family: root.textFont
+                                                                    font.pixelSize: 10
+                                                                    font.bold: true
+                                                                }
                                                             }
                                                         }
 
                                                         Item { Layout.fillWidth: true }
-
-                                                        BadgePill {
-                                                            visible: !!(modelData.peak)
-                                                            text: root.peakBadgeLabel(modelData.peak)
-                                                            icon: root.peakBadgeIcon(modelData.peak)
-                                                            accent: root.peakBadgeAccent(modelData.peak)
-                                                            maximumWidth: 92
-                                                        }
 
                                                         BadgePill {
                                                             visible: modelData.display
