@@ -1514,22 +1514,14 @@ ShellRoot {
                                                             Layout.fillWidth: true
                                                             spacing: 2
 
-                                                            Label {
-                                                                text: modelData.label
-                                                                color: root.theme.text
-                                                                font.family: root.textFont
-                                                                font.pixelSize: 11
-                                                                font.bold: true
-                                                            }
-
                                                             RowLayout {
                                                                 Layout.fillWidth: true
                                                                 spacing: 4
 
                                                                 Label {
                                                                     Layout.fillWidth: true
-                                                                    text: modelData.quotaSummaryText || modelData.chipText || "--"
-                                                                    color: statusColor(modelData)
+                                                                    text: modelData.label
+                                                                    color: root.theme.text
                                                                     font.family: root.textFont
                                                                     font.pixelSize: 11
                                                                     font.bold: true
@@ -1553,6 +1545,16 @@ ShellRoot {
                                                                     ToolTip.delay: 150
                                                                     ToolTip.text: root.peakBadgeDetail(modelData.peak)
                                                                 }
+                                                            }
+
+                                                            Label {
+                                                                Layout.fillWidth: true
+                                                                text: modelData.quotaSummaryText || modelData.chipText || "--"
+                                                                color: statusColor(modelData)
+                                                                font.family: root.textFont
+                                                                font.pixelSize: 11
+                                                                font.bold: true
+                                                                elide: Text.ElideRight
                                                             }
                                                         }
 
