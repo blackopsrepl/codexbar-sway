@@ -101,6 +101,7 @@ module CodexBar
         metadata = Core::Types::PROVIDER_METADATA.fetch(provider)
         chip_text = chip_text(config, provider, result)
         incident = clean(result && result[:incident]) || service_incident(service_status)
+        peak = provider_peak(provider, usage, actual_metrics, local_usage, now)
 
         {
           id: provider,
@@ -129,7 +130,7 @@ module CodexBar
           quotaSummaryText: quota_summary_text(config, provider, actual_metrics, unavailable_metrics),
           secondaryMetrics: actual_metrics.reject { |entry| dominant_metric && entry[:key] == dominant_metric[:key] },
           hero: hero_view(config, provider, usage, dominant_metric, now),
-          detailCards: provider_detail_cards(config, provider, result, usage, dominant_metric, actual_metrics, now, service_status, local_usage, storage, history),
+          detailCards: provider_detail_cards(config, provider, result, usage, dominant_metric, actual_metrics, now, service_status, local_usage, storage, history, peak),
           creditsText: result && result[:credits] ? Core::Format.credits_string(result[:credits]) : nil,
           providerCostText: provider_cost_text(usage),
           spendLines: spend_lines(usage),
@@ -140,7 +141,8 @@ module CodexBar
           serviceStatusText: Core::Format.service_status_text(service_status),
           serviceStatusUpdatedAt: clean(service_status[:updatedAt]),
           localUsageText: local_usage_text(local_usage),
-          localUsageModels: model_usage_rows(local_usage && local_usage[:models]),
+          localUsageModels: model_usage_rows(provider, local_usage && local_usage[:models], now),
+          peak: peak,
           storageText: storage && storage[:totalBytes] ? Core::Format.bytes_string(storage[:totalBytes]) : nil,
           historySummary: provider_history_summary(history),
           historyDays: provider_history_days(history),
@@ -233,7 +235,7 @@ module CodexBar
         end
       end
 
-      def provider_detail_cards(config, provider, result, usage, dominant_metric, metrics, now, service_status = nil, local_usage = nil, storage = nil, history = nil)
+      def provider_detail_cards(config, provider, result, usage, dominant_metric, metrics, now, service_status = nil, local_usage = nil, storage = nil, history = nil, peak = nil)
         cards = unavailable_metric_views(provider, usage).map do |entry|
           {
             key: "#{entry[:key]}-unavailable",
@@ -246,6 +248,8 @@ module CodexBar
         cards.concat(metrics
           .reject { |entry| dominant_metric && entry[:key] == dominant_metric[:key] }
           .map { |entry| metric_card_view(config, entry, now) })
+        peak_tile = peak_card(peak)
+        cards << peak_tile if peak_tile
         cards << service_status_card(service_status) if service_status && !service_status.empty?
         cards.concat(spend_card_views(config, usage, now))
         local_card = local_usage_card(local_usage)
@@ -278,6 +282,18 @@ module CodexBar
         cards
       end
 
+      def peak_card(peak)
+        return nil unless peak
+
+        {
+          key: "peak",
+          icon: "",
+          label: "Rate period",
+          value: peak[:label],
+          detail: peak[:detail]
+        }
+      end
+
       def service_status_card(service_status)
         {
           key: "service-status",
@@ -308,21 +324,34 @@ module CodexBar
         Core::Format.token_summary_line(local_usage) || "No local token summary"
       end
 
-      def model_usage_rows(models)
+      def model_usage_rows(provider, models, now = Time.now.utc)
         return [] unless models.is_a?(Hash)
 
         models.values
           .select { |entry| entry.is_a?(Hash) && entry[:totalTokens].to_i.positive? }
           .sort_by { |entry| [-entry[:totalTokens].to_i, entry[:modelId].to_s] }
           .map do |entry|
+            model_id = entry[:modelId].to_s
             {
-              modelId: entry[:modelId].to_s,
-              label: entry[:modelId].to_s,
+              modelId: model_id,
+              label: model_id,
               tokensText: "#{format_tokens(entry[:totalTokens])} tok",
               recordsText: entry[:records].to_i.positive? ? "#{entry[:records]} records" : nil,
-              detail: model_usage_detail(entry)
+              detail: model_usage_detail(entry),
+              peak: Core::Peak.model_state(provider, model_id, now)
             }
           end
+      end
+
+      # Provider-level peak state for the overview and detail surfaces. Quota
+      # meters name their model buckets directly; for window providers the
+      # models come from the local usage summary, so a model-gated provider with
+      # only non-matching models reports no peak state.
+      def provider_peak(provider, usage, metrics, local_usage, now)
+        model_ids = Array(usage && usage[:meters]).filter_map { |meter| meter[:modelId] }
+        model_ids = metrics.filter_map { |metric| metric[:modelId] } if model_ids.empty?
+        model_ids = ((local_usage && local_usage[:models]) || {}).keys if model_ids.empty?
+        Core::Peak.provider_state(provider, model_ids, now)
       end
 
       def model_usage_detail(entry)
@@ -581,6 +610,7 @@ module CodexBar
           label: metric[:label],
           value: metric[:summary],
           detail: [
+            metric[:peak] && metric[:peak][:label],
             pace_label(metric[:paceText]),
             metric[:resetText] ? "Reset #{metric[:resetText]}" : nil
           ].compact.join(" · ")
@@ -684,15 +714,16 @@ module CodexBar
         Core::Types::PROVIDER_METADATA.fetch(provider)[:icon] || ""
       end
 
-      def build_metric_view(config, key, label, window, active_key, active_pace, now)
+      def build_metric_view(config, provider, key, label, window, active_key, active_pace, now)
         return nil unless window
 
         pace = key == active_key ? active_pace : Core::Metric.usage_pace(window)
+        model_id = clean(window[:modelId])
         {
           key: key,
           label: label,
           shortLabel: clean(window[:shortLabel]),
-          modelId: clean(window[:modelId]),
+          modelId: model_id,
           summary: Core::Format.usage_line(window, config.dig(:display, :showUsed)),
           remainingPercent: Core::Types.rate_window_remaining_percent(window),
           usedPercent: window[:usedPercent].to_f,
@@ -700,7 +731,8 @@ module CodexBar
           paceText: Core::Metric.pace_text(pace),
           paceSummary: Core::Metric.pace_summary_text(window),
           paceState: Core::Metric.pace_state(pace),
-          severity: Core::Format.window_severity(window)
+          severity: Core::Format.window_severity(window),
+          peak: model_id ? Core::Peak.model_state(provider, model_id, now) : nil
         }
       end
 
@@ -709,7 +741,7 @@ module CodexBar
         return nil unless window
 
         key, label = metric_identity(provider, usage, window, resolved_metric)
-        build_metric_view(config, key, label, window, key, resolved_metric[:pace], now)
+        build_metric_view(config, provider, key, label, window, key, resolved_metric[:pace], now)
       end
 
       def metric_views(config, provider, usage, resolved_metric, now)
@@ -718,7 +750,7 @@ module CodexBar
         if Array(usage[:meters]).any?
           active_key, = metric_identity(provider, usage, resolved_metric[:window], resolved_metric)
           return usage[:meters].filter_map do |meter|
-            build_metric_view(config, meter[:key], meter[:label], meter, active_key, resolved_metric[:pace], now)
+            build_metric_view(config, provider, meter[:key], meter[:label], meter, active_key, resolved_metric[:pace], now)
           end
         end
 
@@ -729,7 +761,7 @@ module CodexBar
           ["secondary", lane_label(metadata[:weeklyLabel] || "Secondary", usage[:secondary]), usage[:secondary]],
           ["tertiary", lane_label(metadata[:tertiaryLabel] || "Tertiary", usage[:tertiary]), usage[:tertiary]]
         ].filter_map do |key, label, window|
-          build_metric_view(config, key, label, window, active_key, resolved_metric[:pace], now)
+          build_metric_view(config, provider, key, label, window, active_key, resolved_metric[:pace], now)
         end
       end
 
@@ -910,11 +942,14 @@ module CodexBar
                     metrics.join(" · ")
                   end
 
-        "#{provider_view[:icon]} #{provider_view[:label]}: #{summary}"
+        model_peak = provider_view[:metrics].any? { |metric| metric[:peak] }
+        peak_suffix = provider_view[:peak] && !model_peak ? " · #{provider_view[:peak][:label]}" : ""
+        "#{provider_view[:icon]} #{provider_view[:label]}: #{summary}#{peak_suffix}"
       end
 
       def metric_tooltip_text(config, metric)
-        "#{metric_icon(metric[:key])} #{metric[:label]} #{metric_summary_text(config, metric)}"
+        peak = metric[:peak] ? " #{metric[:peak][:label]}" : ""
+        "#{metric_icon(metric[:key])} #{metric[:label]} #{metric_summary_text(config, metric)}#{peak}"
       end
 
       def waybar_metric_segment(config, metric)

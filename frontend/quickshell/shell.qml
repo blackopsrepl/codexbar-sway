@@ -99,7 +99,9 @@ ShellRoot {
         bell: "",
         privacy: "",
         storage: "",
-        cost: ""
+        cost: "",
+        peak: "󰖙",
+        offpeak: "󰖔"
     })
 
     property var viewData: snapshotAdapter.view && snapshotAdapter.view.summary ? snapshotAdapter.view : ({ summary: {}, chip: {}, providers: [] })
@@ -1379,6 +1381,14 @@ ShellRoot {
                                                         Item { Layout.fillWidth: true }
 
                                                         BadgePill {
+                                                            visible: !!(modelData.peak)
+                                                            text: modelData.peak ? modelData.peak.label : ""
+                                                            icon: modelData.peak && modelData.peak.state === "peak" ? root.glyphs.peak : root.glyphs.offpeak
+                                                            accent: modelData.peak && modelData.peak.state === "offpeak" ? root.theme.good : root.theme.warn
+                                                            maximumWidth: 92
+                                                        }
+
+                                                        BadgePill {
                                                             visible: modelData.display
                                                             icon: root.glyphs.display
                                                             accent: statusColor(modelData)
@@ -1606,6 +1616,14 @@ ShellRoot {
                                                     Item { Layout.fillWidth: true }
 
                                                     BadgePill {
+                                                        visible: !!(focusProvider() && focusProvider().peak)
+                                                        text: focusProvider() && focusProvider().peak ? focusProvider().peak.label : ""
+                                                        icon: focusProvider() && focusProvider().peak && focusProvider().peak.state === "peak" ? root.glyphs.peak : root.glyphs.offpeak
+                                                        accent: focusProvider() && focusProvider().peak && focusProvider().peak.state === "offpeak" ? root.theme.good : root.theme.warn
+                                                        maximumWidth: 100
+                                                    }
+
+                                                    BadgePill {
                                                         visible: !!(focusProvider() && focusProvider().hero && focusProvider().hero.supporting)
                                                         text: focusProvider() && focusProvider().hero ? focusProvider().hero.supporting : ""
                                                         accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
@@ -1710,6 +1728,14 @@ ShellRoot {
                                                             color: root.theme.textDim
                                                             font.family: root.textFont
                                                             font.pixelSize: 10
+                                                        }
+
+                                                        Text {
+                                                            visible: !!(modelData.peak)
+                                                            text: modelData.peak && modelData.peak.state === "peak" ? root.glyphs.peak : root.glyphs.offpeak
+                                                            color: modelData.peak && modelData.peak.state === "offpeak" ? root.theme.good : root.theme.warn
+                                                            font.family: root.iconFont
+                                                            font.pixelSize: 11
                                                         }
                                                     }
                                                 }
