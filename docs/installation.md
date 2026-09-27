@@ -15,6 +15,7 @@ CodexBar installs as a user-prefix Linux tool. The install must not depend on th
   - Gemini CLI OAuth credentials in `~/.gemini/oauth_creds.json`
   - OpenCode Go: `opencode-go` key in `~/.local/share/opencode/auth.json`, with local usage read from `~/.local/share/opencode/opencode.db`
   - Z.ai: `ZAI_API_KEY`/`GLM_API_KEY`, or the `zai-coding-plan` key in `~/.local/share/opencode/auth.json` (local usage reads Z.ai-routed messages from the same OpenCode database)
+  - Ollama Cloud: `OLLAMA_API_KEY`, or the `ollama-cloud` key in `~/.local/share/opencode/auth.json` (local usage reads `ollama-cloud`-routed messages from the same OpenCode database)
 
 ## Install
 

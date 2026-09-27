@@ -54,7 +54,7 @@ codexbar display mode both|percent|pace
 codexbar config init
 codexbar config validate
 codexbar config dump
-codexbar open dashboard codex|claude|gemini|opencode|zai
+codexbar open dashboard codex|claude|gemini|opencode|zai|ollama
 codexbar runtime status
 codexbar runtime cadence manual
 codexbar runtime cadence interval 60

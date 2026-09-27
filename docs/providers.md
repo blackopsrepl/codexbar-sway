@@ -7,6 +7,7 @@ The Linux release supports exactly:
 - `gemini`
 - `opencode`
 - `zai`
+- `ollama`
 
 ## Codex
 
@@ -77,4 +78,17 @@ Z.ai tracks the GLM Coding Plan subscription allowance, not pay-as-you-go API cr
 
 Z.ai local usage is read from the OpenCode usage database, filtered to assistant messages whose provider is `zai-coding-plan` or `zai`; those messages are excluded from the OpenCode Go totals (which include only `providerID` `opencode-go`), so no usage is double-counted. The GLM Coding Plan reports no per-token cost, so the Z.ai cost total stays zero.
 
-Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, `opencode`, and `zai` are out of scope for this release line.
+## Ollama Cloud
+
+- Source label: `ollama-cloud`.
+- Provider label: Ollama Cloud.
+- Credentials: `OLLAMA_API_KEY`, falling back to the `ollama-cloud` key in `~/.local/share/opencode/auth.json`.
+- Usage endpoint: `https://ollama.com/api/usage`.
+- Local usage source: `~/.local/share/opencode/opencode.db` (the OpenCode SQLite usage database).
+- Dashboard: `https://ollama.com/settings`
+
+Ollama Cloud exposes an authenticated account usage endpoint that reports allowance windows as normalized `0..1` used fractions, not token counts. Its shape depends on the account's plan: an account migrated to monthly credits returns a single `monthly` allowance (with per-model request counts), while an account still on the legacy plan returns `session` (five-hour) and `weekly` allowances. The two shapes are mutually exclusive per account, so a missing key simply yields no window. CodexBar maps the `monthly` allowance to the primary lane with the `Monthly`/`mo` labels, and the legacy `session` and `weekly` allowances to the primary and secondary lanes. The response carries no reset timestamps, so Ollama windows have no reset countdown or pace; a missing window stays absent. The usage endpoint does not return the plan tier, so the provider identity reports the fixed `Ollama Cloud` login method.
+
+Ollama Cloud local usage is read from assistant messages in the OpenCode usage database whose `providerID` is `ollama-cloud`, so usage routed through other providers in the same harness is not attributed to the account. Each message contributes its input, cached read/write, output, reasoning, and total tokens plus monetary cost to the message's activity date and model id. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
+
+Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama` are out of scope for this release line.

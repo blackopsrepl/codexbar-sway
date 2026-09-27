@@ -12,9 +12,9 @@ This repository ships an independent Linux implementation inspired by [the origi
 - Optional SolverForge Linux wrapper for the existing Waybar module.
 - Optional Omarchy shell bar module on Hyprland, mounting the same cached-state chip.
 
-Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
+Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama`.
 
-Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations. Missing percentages are never synthesized: non-Pro ChatGPT accounts keep an omitted five-hour lane visibly unavailable, while an absent weekly lane and omitted Pro lanes stay absent. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible. Codex and Claude local usage is read from their session/project JSONL logs and retained by model from each record's declared model. OpenCode Go exposes five-hour rolling, weekly, and monthly allowance windows from the OpenCode Go usage endpoint, mapped to the primary, secondary, and tertiary lanes; missing windows stay absent. OpenCode Go local usage is read from the OpenCode usage database and retained by model, counting only assistant messages with `providerID` `opencode-go` so other harness-routed providers (OpenAI/ChatGPT, Moonshot/Kimi, free Zen `opencode` models) are excluded. Z.ai exposes GLM Coding Plan used-percentage windows from the Z.ai quota endpoint: five-hour and weekly windows map to the primary and secondary lanes, and a monthly tools window maps to the tertiary lane when present; missing windows stay absent. Z.ai local usage is read from Z.ai-routed assistant messages (`providerID` `zai-coding-plan`/`zai`) in the OpenCode usage database, which are excluded from the OpenCode Go totals.
+Codex and Claude expose named quota windows. Codex five-hour and weekly windows are classified from their declared durations. Missing percentages are never synthesized: non-Pro ChatGPT accounts keep an omitted five-hour lane visibly unavailable, while an absent weekly lane and omitted Pro lanes stay absent. Gemini exposes separate model meters from the Gemini CLI-backed quota API; model buckets must remain separate in presenter data, tooltips, history, and detail cards. Gemini local usage is read from Gemini CLI chat JSONL records and retained by model when possible. Codex and Claude local usage is read from their session/project JSONL logs and retained by model from each record's declared model. OpenCode Go exposes five-hour rolling, weekly, and monthly allowance windows from the OpenCode Go usage endpoint, mapped to the primary, secondary, and tertiary lanes; missing windows stay absent. OpenCode Go local usage is read from the OpenCode usage database and retained by model, counting only assistant messages with `providerID` `opencode-go` so other harness-routed providers (OpenAI/ChatGPT, Moonshot/Kimi, free Zen `opencode` models) are excluded. Z.ai exposes GLM Coding Plan used-percentage windows from the Z.ai quota endpoint: five-hour and weekly windows map to the primary and secondary lanes, and a monthly tools window maps to the tertiary lane when present; missing windows stay absent. Z.ai local usage is read from Z.ai-routed assistant messages (`providerID` `zai-coding-plan`/`zai`) in the OpenCode usage database, which are excluded from the OpenCode Go totals. Ollama Cloud exposes account allowance windows as normalized used fractions from the Ollama usage endpoint: a migrated account reports a single monthly window mapped to the primary lane, and an unmigrated account reports the legacy session (five-hour) and weekly windows mapped to the primary and secondary lanes. The endpoint returns no reset timestamps, so Ollama windows carry no reset countdown or pace. Ollama Cloud local usage is read from `ollama-cloud`-routed assistant messages in the OpenCode usage database, kept separate from the OpenCode Go, Z.ai, and other-provider totals.
 
 Retained history follows the same provider shape. Window providers keep their primary/secondary/tertiary samples, model-meter providers keep per-model quota without copying model buckets into window lanes, and local-usage fields are re-merged from the current scan window so a corrected local scanner repairs already-retained days. Days with neither a quota sample nor local usage are omitted from the History view.
 
@@ -26,10 +26,10 @@ Retained history follows the same provider shape. Window providers keep their pr
 - `lib/codexbar.rb`: top-level load file.
 - `lib/codexbar/cli.rb`: command dispatcher and config mutation surface.
 - `lib/codexbar/core/`: config version 5, provider metadata, formatting, metrics, process, HTTP.
-- `lib/codexbar/providers/`: Codex, Claude, Gemini, OpenCode, and Z.ai fetchers and registry.
+- `lib/codexbar/providers/`: Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama fetchers and registry.
 - `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
 - `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.
-- `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, Gemini, OpenCode Go, and Z.ai token usage scanner, attributing OpenCode database messages by provider id.
+- `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud token usage scanner, attributing OpenCode database messages by provider id.
 - `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries, keeping model-meter quota in per-model maps rather than window lanes.
 - `lib/codexbar/runtime/storage.rb`: optional provider storage footprint scanner.
 - `lib/codexbar/runtime/notifications.rb`: quota and incident notification transitions.
@@ -147,7 +147,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 - `codexbar notifications status|enable|disable`
 - `codexbar privacy status|hide|show`
 - `codexbar cache clear ...`
-- `codexbar open dashboard codex|claude|gemini|opencode|zai`
+- `codexbar open dashboard codex|claude|gemini|opencode|zai|ollama`
 
 ## Install Flow
 
@@ -167,7 +167,7 @@ After install/configure, the live desktop must not depend on the checkout direct
 2. `make test`: built-in Ruby test suite.
 3. `make smoke`: config, Waybar render, and UI status smoke checks.
 4. `make check`: canonical preview release gate via `bin/release-check`.
-5. `make check-live`: credentialed stable release gate for Codex, Claude, Gemini, OpenCode, and Z.ai.
+5. `make check-live`: credentialed stable release gate for Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama Cloud.
 
 Release cutting, deployment, and publication to both remotes follow the step-by-step workflow in `docs/RELEASING.md`.
 

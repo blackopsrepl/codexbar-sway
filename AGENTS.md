@@ -10,17 +10,18 @@
 - Waybar text is compact provider quota percentage text; do not put pace/reserve/hot labels or pace CSS classes in the bar.
 - Provider fetches belong in the daemon and usage commands, not in Waybar.
 - `snapshot.json` and `ui.json` are the backend/frontend runtime contract.
-- Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
+- Supported providers are exactly `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama`.
 - Gemini quota must stay model-meter based. Preserve each CLI/API model bucket instead of collapsing Gemini into a single Pro/Flash pair.
 - Gemini local usage must come from deterministic Gemini CLI chat JSONL records or an explicitly documented telemetry file. Do not add browser scraping, cookie scraping, or silent API-key/Vertex quota fallbacks.
 - Z.ai quota is the GLM Coding Plan subscription allowance from `https://api.z.ai/api/monitor/usage/quota/limit`, not pay-as-you-go API credit. Its API key comes from `ZAI_API_KEY`/`GLM_API_KEY` or the `zai-coding-plan` entry in `~/.local/share/opencode/auth.json`. Z.ai local usage is read from the OpenCode usage database by filtering assistant messages whose provider is `zai-coding-plan` or `zai`; OpenCode Go local usage is read from the same database but only from assistant messages whose provider is `opencode-go`, so other harness-routed providers (OpenAI/ChatGPT, Moonshot/Kimi, free Zen `opencode` models) and Z.ai rows are never attributed to OpenCode Go.
-- Provider ids are stable config keys: `opencode` is the OpenCode Go subscription provider (display label `OpenCode Go`), and `zai` is the GLM Coding Plan provider. Change labels freely; never rename ids for a label change.
+- Ollama Cloud quota is the account allowance from `https://ollama.com/api/usage` (Bearer API key), reported as normalized 0..1 used fractions, not token counts. Its API key comes from `OLLAMA_API_KEY` or the `ollama-cloud` entry in `~/.local/share/opencode/auth.json`. Accounts migrated to monthly credits report a single `monthly` window; unmigrated accounts report the legacy `session` (5-hour) and `weekly` windows. The payload carries no reset timestamps. Ollama local usage is read from the OpenCode usage database, counting only assistant messages whose provider is `ollama-cloud`.
+- Provider ids are stable config keys: `opencode` is the OpenCode Go subscription provider (display label `OpenCode Go`), `zai` is the GLM Coding Plan provider, and `ollama` is the Ollama Cloud provider. Change labels freely; never rename ids for a label change.
 
 ## Project Structure & Modules
 - `bin/codexbar`: Ruby entrypoint.
 - `bin/release-check`: canonical release validation script used by `make check`.
 - `lib/codexbar/core`: config, types, formatting, process, HTTP, and metric logic.
-- `lib/codexbar/providers`: Codex, Claude, Gemini, OpenCode, and Z.ai fetchers and registry.
+- `lib/codexbar/providers`: Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama fetchers and registry.
 - `lib/codexbar/runtime`: daemon, snapshot state, presenter, QuickShell control, Waybar JSON, Omarchy shell bar installer, and the bounded legacy direct-bar command.
 - `frontend/quickshell/shell.qml`: the only human-facing UI.
 - `packaging/solverforge-linux`: reproducible SolverForge Linux Waybar wrapper integration.
@@ -65,7 +66,7 @@
 - Provider action controls should queue rather than kill in-flight CLI actions.
 - The QuickShell panel is a modal overlay. It must stay above windows, ignore layer-shell exclusion, and remain vertically relaxed.
 - Gemini detail views must preserve model-level quota and local usage rows where presenter data provides them.
-- Overview cards render an equivalent compact summary for every provider: window providers show `5h X% / W Y%` from the five-hour and weekly lanes, and model-meter providers show their dominant model.
+- Overview cards render an equivalent compact summary for every provider: window providers show `5h X% / W Y%` from the five-hour and weekly lanes, model-meter providers show their dominant model, and providers with a provider-declared lane label use it (for example Ollama Cloud's `mo X%` monthly allowance).
 - Retained history must stay provider-shaped: model-meter providers keep per-model quota in `modelQuota`/`modelUsage` and never synthesize window lanes, and days with no quota sample and no local usage are omitted so the History view falls back to its empty state.
 - Keep pace/reserve/hot detail in the modal/provider cards where it helps interpretation; keep it out of Waybar.
 
@@ -75,7 +76,7 @@
 - Treat live provider checks as smoke tests, not as the primary regression suite.
 - `make syntax` must check each Ruby source file separately.
 - Run `make test` before handoff and `make check` before release.
-- Run `make check-live` only when the machine has working Codex, Claude, Gemini, OpenCode, and Z.ai credentials.
+- Run `make check-live` only when the machine has working Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama Cloud credentials.
 
 ## Documentation Guidelines
 - Keep `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `docs/` aligned with the Ruby code.

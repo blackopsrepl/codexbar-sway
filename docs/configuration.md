@@ -45,6 +45,22 @@ The file is written with `0600` permissions.
       "showInOverview": true,
       "allowAutoSelect": true,
       "source": "auto"
+    },
+    {
+      "id": "zai",
+      "enabled": false,
+      "visible": true,
+      "showInOverview": true,
+      "allowAutoSelect": true,
+      "source": "auto"
+    },
+    {
+      "id": "ollama",
+      "enabled": false,
+      "visible": true,
+      "showInOverview": true,
+      "allowAutoSelect": true,
+      "source": "auto"
     }
   ],
   "display": {
@@ -111,14 +127,14 @@ The file is written with `0600` permissions.
 - `status`: polls external service-status feeds for the supported providers.
 - `notifications`: controls quota and incident desktop notifications through `runtime.notificationCommand`.
 - `history`: retains daily cached quota/local-usage summaries.
-- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records. Z.ai reads its routed assistant messages from the OpenCode usage database; the coding plan reports no per-token cost.
+- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records. Z.ai and Ollama Cloud read their routed assistant messages from the OpenCode usage database; the coding plan reports no per-token cost.
 - `storage`: optionally scans local provider state directories for footprint summaries.
 - `privacy.hidePersonalInfo`: redacts account identity text in the UI.
 - `server`: controls the read-only cached JSON server.
 
 `make configure-user` preserves provider and display settings and updates only `runtime.quickShellShell`.
 
-Supported provider IDs remain exactly `codex`, `claude`, `gemini`, `opencode`, and `zai`.
+Supported provider IDs remain exactly `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama`.
 Default provider entries are present but disabled; activate only the providers this machine should fetch.
 
 Validate with:
