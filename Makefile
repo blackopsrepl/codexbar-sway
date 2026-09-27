@@ -61,6 +61,7 @@ INSTALL_FILES := \
 	lib/codexbar/core/format.rb \
 	lib/codexbar/core/http.rb \
 	lib/codexbar/core/metric.rb \
+	lib/codexbar/core/peak.rb \
 	lib/codexbar/core/process.rb \
 	lib/codexbar/core/types.rb \
 	lib/codexbar/providers/claude.rb \
