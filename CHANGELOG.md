@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.6.2](https://github.com/blackopsrepl/codexbar-sway/compare/v1.6.1...v1.6.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* **ui:** keep the overview peak label visible in narrow cards b8a2cb1
+
 ## [1.6.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.6.0...v1.6.1) (2026-09-27)
 
 
