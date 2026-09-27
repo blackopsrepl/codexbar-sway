@@ -54,4 +54,42 @@ class ConfigTest < Minitest::Test
     assert_equal "interval", interval.dig(:runtime, :refreshMode)
     assert_equal 60, interval.dig(:runtime, :refreshSeconds)
   end
+
+  def test_save_config_writes_atomically_and_leaves_no_temp_file
+    Dir.mktmpdir("codexbar-config") do |dir|
+      path = File.join(dir, "config.json")
+      config = CodexBar::Core::Config.default_config
+
+      CodexBar::Core::Config.save_config(config, path)
+
+      assert File.file?(path)
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert_empty Dir.glob("#{path}.tmp.*"), "temp file left behind"
+      assert_equal 5, JSON.parse(File.read(path))["version"]
+    end
+  end
+
+  def test_save_config_never_exposes_a_torn_read_to_a_concurrent_reader
+    Dir.mktmpdir("codexbar-config") do |dir|
+      path = File.join(dir, "config.json")
+      enabled = CodexBar::Core::Config.normalize_config(CodexBar::Core::Config.default_config)
+      enabled[:providers].each { |provider| provider[:enabled] = true }
+      CodexBar::Core::Config.save_config(enabled, path)
+
+      torn = 0
+      writer = Thread.new { 400.times { CodexBar::Core::Config.save_config(enabled, path) } }
+      reader = Thread.new do
+        4000.times do
+          raw = File.read(path)
+          torn += 1 unless raw.end_with?("}\n") && JSON.parse(raw).is_a?(Hash)
+        rescue JSON::ParserError, Errno::ENOENT
+          torn += 1
+        end
+      end
+      writer.join
+      reader.join
+
+      assert_equal 0, torn, "concurrent readers observed a torn config write"
+    end
+  end
 end

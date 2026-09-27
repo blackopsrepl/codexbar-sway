@@ -143,7 +143,7 @@ configure-user:
 		exit 1; \
 	fi
 	@if [[ ! -f "$(CONFIG)" ]]; then "$(BIN_DIR)/codexbar" config init --config "$(CONFIG)" >/dev/null; fi
-	@ruby -rjson -rfileutils -e 'path, shell = ARGV; data = JSON.parse(File.read(path)); data["runtime"] ||= {}; data["runtime"]["quickShellShell"] = File.expand_path(shell); FileUtils.mkdir_p(File.dirname(path)); File.write(path, JSON.pretty_generate(data) + "\n"); File.chmod(0o600, path)' "$(CONFIG)" "$(APP_DIR)/frontend/quickshell/shell.qml"
+	@ruby -rjson -rfileutils -e 'path, shell = ARGV; path = File.expand_path(path); data = JSON.parse(File.read(path)); data["runtime"] ||= {}; data["runtime"]["quickShellShell"] = File.expand_path(shell); FileUtils.mkdir_p(File.dirname(path)); tmp = "#{path}.tmp.#{$$}"; File.write(tmp, JSON.pretty_generate(data) + "\n"); File.chmod(0o600, tmp); File.rename(tmp, path); File.chmod(0o600, path)' "$(CONFIG)" "$(APP_DIR)/frontend/quickshell/shell.qml"
 	@printf "$(GREEN)$(CHECK) User config updated: $(CONFIG)$(RESET)\n"
 
 install-solverforge-linux-integration:

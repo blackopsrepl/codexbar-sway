@@ -82,11 +82,22 @@ module CodexBar
         default_config
       end
 
+      # Atomic: a concurrent reader (the daemon or the panel) must never observe
+      # a truncated or half-written config, because that would either raise
+      # JSON::ParserError or, if it read as empty, silently fall back to defaults
+      # with every provider disabled.
       def save_config(config, config_path = default_config_path)
         normalized = normalize_config(config)
-        FileUtils.mkdir_p(File.dirname(config_path))
-        File.write(config_path, "#{JSON.pretty_generate(normalized)}\n")
-        File.chmod(0o600, config_path)
+        target = File.expand_path(config_path)
+        FileUtils.mkdir_p(File.dirname(target))
+        temp_path = "#{target}.tmp.#{$$}"
+        File.write(temp_path, "#{JSON.pretty_generate(normalized)}\n")
+        File.chmod(0o600, temp_path)
+        File.rename(temp_path, target)
+        File.chmod(0o600, target)
+        target
+      ensure
+        FileUtils.rm_f(temp_path) if temp_path && File.exist?(temp_path)
       end
 
       def init_config(config_path = default_config_path)
