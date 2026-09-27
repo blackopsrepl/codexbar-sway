@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.5.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.4.3...v1.5.0) (2026-09-27)
+
+
+### Features
+
+* **ollama:** add Ollama Cloud quota provider 2f75d5f
+* **ollama:** read Ollama Cloud local usage from the OpenCode database 0a1aaf0
+* **omarchy:** mount the Waybar chip as an Omarchy shell bar module c63a197
+* **ui:** follow the active Omarchy theme 329950b
+
+
+### Bug Fixes
+
+* **install:** ship runtime/omarchy.rb in the install manifest 687bb5e
+* **omarchy:** reject out-of-range bar module indexes 0165a7e
+* **omarchy:** reject unused and conflicting placement flags 1ccc8b4
+* **ui:** keep distinct heatmap fill tiers under Omarchy themes e8c2405
+* **ui:** keep the overview usable on small screens 3836ab9
+
 ## [1.4.3](https://github.com/blackopsrepl/codexbar-sway/compare/v1.4.2...v1.4.3) (2026-09-17)
 
 
