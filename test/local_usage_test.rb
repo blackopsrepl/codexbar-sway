@@ -408,4 +408,82 @@ class LocalUsageTest < Minitest::Test
       ENV["CODEXBAR_OPENCODE_DB"] = previous
     end
   end
+
+  def test_opencode_message_query_scopes_ollama_cloud_provider
+    calls = []
+    result = lambda do |_command, args, **_options|
+      calls << args
+      if args.last.include?("SELECT id FROM session")
+        { exitCode: 0, stdout: JSON.generate([{ id: "session-1" }]) }
+      else
+        { exitCode: 0, stdout: "[]" }
+      end
+    end
+
+    CodexBar::Core::Process.stub(:run_command, result) do
+      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :ollama_cloud_only)
+    end
+
+    assert_includes calls.last.last, "json_extract(data, '$.providerID') = 'ollama-cloud'"
+    refute_includes calls.last.last, "opencode-go"
+  end
+
+  def test_scan_ollama_reads_ollama_cloud_messages_from_opencode_database
+    rows = [
+      {
+        date: "2026-09-14",
+        model_id: "deepseek-v4.1-flash",
+        records: 2,
+        input_tokens: 100,
+        cached_input_tokens: 10,
+        output_tokens: 200,
+        reasoning_output_tokens: 5,
+        total_tokens: 315,
+        cost: 0.0
+      }
+    ]
+    queries = []
+    result = lambda do |_command, args, **_options|
+      queries << args.last
+      if args.last.include?("SELECT id FROM session")
+        { exitCode: 0, stdout: JSON.generate([{ id: "session-1" }]) }
+      else
+        { exitCode: 0, stdout: JSON.generate(rows) }
+      end
+    end
+
+    previous = ENV["CODEXBAR_OPENCODE_DB"]
+    Dir.mktmpdir("codexbar-ollama") do |dir|
+      db_path = File.join(dir, "opencode.db")
+      File.write(db_path, "")
+      ENV["CODEXBAR_OPENCODE_DB"] = db_path
+      summary = nil
+      CodexBar::Core::Process.stub(:run_command, result) do
+        summary = CodexBar::Runtime::LocalUsage.scan_ollama(Time.now.utc - 86_400)
+      end
+
+      assert_equal "ollama", summary[:provider]
+      assert_equal true, summary[:supported]
+      assert_equal 2, summary[:records]
+      assert_equal 315, summary[:totalTokens]
+      assert_equal "deepseek-v4.1-flash", summary[:models].keys.first
+      assert_includes queries.last, "json_extract(data, '$.providerID') = 'ollama-cloud'"
+    ensure
+      ENV["CODEXBAR_OPENCODE_DB"] = previous
+    end
+  end
+
+  def test_scan_ollama_reports_supported_without_database
+    Dir.mktmpdir("codexbar-ollama") do |dir|
+      previous = ENV["CODEXBAR_OPENCODE_DB"]
+      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing.db")
+
+      summary = CodexBar::Runtime::LocalUsage.scan_ollama(Time.now.utc - 86_400)
+
+      assert_equal true, summary[:supported]
+      assert_equal 0, summary[:records]
+    ensure
+      ENV["CODEXBAR_OPENCODE_DB"] = previous
+    end
+  end
 end

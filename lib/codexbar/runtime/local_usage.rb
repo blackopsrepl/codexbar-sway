@@ -9,6 +9,7 @@ module CodexBar
     module LocalUsage
       ZAI_PROVIDER_IDS = %w[zai-coding-plan zai].freeze
       OPENCODE_GO_PROVIDER_ID = "opencode-go"
+      OLLAMA_CLOUD_PROVIDER_ID = "ollama-cloud"
 
       module_function
 
@@ -34,7 +35,8 @@ module CodexBar
             "claude" => scan_claude(cutoff),
             "gemini" => scan_gemini(cutoff),
             "opencode" => scan_opencode(cutoff),
-            "zai" => scan_zai(cutoff)
+            "zai" => scan_zai(cutoff),
+            "ollama" => scan_ollama(cutoff)
           }
         }
         State.write_local_usage(config, payload)
@@ -216,6 +218,8 @@ module CodexBar
           "COALESCE(json_extract(data, '$.providerID'), '') IN (#{zai_ids})"
         when :opencode_go_only
           "json_extract(data, '$.providerID') = '#{OPENCODE_GO_PROVIDER_ID}'"
+        when :ollama_cloud_only
+          "json_extract(data, '$.providerID') = '#{OLLAMA_CLOUD_PROVIDER_ID}'"
         end
       end
 
@@ -233,6 +237,18 @@ module CodexBar
         ) if rows.nil?
 
         summarize_opencode_messages(rows, provider: "zai")
+      end
+
+      def scan_ollama(cutoff)
+        db_path = opencode_db_path
+        return empty_summary("ollama", supported: true) unless db_path && File.file?(db_path)
+
+        rows = opencode_messages(db_path, cutoff, providers: :ollama_cloud_only)
+        return empty_summary("ollama", supported: false).merge(
+          note: "The sqlite3 binary is unavailable to read the OpenCode usage database."
+        ) if rows.nil?
+
+        summarize_opencode_messages(rows, provider: "ollama")
       end
 
       def unsupported_provider(provider)
