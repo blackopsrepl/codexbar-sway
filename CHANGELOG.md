@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.6.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.6.0...v1.6.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **peak:** resolve peak windows in local time and at exact boundaries def5d57
+* **ui:** resolve peak state live from compiled timelines 50b1294
+
 ## [1.6.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.5.0...v1.6.0) (2026-09-27)
 
 
