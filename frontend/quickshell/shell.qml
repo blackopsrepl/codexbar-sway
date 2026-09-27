@@ -108,6 +108,157 @@ ShellRoot {
     property var providerViews: viewData.providers || []
     property string focusProviderId: ""
     property string activeView: "overview"
+    // Peak state resolves against the panel's own clock from timezone-absolute
+    // compiled timelines in peakSchedules, so it is exact at every boundary and
+    // DST/odd-offset correct without repeating the schedule here. The timer is
+    // armed to the next transition rather than polling, so it costs nothing
+    // while the state holds.
+    property double nowMs: Date.now()
+    property var peakSchedules: viewData.peakSchedules || ({})
+
+    onPeakSchedulesChanged: peakClock.arm()
+
+    Timer {
+        id: peakClock
+        repeat: false
+        running: false
+        onTriggered: {
+            root.nowMs = Date.now()
+            root.peakClock.arm()
+        }
+
+        function nextTransitionMs() {
+            var schedules = root.peakSchedules
+            if (!schedules) {
+                return null
+            }
+            var earliest = null
+            var ids = Object.keys(schedules)
+            for (var i = 0; i < ids.length; i += 1) {
+                var schedule = schedules[ids[i]]
+                var transitions = schedule && schedule.transitions ? schedule.transitions : []
+                for (var j = 0; j < transitions.length; j += 1) {
+                    var at = transitions[j][0] * 1000
+                    if (at > root.nowMs && (earliest === null || at < earliest)) {
+                        earliest = at
+                    }
+                }
+            }
+            return earliest
+        }
+
+        function arm() {
+            // Refresh the clock reading on every arm so a snapshot refresh also
+            // re-renders the label, not only a boundary crossing.
+            root.nowMs = Date.now()
+            var next = nextTransitionMs()
+            if (next === null) {
+                running = false
+                return
+            }
+            // Fire just after the boundary so the resolution is unambiguous.
+            var untilNext = Math.ceil(next - root.nowMs) + 250
+            // Cap the sleep so a clock jump (NTP step, suspend/resume) self-heals
+            // within an hour instead of persisting until the next boundary.
+            interval = Math.max(500, Math.min(untilNext, 3600000))
+            restart()
+        }
+    }
+
+    function peakScheduleFor(id) {
+        return id ? root.peakSchedules[id] : null
+    }
+
+    // Resolves a provider/model peak object against the panel clock. The last
+    // transition at or before now is the current state; the next transition is
+    // the end of the current window.
+    function peakResolved(peak) {
+        if (!peak || !peak.scheduleId) {
+            return null
+        }
+
+        var schedule = root.peakScheduleFor(peak.scheduleId)
+        if (!schedule || !schedule.transitions || !schedule.transitions.length) {
+            return null
+        }
+
+        var transitions = schedule.transitions
+        var inPeak = transitions[0][1] === 1
+        var startMs = null
+        var endMs = null
+        for (var i = 0; i < transitions.length; i += 1) {
+            var at = transitions[i][0] * 1000
+            if (at <= root.nowMs) {
+                inPeak = transitions[i][1] === 1
+                startMs = at
+            } else {
+                endMs = at
+                break
+            }
+        }
+
+        if (endMs === null && transitions.length) {
+            endMs = transitions[transitions.length - 1][0] * 1000
+        }
+
+        return {
+            inPeak: inPeak,
+            label: inPeak ? "Peak" : "Off-peak",
+            state: inPeak ? "peak" : "offpeak",
+            windowText: (startMs !== null && endMs !== null) ? root.localSpan(startMs, endMs) : "",
+            detail: schedule.detail || ""
+        }
+    }
+
+    function localSpan(startMs, endMs) {
+        var start = new Date(startMs)
+        var end = new Date(endMs)
+        var sameDay = start.toDateString() === end.toDateString()
+        var startText = Qt.formatDateTime(start, "ddd HH:mm")
+        var endText = sameDay ? Qt.formatDateTime(end, "HH:mm") : Qt.formatDateTime(end, "ddd HH:mm")
+        return startText + "\u2013" + endText
+    }
+
+    function peakBadgeLabel(peak) {
+        var resolved = root.peakResolved(peak)
+        return resolved ? resolved.label : ""
+    }
+
+    function peakBadgeDetail(peak) {
+        var resolved = root.peakResolved(peak)
+        if (!resolved) {
+            return ""
+        }
+        var prefix = resolved.inPeak ? "Peak now" : "Off-peak now"
+        return resolved.windowText ? (prefix + " \u00b7 " + resolved.windowText + " local") : prefix
+    }
+
+    function peakBadgeIcon(peak) {
+        var resolved = root.peakResolved(peak)
+        if (!resolved) {
+            return ""
+        }
+        return resolved.inPeak ? root.glyphs.peak : root.glyphs.offpeak
+    }
+
+    function peakBadgeAccent(peak) {
+        var resolved = root.peakResolved(peak)
+        return resolved && resolved.inPeak ? root.theme.warn : root.theme.good
+    }
+
+    // Live value/detail for the "Rate period" card, resolved from the schedule
+    // id alone so the card tracks the panel clock even when the snapshot is old.
+    function peakCardLive(scheduleId) {
+        var resolved = root.peakResolved({ scheduleId: scheduleId })
+        if (!resolved) {
+            return null
+        }
+        var detail = resolved.detail || ""
+        if (resolved.windowText) {
+            detail = resolved.windowText + " local" + (detail ? " \u00b7 " + detail : "")
+        }
+        return { value: resolved.label, detail: detail }
+    }
 
     function accentColor(provider) {
         return provider && provider.accent ? provider.accent : root.theme.good
@@ -410,6 +561,7 @@ ShellRoot {
     Component.onCompleted: {
         snapshotFile.reload()
         uiFile.reload()
+        peakClock.arm()
     }
 
     component CodexButton: Button {
@@ -817,6 +969,7 @@ ShellRoot {
     component DetailTile: CardFrame {
         id: tile
         property var itemData: ({})
+        property var liveData: itemData.scheduleId ? root.peakCardLive(itemData.scheduleId) : null
         Layout.fillWidth: true
         Layout.preferredHeight: 72
         accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
@@ -850,7 +1003,7 @@ ShellRoot {
 
             Label {
                 Layout.fillWidth: true
-                text: itemData.value || "--"
+                text: tile.liveData ? tile.liveData.value : (itemData.value || "--")
                 color: root.theme.text
                 font.family: root.textFont
                 font.pixelSize: 15
@@ -860,12 +1013,12 @@ ShellRoot {
 
             Label {
                 Layout.fillWidth: true
-                text: itemData.detail || ""
+                text: tile.liveData ? tile.liveData.detail : (itemData.detail || "")
                 color: root.theme.textDim
                 font.family: root.textFont
                 font.pixelSize: 10
                 elide: Text.ElideRight
-                visible: !!itemData.detail
+                visible: !!(tile.liveData ? tile.liveData.detail : itemData.detail)
             }
         }
     }
@@ -1382,9 +1535,9 @@ ShellRoot {
 
                                                         BadgePill {
                                                             visible: !!(modelData.peak)
-                                                            text: modelData.peak ? modelData.peak.label : ""
-                                                            icon: modelData.peak && modelData.peak.state === "peak" ? root.glyphs.peak : root.glyphs.offpeak
-                                                            accent: modelData.peak && modelData.peak.state === "offpeak" ? root.theme.good : root.theme.warn
+                                                            text: root.peakBadgeLabel(modelData.peak)
+                                                            icon: root.peakBadgeIcon(modelData.peak)
+                                                            accent: root.peakBadgeAccent(modelData.peak)
                                                             maximumWidth: 92
                                                         }
 
@@ -1617,9 +1770,9 @@ ShellRoot {
 
                                                     BadgePill {
                                                         visible: !!(focusProvider() && focusProvider().peak)
-                                                        text: focusProvider() && focusProvider().peak ? focusProvider().peak.label : ""
-                                                        icon: focusProvider() && focusProvider().peak && focusProvider().peak.state === "peak" ? root.glyphs.peak : root.glyphs.offpeak
-                                                        accent: focusProvider() && focusProvider().peak && focusProvider().peak.state === "offpeak" ? root.theme.good : root.theme.warn
+                                                        text: root.peakBadgeLabel(focusProvider() ? focusProvider().peak : null)
+                                                        icon: root.peakBadgeIcon(focusProvider() ? focusProvider().peak : null)
+                                                        accent: root.peakBadgeAccent(focusProvider() ? focusProvider().peak : null)
                                                         maximumWidth: 100
                                                     }
 
@@ -1732,8 +1885,8 @@ ShellRoot {
 
                                                         Text {
                                                             visible: !!(modelData.peak)
-                                                            text: modelData.peak && modelData.peak.state === "peak" ? root.glyphs.peak : root.glyphs.offpeak
-                                                            color: modelData.peak && modelData.peak.state === "offpeak" ? root.theme.good : root.theme.warn
+                                                            text: root.peakBadgeIcon(modelData.peak)
+                                                            color: root.peakBadgeAccent(modelData.peak)
                                                             font.family: root.iconFont
                                                             font.pixelSize: 11
                                                         }
