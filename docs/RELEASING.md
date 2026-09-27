@@ -51,6 +51,17 @@ rg "<retired product term pattern>" README.md AGENTS.md WIREFRAME.md docs
 
 Any hit for retired upstream product, packaging, or provider claims must be removed from current docs.
 
+## Peak/Off-Peak Window Update (Required)
+
+Before tagging, re-verify every peak/off-peak window against the vendor's current documentation. No supported provider API exposes the schedule and no runtime source can correct it, so this cannot be automated.
+
+1. Open each vendor's current pricing/plan documentation for the entries in `Core::Peak::SCHEDULES` (`lib/codexbar/core/peak.rb`).
+2. Confirm the peak weekday range, UTC start, and UTC end for every entry, and the model scope.
+3. If any window changed, update `Core::Peak::SCHEDULES` and the matching table in `docs/providers.md` in the same release.
+4. Re-check the boundaries in the machine's local zone (including DST and non-hour offsets) before finishing.
+
+Do not encode limited-time promotions; encode only standing recurring schedules.
+
 ## Provider Claims
 
 The release may claim support for exactly:
@@ -60,14 +71,16 @@ The release may claim support for exactly:
 - `gemini`
 - `opencode`
 - `zai`
+- `ollama`
 
 Provider behavior must match `lib/codexbar/providers/*`.
 
 ## Release Workflow
 
 1. Commit the release work as atomic conventional commits (`feat`, `fix`, `docs`, ...). The changelog and version bump are derived from these commits.
-2. Run the required gates on the exact tree being released.
-3. Cut the release with the globally installed release tool. Do not use `npx`, do not hand-edit `CHANGELOG.md`, and never create the release commit or tag by hand:
+2. Re-verify and update every peak/off-peak window (see "Peak/Off-Peak Window Update" above).
+3. Run the required gates on the exact tree being released.
+4. Cut the release with the globally installed release tool. Do not use `npx`, do not hand-edit `CHANGELOG.md`, and never create the release commit or tag by hand:
 
    ```bash
    commit-and-tag-version --release-as vX.Y.Z
@@ -75,7 +88,7 @@ Provider behavior must match `lib/codexbar/providers/*`.
 
    The tool bumps `version.env` and the Codex app-server client identity in `lib/codexbar/providers/codex.rb`, regenerates `CHANGELOG.md`, creates the release commit, and tags it.
 
-4. Verify the release before publishing:
+5. Verify the release before publishing:
 
    ```bash
    git show --stat --oneline HEAD   # exactly version.env + codex.rb + CHANGELOG.md
@@ -84,14 +97,14 @@ Provider behavior must match `lib/codexbar/providers/*`.
    sed -n '1,16p' CHANGELOG.md      # correct heading and compare URL
    ```
 
-5. Deploy the released version and restart the runtime — running processes keep executing the previous code until restarted (see "Restart After Install" in `docs/installation.md`):
+6. Deploy the released version and restart the runtime — running processes keep executing the previous code until restarted (see "Restart After Install" in `docs/installation.md`):
 
    ```bash
    make install
    # restart codexbar daemon, then restart the panel and run: codexbar ui open
    ```
 
-6. Publish to both remotes and prove the remote state:
+7. Publish to both remotes and prove the remote state:
 
    ```bash
    git push git.local main vX.Y.Z
