@@ -1537,12 +1537,21 @@ ShellRoot {
                                                                 }
 
                                                                 Text {
+                                                                    id: peakGlyph
                                                                     visible: !!(modelData.peak)
-                                                                    text: root.peakBadgeLabel(modelData.peak)
+                                                                    text: root.peakBadgeIcon(modelData.peak)
                                                                     color: root.peakBadgeAccent(modelData.peak)
-                                                                    font.family: root.textFont
-                                                                    font.pixelSize: 10
-                                                                    font.bold: true
+                                                                    font.family: root.iconFont
+                                                                    font.pixelSize: 11
+
+                                                                    MouseArea {
+                                                                        anchors.fill: parent
+                                                                        hoverEnabled: true
+                                                                    }
+
+                                                                    ToolTip.visible: peakGlyph.MouseArea.hovered
+                                                                    ToolTip.delay: 150
+                                                                    ToolTip.text: root.peakBadgeDetail(modelData.peak)
                                                                 }
                                                             }
                                                         }
