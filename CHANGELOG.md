@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.6.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.5.0...v1.6.0) (2026-09-27)
+
+
+### Features
+
+* **peak:** declare vendor peak/off-peak rate schedules 75efa70
+* **ui:** surface peak/off-peak state per model 7523818
+
 ## [1.5.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.4.3...v1.5.0) (2026-09-27)
 
 
