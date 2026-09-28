@@ -67,6 +67,27 @@ class PeakTest < Minitest::Test
     assert_nil rows.find { |row| row[:modelId] == "glm-5.3" }[:peak]
   end
 
+  def test_model_gated_provider_peak_state_comes_from_hermes_sourced_models
+    # Monday 07:00 UTC sits inside the OpenCode Go DeepSeek peak window. The
+    # OpenCode Go quota payload names no models, so the provider's peak state is
+    # resolved from the local usage model list — which is exactly where Hermes
+    # usage now lands. A meter fed only by Hermes must keep reporting peak state.
+    now = Time.utc(2026, 9, 28, 7, 0)
+    local_usage = {
+      sources: %w[opencode-db hermes],
+      models: {
+        "deepseek-v4.1-flash" => { modelId: "deepseek-v4.1-flash", records: 4, totalTokens: 4_155 }
+      }
+    }
+
+    assert_nil CodexBar::Runtime::Presenter.provider_peak("opencode", {}, [], nil, now)
+
+    state = CodexBar::Runtime::Presenter.provider_peak("opencode", {}, [], local_usage, now)
+
+    assert_equal "peak", state[:state]
+    assert_equal ["deepseek-v4.1-flash"], state[:models]
+  end
+
   def test_window_text_is_rendered_in_the_local_zone
     with_zone("America/Los_Angeles") do
       state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 7, 0))
