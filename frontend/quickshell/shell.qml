@@ -1870,6 +1870,16 @@ ShellRoot {
                                                     }
                                                 }
 
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    visible: !!focusProvider() && !!focusProvider().localUsageSourcesText
+                                                    text: focusProvider() && focusProvider().localUsageSourcesText ? focusProvider().localUsageSourcesText : ""
+                                                    color: root.theme.textDim
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 9
+                                                    elide: Text.ElideRight
+                                                }
+
                                                 Repeater {
                                                     model: focusProvider() && focusProvider().localUsageModels ? focusProvider().localUsageModels : []
 

@@ -8,6 +8,15 @@ module CodexBar
     module Presenter
       TARGET_PROVIDERS = %w[codex claude gemini opencode zai ollama].freeze
 
+      # Human labels for the local usage stores a provider summary covers.
+      LOCAL_USAGE_SOURCE_LABELS = {
+        "codex-jsonl" => "Codex CLI",
+        "claude-jsonl" => "Claude CLI",
+        "gemini-jsonl" => "Gemini CLI",
+        "opencode-db" => "OpenCode DB",
+        "hermes" => "Hermes"
+      }.freeze
+
       module_function
 
       def build_snapshot_view(config, snapshot, now = Time.now)
@@ -153,6 +162,7 @@ module CodexBar
           serviceStatusText: Core::Format.service_status_text(service_status),
           serviceStatusUpdatedAt: clean(service_status[:updatedAt]),
           localUsageText: local_usage_text(local_usage),
+          localUsageSourcesText: local_usage_sources_text(local_usage),
           localUsageModels: model_usage_rows(provider, local_usage && local_usage[:models], now),
           peak: peak,
           storageText: storage && storage[:totalBytes] ? Core::Format.bytes_string(storage[:totalBytes]) : nil,
@@ -323,13 +333,29 @@ module CodexBar
         text = Core::Format.token_summary_line(local_usage)
         return nil unless text
 
+        labels = local_usage_source_labels(local_usage)
         {
           key: "local-usage",
           icon: "",
           label: "Local usage",
           value: text,
-          detail: "Exact local logs"
+          detail: labels.empty? ? "Exact local logs" : "Exact local logs · #{labels.join(' + ')}"
         }
+      end
+
+      # Names the stores a provider's local usage covers, so the meter states
+      # what it measures instead of implying complete coverage.
+      def local_usage_sources_text(local_usage)
+        labels = local_usage_source_labels(local_usage)
+        return nil if labels.empty?
+
+        "Sources: #{labels.join(' + ')}"
+      end
+
+      def local_usage_source_labels(local_usage)
+        Array(local_usage && local_usage[:sources])
+          .map { |source| LOCAL_USAGE_SOURCE_LABELS[source.to_s] || source.to_s }
+          .reject { |label| label.strip.empty? }
       end
 
       def local_usage_text(local_usage)

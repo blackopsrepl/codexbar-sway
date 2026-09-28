@@ -516,6 +516,76 @@ class RuntimeTest < Minitest::Test
     assert_includes gemini[:localUsageModels].first[:detail], "1k cached"
   end
 
+  def test_local_usage_source_labels_name_each_store
+    assert_equal "Sources: OpenCode DB + Hermes",
+                 CodexBar::Runtime::Presenter.local_usage_sources_text(sources: %w[opencode-db hermes])
+    assert_equal "Sources: Codex CLI", CodexBar::Runtime::Presenter.local_usage_sources_text(sources: %w[codex-jsonl])
+    assert_equal "Sources: bespoke-store",
+                 CodexBar::Runtime::Presenter.local_usage_sources_text(sources: ["bespoke-store"])
+    assert_nil CodexBar::Runtime::Presenter.local_usage_sources_text(sources: [])
+    assert_nil CodexBar::Runtime::Presenter.local_usage_sources_text(nil)
+  end
+
+  def test_local_usage_card_detail_names_the_stores_it_covers
+    card = CodexBar::Runtime::Presenter.local_usage_card(
+      supported: true,
+      totalTokens: 10,
+      records: 1,
+      sources: %w[opencode-db hermes]
+    )
+    plain = CodexBar::Runtime::Presenter.local_usage_card(
+      supported: true,
+      totalTokens: 10,
+      records: 1,
+      sources: []
+    )
+
+    assert_equal "Exact local logs · OpenCode DB + Hermes", card[:detail]
+    assert_equal "Exact local logs", plain[:detail]
+  end
+
+  def test_provider_view_exposes_local_usage_sources
+    now = Time.now.utc
+    config = build_config
+    config = with_provider_state(config, "opencode", enabled: true, visible: true)
+    results = {
+      "opencode" => provider_result(
+        provider: "opencode",
+        usage: usage_payload(
+          provider: "opencode",
+          now: now,
+          primary: window(used_percent: 3, window_minutes: 300, now: now, resets_in_minutes: 60)
+        )
+      )
+    }
+    local_usage = {
+      providers: {
+        "opencode" => {
+          provider: "opencode",
+          supported: true,
+          records: 5,
+          totalTokens: 4_155,
+          sources: %w[opencode-db hermes],
+          models: {
+            "deepseek-v4.1-flash" => {
+              modelId: "deepseek-v4.1-flash",
+              records: 5,
+              totalTokens: 4_155
+            }
+          },
+          daily: []
+        }
+      }
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[opencode], results, now, local_usage: local_usage)
+    opencode = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "opencode" }
+    card = opencode[:detailCards].find { |entry| entry[:key] == "local-usage" }
+
+    assert_equal "Sources: OpenCode DB + Hermes", opencode[:localUsageSourcesText]
+    assert_equal "Exact local logs · OpenCode DB + Hermes", card[:detail]
+  end
+
   def test_waybar_payload_reports_off_when_no_providers_are_enabled
     config = build_config
     payload = CodexBar::Runtime::Waybar.payload(config, nil, Time.now)
