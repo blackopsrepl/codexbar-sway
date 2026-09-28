@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.7.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.6.3...v1.7.0) (2026-09-28)
+
+
+### Features
+
+* **local-usage:** count Hermes usage cumulatively with the CLI logs 7af5367
+* **ui:** label which stores feed each provider's local usage 4f81391
+
 ## [1.6.3](https://github.com/blackopsrepl/codexbar-sway/compare/v1.6.2...v1.6.3) (2026-09-27)
 
 
