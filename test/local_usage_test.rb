@@ -486,4 +486,143 @@ class LocalUsageTest < Minitest::Test
       ENV["CODEXBAR_OPENCODE_DB"] = previous
     end
   end
+
+  def test_refresh_merges_hermes_usage_cumulatively_and_records_the_sources
+    with_local_usage_sandbox do |config, dir|
+      rows = [
+        hermes_row(
+          provider: "opencode-go",
+          model: "deepseek-v4.1-flash",
+          records: 4,
+          input: 1_000,
+          cached: 2_000,
+          output: 100,
+          reasoning: 10,
+          total: 3_110
+        )
+      ]
+
+      payload = stub_hermes_rows(rows) { CodexBar::Runtime::LocalUsage.refresh(config) }
+      opencode = payload[:providers]["opencode"]
+
+      assert_equal %w[opencode-db hermes], opencode[:sources]
+      assert_equal 4, opencode[:records]
+      assert_equal 3_110, opencode[:totalTokens]
+      assert_equal 2_000, opencode[:cachedInputTokens]
+      assert_equal 3_110, opencode.dig(:models, "deepseek-v4.1-flash", :totalTokens)
+      assert_equal 1, opencode[:daily].length
+      assert_equal 3_110, opencode[:daily].last[:totalTokens]
+
+      # Coverage, not row presence, decides the source tag: every provider the
+      # Hermes mapping can feed reports it.
+      assert_equal %w[codex-jsonl hermes], payload[:providers]["codex"][:sources]
+      assert_equal %w[opencode-db hermes], payload[:providers]["zai"][:sources]
+
+      assert_equal true, payload[:hermes][:available]
+      assert_equal File.join(dir, "state.db"), payload[:hermes][:dbPath]
+      assert_empty payload[:hermes][:unattributedProviders]
+
+      persisted = CodexBar::Runtime::State.read_local_usage(config)
+      assert_equal 3_110, persisted.dig(:providers, :opencode, :totalTokens)
+      assert_equal %w[opencode-db hermes], persisted.dig(:providers, :opencode, :sources)
+    end
+  end
+
+  def test_refresh_records_only_the_base_source_when_hermes_is_unavailable
+    with_local_usage_sandbox(hermes_db: false) do |config, _dir|
+      payload = CodexBar::Runtime::LocalUsage.refresh(config)
+
+      assert_equal %w[opencode-db], payload[:providers]["opencode"][:sources]
+      assert_equal 0, payload[:providers]["opencode"][:totalTokens]
+      assert_equal false, payload[:hermes][:available]
+    end
+  end
+
+  def test_refresh_records_hermes_rows_of_skipped_providers_as_unattributed
+    with_local_usage_sandbox do |config, _dir|
+      config[:localUsage][:hermesSkipProviders] = ["opencode"]
+      rows = [
+        hermes_row(provider: "opencode-go", model: "deepseek-v4.1-flash", records: 4, input: 1_000, total: 1_000)
+      ]
+
+      payload = stub_hermes_rows(rows) { CodexBar::Runtime::LocalUsage.refresh(config) }
+      opencode = payload[:providers]["opencode"]
+
+      assert_equal %w[opencode-db], opencode[:sources]
+      assert_equal 0, opencode[:totalTokens]
+      assert_equal [{ provider: "opencode-go", records: 4, totalTokens: 1_000 }], payload[:hermes][:unattributedProviders]
+    end
+  end
+
+  def test_refresh_counts_auxiliary_hermes_tasks_because_they_consume_the_allowance
+    with_local_usage_sandbox do |config, _dir|
+      rows = [
+        hermes_row(provider: "opencode-go", model: "deepseek-v4.1-flash", records: 2, input: 1_000, total: 1_000),
+        hermes_row(provider: "opencode-go", model: "deepseek-v4.1-flash", records: 3, input: 50, total: 50)
+      ]
+
+      payload = stub_hermes_rows(rows) { CodexBar::Runtime::LocalUsage.refresh(config) }
+
+      assert_equal 5, payload.dig(:providers, "opencode", :records)
+      assert_equal 1_050, payload.dig(:providers, "opencode", :totalTokens)
+    end
+  end
+
+  private
+
+  def hermes_row(provider:, model:, records:, input: 0, cached: 0, output: 0, reasoning: 0, total: nil, cost: 0.0)
+    {
+      date: Time.now.utc.strftime("%Y-%m-%d"),
+      billing_provider: provider,
+      model_id: model,
+      records: records,
+      input_tokens: input,
+      cached_input_tokens: cached,
+      output_tokens: output,
+      reasoning_output_tokens: reasoning,
+      total_tokens: total || (input + cached + output + reasoning),
+      cost: cost
+    }
+  end
+
+  # A config whose state dir, OpenCode database, and Hermes database are all
+  # inside a temp dir, so a refresh never reads or writes the real machine.
+  def with_local_usage_sandbox(hermes_db: true)
+    Dir.mktmpdir("codexbar-local-usage") do |dir|
+      previous_opencode = ENV["CODEXBAR_OPENCODE_DB"]
+      previous_hermes = ENV["CODEXBAR_HERMES_DB"]
+      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing-opencode.db")
+
+      hermes_path = File.join(dir, "state.db")
+      if hermes_db
+        File.write(hermes_path, "")
+        ENV["CODEXBAR_HERMES_DB"] = hermes_path
+      else
+        ENV["CODEXBAR_HERMES_DB"] = File.join(dir, "missing-hermes.db")
+      end
+
+      with_temp_home do
+        config = build_config
+        config[:runtime][:stateDir] = File.join(dir, "state")
+        yield config, dir
+      end
+    ensure
+      ENV["CODEXBAR_OPENCODE_DB"] = previous_opencode
+      ENV["CODEXBAR_HERMES_DB"] = previous_hermes
+    end
+  end
+
+  def stub_hermes_rows(rows)
+    result = lambda do |_command, args, **_options|
+      if args.last.to_s.include?("session_model_usage")
+        { exitCode: 0, stdout: JSON.generate(rows) }
+      else
+        { exitCode: 0, stdout: "[]" }
+      end
+    end
+
+    payload = nil
+    CodexBar::Core::Process.stub(:run_command, result) { payload = yield }
+    payload
+  end
 end

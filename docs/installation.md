@@ -16,6 +16,7 @@ CodexBar installs as a user-prefix Linux tool. The install must not depend on th
   - OpenCode Go: `opencode-go` key in `~/.local/share/opencode/auth.json`, with local usage read from `~/.local/share/opencode/opencode.db`
   - Z.ai: `ZAI_API_KEY`/`GLM_API_KEY`, or the `zai-coding-plan` key in `~/.local/share/opencode/auth.json` (local usage reads Z.ai-routed messages from the same OpenCode database)
   - Ollama Cloud: `OLLAMA_API_KEY`, or the `ollama-cloud` key in `~/.local/share/opencode/auth.json` (local usage reads `ollama-cloud`-routed messages from the same OpenCode database)
+  - Hermes Agent: no credential is needed; when `~/.hermes/state.db` exists it is read as an additional local usage source, so a provider driven through Hermes is counted cumulatively with the same provider driven through its own CLI
 
 ## Install
 

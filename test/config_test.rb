@@ -55,6 +55,15 @@ class ConfigTest < Minitest::Test
     assert_equal 60, interval.dig(:runtime, :refreshSeconds)
   end
 
+  def test_local_usage_hermes_skip_providers_keeps_only_supported_provider_ids
+    config = CodexBar::Core::Config.normalize_config(
+      localUsage: { hermesSkipProviders: ["claude", "bogus", "claude", "ollama"] }
+    )
+
+    assert_equal %w[claude ollama], config.dig(:localUsage, :hermesSkipProviders)
+    assert_equal [], CodexBar::Core::Config.default_config.dig(:localUsage, :hermesSkipProviders)
+  end
+
   def test_save_config_writes_atomically_and_leaves_no_temp_file
     Dir.mktmpdir("codexbar-config") do |dir|
       path = File.join(dir, "config.json")

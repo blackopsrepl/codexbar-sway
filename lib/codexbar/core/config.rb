@@ -55,7 +55,8 @@ module CodexBar
           localUsage: {
             enabled: true,
             refreshSeconds: 900,
-            scanDays: 30
+            scanDays: 30,
+            hermesSkipProviders: []
           },
           storage: {
             enabled: false,
@@ -360,7 +361,8 @@ module CodexBar
         {
           enabled: normalize_boolean(input[:enabled], defaults[:enabled]),
           refreshSeconds: [60, positive_integer(input[:refreshSeconds], defaults[:refreshSeconds])].max,
-          scanDays: [1, positive_integer(input[:scanDays], defaults[:scanDays])].max
+          scanDays: [1, positive_integer(input[:scanDays], defaults[:scanDays])].max,
+          hermesSkipProviders: normalize_providers(input[:hermesSkipProviders])
         }
       end
 

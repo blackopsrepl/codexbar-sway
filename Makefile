@@ -72,6 +72,7 @@ INSTALL_FILES := \
 	lib/codexbar/providers/opencode.rb \
 	lib/codexbar/providers/zai.rb \
 	lib/codexbar/runtime/daemon.rb \
+	lib/codexbar/runtime/hermes_usage.rb \
 	lib/codexbar/runtime/history.rb \
 	lib/codexbar/runtime/local_usage.rb \
 	lib/codexbar/runtime/notifications.rb \

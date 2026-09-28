@@ -11,6 +11,18 @@ module CodexBar
       OPENCODE_GO_PROVIDER_ID = "opencode-go"
       OLLAMA_CLOUD_PROVIDER_ID = "ollama-cloud"
 
+      # The log store each provider's summary is primarily read from. Summaries
+      # carry this plus any additional store merged into them, so a meter always
+      # states what it covers instead of implying full coverage.
+      BASE_SOURCES = {
+        "codex" => "codex-jsonl",
+        "claude" => "claude-jsonl",
+        "gemini" => "gemini-jsonl",
+        "opencode" => "opencode-db",
+        "zai" => "opencode-db",
+        "ollama" => "opencode-db"
+      }.freeze
+
       module_function
 
       def read_cache(config)
@@ -27,20 +39,75 @@ module CodexBar
       def refresh(config, now: Time.now.utc)
         scan_days = config.dig(:localUsage, :scanDays).to_i
         cutoff = now - (scan_days * 86_400)
+        hermes = HermesUsage.read(cutoff, skip_providers: config.dig(:localUsage, :hermesSkipProviders))
+        providers = {
+          "codex" => scan_codex(cutoff),
+          "claude" => scan_claude(cutoff),
+          "gemini" => scan_gemini(cutoff),
+          "opencode" => scan_opencode(cutoff),
+          "zai" => scan_zai(cutoff),
+          "ollama" => scan_ollama(cutoff)
+        }
+        providers.each do |provider, summary|
+          merge_hermes!(summary, hermes, provider)
+        end
+
         payload = {
           generatedAt: now.iso8601,
           scanDays: scan_days,
-          providers: {
-            "codex" => scan_codex(cutoff),
-            "claude" => scan_claude(cutoff),
-            "gemini" => scan_gemini(cutoff),
-            "opencode" => scan_opencode(cutoff),
-            "zai" => scan_zai(cutoff),
-            "ollama" => scan_ollama(cutoff)
-          }
+          hermes: hermes_meta(hermes),
+          providers: providers
         }
         State.write_local_usage(config, payload)
         payload
+      end
+
+      # Merges the Hermes contribution into a provider summary using the same
+      # additive helpers the log scanners use, so per-model rows, per-day totals,
+      # retained history, the heatmap, and the provider's peak model list all
+      # inherit Hermes traffic without a second code path.
+      def merge_hermes!(summary, hermes, provider)
+        summary[:sources] = [BASE_SOURCES[provider]].compact
+        return summary unless hermes[:available]
+        return summary unless hermes[:coverage].include?(provider)
+
+        summary[:sources] << HermesUsage::SOURCE_ID
+        rows = hermes[:providers][provider]
+        return summary unless rows.is_a?(Array)
+
+        rows.each { |row| merge_hermes_row!(summary, row) }
+        summary
+      end
+
+      def merge_hermes_row!(summary, row)
+        date = row[:date].to_s.strip
+        return summary if date.empty?
+
+        timestamp = Time.parse("#{date}T00:00:00Z")
+        usage = {
+          input_tokens: row[:input_tokens].to_i,
+          cached_input_tokens: row[:cached_input_tokens].to_i,
+          output_tokens: row[:output_tokens].to_i,
+          reasoning_output_tokens: row[:reasoning_output_tokens].to_i,
+          total_tokens: row[:total_tokens].to_i
+        }
+        add_usage(summary, timestamp, usage, records: row[:records].to_i, model_id: row[:model_id])
+        # Only settled cost is carried: Hermes records an estimate for providers
+        # it cannot price, and an estimate is not a cost.
+        cost = row[:cost].to_f
+        add_cost(summary, timestamp, cost) if cost.positive?
+        summary
+      rescue ArgumentError
+        summary
+      end
+
+      def hermes_meta(hermes)
+        {
+          available: hermes[:available],
+          dbPath: hermes[:dbPath],
+          note: hermes[:note],
+          unattributedProviders: hermes[:unattributedProviders] || []
+        }
       end
 
       def due?(config, cached, now = Time.now.utc)

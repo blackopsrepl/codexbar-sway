@@ -91,6 +91,34 @@ Ollama Cloud exposes an authenticated account usage endpoint that reports allowa
 
 Ollama Cloud local usage is read from assistant messages in the OpenCode usage database whose `providerID` is `ollama-cloud`, so usage routed through other providers in the same harness is not attributed to the account. Each message contributes its input, cached read/write, output, reasoning, and total tokens plus monetary cost to the message's activity date and model id. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
 
+## Hermes local usage
+
+Hermes Agent keeps its own accounting in `~/.hermes/state.db`: every API call it makes is booked in `session_model_usage`, keyed by session, model, `billing_provider`, route, mode, and task. Auxiliary work (title generation, approvals, background review) is recorded there under its own task id and is never folded into the per-session counters, so reading the table cannot double-count against anything else. CodexBar reads that table as an additional local usage source for the providers it can drive, so a provider used through Hermes is counted cumulatively with the same provider used through its own CLI.
+
+Rows are attributed only when the Hermes provider id names the same product CodexBar meters:
+
+| Hermes `billing_provider` | CodexBar provider |
+| --- | --- |
+| `opencode-go` | `opencode` |
+| `zai` | `zai` |
+| `ollama-cloud` | `ollama` |
+| `openai-codex` | `codex` |
+| `anthropic` | `claude` |
+| `gemini` | `gemini` |
+
+Every other id stays unattributed and is preserved in `localUsage.hermes.unattributedProviders` with its records and tokens. That includes `opencode` and `opencode-zen` (the Zen and free gateways rather than the Go subscription), `openai-api` (platform billing rather than the ChatGPT/Codex plan), `ollama` (a local server without an account allowance), and `vertex`, `deepseek`, `xai`, `bedrock`, `lmstudio`, and the rest. `anthropic` maps to `claude` because that is the id Hermes routes the Claude subscription through; if you also drive an Anthropic API key through Hermes, exclude it with `localUsage.hermesSkipProviders`.
+
+Accounting rules:
+
+- `records` counts API calls (`api_call_count`), including Hermes' auxiliary calls, because those calls consume the account allowance.
+- Each row contributes input, cached read/write, output, reasoning, and total tokens, and is attributed to the UTC day of its last activity (`last_seen`, falling back to the session start for rows written before Hermes recorded activity timestamps). A session that crosses midnight is attributed to the later day.
+- Only `actual_cost_usd` is carried into the cost lane. Hermes stores an estimate for providers it cannot price, and an estimate is not a cost.
+- Hermes flushes token counters through an asynchronous accounting queue, so a call that just finished may not be in the database yet. The scan converges within seconds; it is not exact at the instant it runs.
+- Coverage, not row presence, decides a summary's `sources` entry: a provider the mapping feeds reports the Hermes source even when its Hermes traffic in the window is zero.
+- The store is read with the `sqlite3` binary, and a missing database is a no-op. When the database exists but cannot be read (missing `sqlite3`, or a query failure) the summary keeps its CLI source only and the payload records the reason in `localUsage.hermes.note`.
+
+Reads are bounded to the same `localUsage.scanDays` window as every other source, and `CODEXBAR_HERMES_DB` overrides the database path.
+
 Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama` are out of scope for this release line.
 
 ## Peak / Off-Peak Rate Windows

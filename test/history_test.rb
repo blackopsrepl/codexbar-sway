@@ -37,6 +37,59 @@ class HistoryTest < Minitest::Test
     end
   end
 
+  def test_history_retains_hermes_sourced_local_usage_in_model_usage
+    Dir.mktmpdir("codexbar-state") do |dir|
+      now = Time.now.utc
+      config = build_config
+      config[:runtime][:stateDir] = dir
+      config = with_provider_state(config, "opencode", enabled: true, visible: true)
+      results = {
+        "opencode" => provider_result(
+          provider: "opencode",
+          usage: usage_payload(
+            provider: "opencode",
+            now: now,
+            primary: window(used_percent: 3, window_minutes: 300, now: now, resets_in_minutes: 90)
+          )
+        )
+      }
+      snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[opencode], results, now)
+      models = {
+        "deepseek-v4.1-flash" => {
+          modelId: "deepseek-v4.1-flash",
+          records: 5,
+          inputTokens: 1_050,
+          cachedInputTokens: 3_000,
+          outputTokens: 105,
+          reasoningOutputTokens: 0,
+          toolTokens: 0,
+          totalTokens: 4_155
+        }
+      }
+      local_usage = {
+        providers: {
+          "opencode" => {
+            provider: "opencode",
+            supported: true,
+            records: 5,
+            totalTokens: 4_155,
+            models: models,
+            sources: %w[opencode-db hermes],
+            daily: [{ date: now.strftime("%Y-%m-%d"), records: 5, totalTokens: 4_155, models: models, cost: nil }]
+          }
+        }
+      }
+
+      history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
+      day = history.dig(:providers, "opencode", :daily).last
+
+      assert_equal 4_155, day[:totalTokens]
+      assert_equal 5, day[:records]
+      assert_equal 4_155, day.dig(:modelUsage, "deepseek-v4.1-flash", :totalTokens)
+      assert_equal 3, day[:latestPrimaryUsedPercent]
+    end
+  end
+
   def test_history_retains_gemini_model_quota_and_local_usage
     Dir.mktmpdir("codexbar-state") do |dir|
       now = Time.now.utc
