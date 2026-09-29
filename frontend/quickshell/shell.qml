@@ -367,7 +367,9 @@ ShellRoot {
     function runCodexbar(args) {
         var command = [root.codexbarBin].concat(args).concat(["--config", root.configPath])
         if (actionRunner.running) {
-            actionRunner.queuedCommand = command
+            if (actionRunner.queue.length < 8) {
+                actionRunner.queue.push(command)
+            }
             return
         }
 
@@ -523,7 +525,7 @@ ShellRoot {
 
     Process {
         id: actionRunner
-        property var queuedCommand: null
+        property var queue: []
         running: false
         stdout: StdioCollector {}
         stderr: StdioCollector {
@@ -534,10 +536,8 @@ ShellRoot {
             }
         }
         onRunningChanged: {
-            if (!running && queuedCommand) {
-                var nextCommand = queuedCommand
-                queuedCommand = null
-                command = nextCommand
+            if (!running && queue.length) {
+                command = queue.shift()
                 running = true
             }
         }
