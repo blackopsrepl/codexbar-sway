@@ -171,8 +171,36 @@ ShellRoot {
 
     // Resolves a provider/model peak object against the panel clock. The last
     // transition at or before now is the current state; the next transition is
-    // the end of the current window.
+    // the end of the current window. When the snapshot carries no compiled
+    // timeline for the peak (version skew until the next daemon refresh), the
+    // static label/state/window fields the presenter rendered into the
+    // snapshot keep every peak surface working.
     function peakResolved(peak) {
+        if (!peak) {
+            return null
+        }
+
+        var resolved = timelinePeakResolved(peak)
+        if (resolved) {
+            return resolved
+        }
+
+        var state = peak.state === "peak" || peak.state === "offpeak" ? peak.state : ""
+        if (!state) {
+            return null
+        }
+
+        var inPeak = state === "peak"
+        return {
+            inPeak: inPeak,
+            label: inPeak ? "Peak" : "Off-peak",
+            state: state,
+            windowText: peak.windowText ? String(peak.windowText) : "",
+            detail: peak.detail ? String(peak.detail) : ""
+        }
+    }
+
+    function timelinePeakResolved(peak) {
         if (!peak || !peak.scheduleId) {
             return null
         }
