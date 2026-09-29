@@ -108,6 +108,10 @@ ShellRoot {
     property var providerViews: viewData.providers || []
     property string focusProviderId: ""
     property string activeView: "overview"
+    // Low-resolution displays (1366x768 and similar laptops) cannot fit the
+    // relaxed chrome, so the panel tightens margins, the header, and the
+    // detail action panel instead of squeezing the content area to a sliver.
+    property bool dense: panelWindow.height > 0 && panelWindow.height < 820
     // Peak state resolves against the panel's own clock from timezone-absolute
     // compiled timelines in peakSchedules, so it is exact at every boundary and
     // DST/odd-offset correct without repeating the schedule here. The timer is
@@ -643,7 +647,7 @@ ShellRoot {
         font.bold: selected
         hoverEnabled: true
         padding: 0
-        implicitHeight: 32
+        implicitHeight: root.dense ? 28 : 32
         implicitWidth: Math.max(120, contentItem.implicitWidth + 24)
         onClicked: root.setView(view)
 
@@ -1154,7 +1158,7 @@ ShellRoot {
         focusable: true
         aboveWindows: true
         exclusionMode: ExclusionMode.Ignore
-        property int verticalMargin: 18
+        property int verticalMargin: root.dense ? 10 : 18
         implicitWidth: screen ? screen.width : 960
         implicitHeight: screen ? screen.height : 760
 
@@ -1223,8 +1227,8 @@ ShellRoot {
             FocusScope {
                 id: modalFrame
                 anchors.centerIn: parent
-                width: Math.min(960, Math.max(320, panelWindow.width - 36))
-                height: Math.min(panelWindow.height - 16, Math.max(420, panelWindow.height - (panelWindow.verticalMargin * 2)))
+                width: Math.min(960, Math.max(320, panelWindow.width - (root.dense ? 24 : 36)))
+                height: Math.min(panelWindow.height - 12, Math.max(420, panelWindow.height - (panelWindow.verticalMargin * 2)))
                 focus: true
 
                 Keys.onEscapePressed: root.closePanel()
@@ -1250,17 +1254,17 @@ ShellRoot {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 18
-                    spacing: 12
+                    anchors.margins: root.dense ? 12 : 18
+                    spacing: root.dense ? 8 : 12
 
                     CardFrame {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 78
+                        Layout.preferredHeight: root.dense ? 62 : 78
                         accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                         RowLayout {
                             anchors.fill: parent
-                            anchors.margins: 14
+                            anchors.margins: root.dense ? 8 : 14
                             spacing: 12
 
                             ColumnLayout {
@@ -1282,7 +1286,7 @@ ShellRoot {
                                             text: viewData.summary && viewData.summary.displayLabel ? ("CodexBar / " + viewData.summary.displayLabel) : "CodexBar"
                                             color: root.theme.text
                                             font.family: root.textFont
-                                            font.pixelSize: 18
+                                            font.pixelSize: root.dense ? 15 : 18
                                             font.bold: true
                                         }
 
@@ -1439,8 +1443,8 @@ ShellRoot {
                                             anchors.top: parent.top
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.margins: 12
-                                            spacing: 10
+                                            anchors.margins: root.dense ? 10 : 12
+                                            spacing: root.dense ? 8 : 10
 
                                     RowLayout {
                                         spacing: 8
@@ -1514,7 +1518,7 @@ ShellRoot {
                                             delegate: CardFrame {
                                                 required property var modelData
                                                 Layout.fillWidth: true
-                                                Layout.preferredHeight: 118
+                                                Layout.preferredHeight: root.dense ? 102 : 118
                                                 accent: statusColor(modelData)
                                                 color: modelData.id === root.focusProviderId ? root.theme.surface : (cardHover.containsMouse ? root.theme.surfaceHi : root.theme.surface)
 
@@ -2359,14 +2363,14 @@ ShellRoot {
 
                     CardFrame {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 230
+                        Layout.preferredHeight: root.dense ? 172 : 230
                         visible: root.activeView === "detail"
                         accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
 
                         ColumnLayout {
                             anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 10
+                            anchors.margins: root.dense ? 8 : 12
+                            spacing: root.dense ? 6 : 10
 
                             RowLayout {
                                 Layout.fillWidth: true
@@ -2374,7 +2378,7 @@ ShellRoot {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: root.dense ? 4 : 6
 
                                     SectionHeader {
                                         text: "Focus"
@@ -2429,7 +2433,7 @@ ShellRoot {
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: root.dense ? 4 : 6
 
                                     SectionHeader {
                                         text: "Provider"
@@ -2504,7 +2508,7 @@ ShellRoot {
 
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: root.dense ? 4 : 6
 
                                 SectionHeader {
                                     text: "Display"
@@ -2562,7 +2566,7 @@ ShellRoot {
 
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: root.dense ? 4 : 6
 
                                 SectionHeader {
                                     text: "Runtime"
