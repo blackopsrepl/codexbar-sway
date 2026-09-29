@@ -44,11 +44,15 @@ The panel renders:
 
 The panel styling is square-cornered: every frame, button, badge, bar, and heatmap cell renders with zero corner radius. Panel polish uses QuickShell primitives only: gradient metric bars with animated fills, hover transitions on buttons, tabs, rail rows, and heatmap cells, a layered square modal shadow, and a fade-in on panel open.
 
+The panel is a modal overlay. Clicking the dimmed backdrop closes it, and clicks on the modal frame never fall through to the backdrop. On screens shorter than 820 panel pixels (for example 1366x768 laptops) the panel switches to a dense layout — tighter margins, a shorter header and view tabs, and a shorter detail action panel — instead of squeezing the content area; taller screens keep the relaxed layout. The provider rail scrolls, so every configured provider stays selectable regardless of screen height.
+
+Peak surfaces resolve live against the panel clock from the compiled `peakSchedules` timelines in the snapshot. When a peak cannot be resolved from a timeline (a snapshot written before the daemon compiled schedules, or version skew until the next refresh), the panel falls back to the static `state`/`label`/`windowText`/`detail` fields in that peak and keeps rendering the badge, icon, and window.
+
 On a Hyprland/Omarchy desktop the panel watches `~/.local/state/omarchy/current/theme/colors.toml` (override via `OMARCHY_THEME_COLORS`) and resolves its semantic colors from the active theme's foundational keys, so `omarchy theme set` restyles the open panel live. Missing keys and non-Omarchy systems fall back to the built-in palette.
 
 The panel sends mutations back through the Ruby CLI. It does not fetch provider usage directly.
 
-Provider action controls queue CLI mutations instead of killing in-flight commands. Provider on/off, show/hide, overview, and auto-select changes update local config/snapshot state immediately; quota refresh remains daemon/refresh owned.
+Provider action controls queue CLI mutations into a small FIFO instead of killing in-flight commands, so rapid clicks on different controls all land. Provider on/off, show/hide, overview, and auto-select changes update local config/snapshot state immediately; quota refresh remains daemon/refresh owned.
 
 Runtime controls include manual, 1m, 2m, 5m, 15m, and 30m refresh cadence, notifications, privacy redaction, status refresh, local usage scan, storage scan, and cache clear commands.
 

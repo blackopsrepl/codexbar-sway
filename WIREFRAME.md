@@ -95,7 +95,7 @@ The QuickShell panel has four views:
 - History: presenter-rendered retained daily history for the focused provider, including a token usage heatmap (week-aligned day grid with a single fill ramp for daily local token totals and inline usage stats) and per-model quota for model-meter providers; days with no quota sample or local usage are omitted and the view falls back to its empty state.
 - Settings: cadence, display, notification, privacy, scan, and cache-clear controls.
 
-The QuickShell panel is a modal overlay. It stays above application windows, ignores layer-shell exclusion, and uses a relaxed vertical footprint with scrolling where detail content exceeds the available height.
+The QuickShell panel is a modal overlay. It stays above application windows, ignores layer-shell exclusion, and uses a relaxed vertical footprint with scrolling where detail content exceeds the available height. Clicking the dimmed backdrop closes the panel, the provider rail scrolls so every configured provider stays selectable, and screens shorter than 820 panel pixels switch to a dense layout instead of squeezing the content area. Peak badges resolve live from the compiled schedule timelines and fall back to the static peak fields in a snapshot that carries no timeline.
 
 Waybar is intentionally smaller than the modal: it renders provider icon, quota percentages, provider/display classes, health classes, and tooltip detail. It does not render pace/reserve/hot text or pace classes.
 
