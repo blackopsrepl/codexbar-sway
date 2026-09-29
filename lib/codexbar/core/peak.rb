@@ -101,7 +101,7 @@ module CodexBar
       end
 
       def state_for(schedule, model_id, now)
-        window = current_or_next_window(schedule, now)
+        window = current_rate_window(schedule, now)
         return nil unless window
 
         active = peak_now?(schedule, now)
@@ -165,12 +165,23 @@ module CodexBar
         Time.utc(date.year, date.month, date.day, minute_of_day / 60, minute_of_day % 60)
       end
 
-      def current_or_next_window(schedule, now)
+      # The window of the rate period in effect at `now`: the peak interval
+      # containing `now`, or, while off-peak, the gap between the surrounding
+      # peak intervals (which runs from one weekday close to the next open, so a
+      # weekend off-peak period spans two dates). Consumers that cannot resolve a
+      # compiled timeline — the Waybar tooltip, the Peak detail card, and the
+      # panel's snapshot fallback — render these static fields as the current
+      # window, so they must describe the same period the timeline resolves.
+      def current_rate_window(schedule, now)
         windows = intervals(schedule, now)
-        current = windows.find { |start, finish| start <= now && now < finish }
-        return current if current
+        peak_window = windows.find { |start, finish| start <= now && now < finish }
+        return peak_window if peak_window
 
-        windows.find { |start, _finish| start > now }
+        previous_end = windows.filter_map { |_start, finish| finish if finish <= now }.max
+        next_start = windows.filter_map { |start, _finish| start if start > now }.min
+        return nil unless previous_end && next_start
+
+        [previous_end, next_start]
       end
 
       # Renders a peak window in the evaluating machine's local zone, correct at

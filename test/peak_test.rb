@@ -170,7 +170,90 @@ class PeakTest < Minitest::Test
     assert schedules["zai"][:transitions].length.positive?
   end
 
+  def test_static_peak_fields_describe_the_same_period_as_the_compiled_timeline
+    # Two paths render one badge. The panel resolves the compiled timeline
+    # against its own clock, and every snapshot-only consumer (the Waybar
+    # tooltip, the Peak card, and the panel's version-skew fallback) renders the
+    # static fields instead. They must name the same period, or the same state
+    # reads differently depending on which path drew it. Off-peak is where the
+    # static fields used to drift: the badge said "Off-peak" next to the hours
+    # of the upcoming peak window.
+    monday = Time.utc(2026, 9, 28, 0, 0)
+    instants = (0...(7 * 48)).map { |step| monday + (step * 1800) }
+
+    with_zone("Europe/Rome") do
+      PEAK::SCHEDULES.each do |schedule|
+        timeline = PEAK.schedule_timeline(schedule[:id], monday)
+        model_id = schedule[:model] ? "deepseek-v4-pro" : nil
+
+        instants.each do |now|
+          state = PEAK.state_for(schedule, model_id, now)
+          (start_at, finish_at), expected_state = current_period(timeline, now)
+
+          assert_equal expected_state, state[:state], "state at #{now} for #{schedule[:id]}"
+          assert_equal start_at, state[:windowStartAt], "window start at #{now} for #{schedule[:id]}"
+          assert_equal finish_at, state[:windowEndAt], "window end at #{now} for #{schedule[:id]}"
+          assert_equal PEAK.local_span(Time.at(start_at), Time.at(finish_at)), state[:windowText],
+                       "window text at #{now} for #{schedule[:id]}"
+        end
+      end
+    end
+  end
+
+  def test_off_peak_window_is_the_off_peak_span_not_the_next_peak_span
+    # Monday 10:00 UTC is the first off-peak minute for Z.ai (the peak window is
+    # 06:00-10:00 UTC). Its rate period runs to the next peak start on Tuesday.
+    state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 10, 0))
+
+    assert_equal "offpeak", state[:state]
+    assert_equal Time.utc(2026, 9, 28, 10, 0).to_i, state[:windowStartAt]
+    assert_equal Time.utc(2026, 9, 29, 6, 0).to_i, state[:windowEndAt]
+
+    with_zone("UTC") do
+      assert_equal "Mon 10:00\u2013Tue 06:00", PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 10, 0))[:windowText]
+    end
+  end
+
+  def test_weekend_off_peak_period_spans_from_friday_close_to_monday_open
+    # Friday 10:00 UTC closes Z.ai's last weekday peak; the next one opens
+    # Monday 06:00 UTC, so the off-peak rate period covers the whole weekend.
+    state = PEAK.model_state("zai", nil, Time.utc(2026, 10, 3, 12, 0))
+
+    assert_equal "offpeak", state[:state]
+    assert_equal Time.utc(2026, 10, 2, 10, 0).to_i, state[:windowStartAt]
+    assert_equal Time.utc(2026, 10, 5, 6, 0).to_i, state[:windowEndAt]
+  end
+
+  def test_peak_window_is_unchanged_while_peak_is_active
+    state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 7, 0))
+
+    assert_equal "peak", state[:state]
+    assert_equal Time.utc(2026, 9, 28, 6, 0).to_i, state[:windowStartAt]
+    assert_equal Time.utc(2026, 9, 28, 10, 0).to_i, state[:windowEndAt]
+  end
+
   private
+
+  # The panel's own resolution, mirrored: the last transition at or before now
+  # is the current state, and the next transition ends the current period.
+  def current_period(timeline, now)
+    transitions = timeline[:transitions]
+    state = transitions.first[1]
+    start_at = transitions.first[0]
+    finish_at = transitions.last[0]
+
+    transitions.each do |at, value|
+      if at <= now.to_i
+        state = value
+        start_at = at
+      else
+        finish_at = at
+        break
+      end
+    end
+
+    [[start_at, finish_at], state.to_i.zero? ? "offpeak" : "peak"]
+  end
 
   def resolve(timeline, time)
     state = timeline[:transitions].first[1]
