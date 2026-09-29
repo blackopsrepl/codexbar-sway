@@ -2022,23 +2022,29 @@ ShellRoot {
                                     font.bold: true
                                 }
 
-                                Column {
-                                    id: providerList
+                                ScrollView {
+                                    id: providerScroll
                                     Layout.fillWidth: true
-                                    spacing: 10
+                                    Layout.fillHeight: true
+                                    clip: true
+                                    contentWidth: availableWidth
+                                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
-                                    Repeater {
-                                        model: providerViews
+                                    Column {
+                                        id: providerList
+                                        width: providerScroll.availableWidth
+                                        spacing: 10
 
-                                        delegate: ProviderRow {
-                                            width: providerList.width
-                                            providerData: modelData
+                                        Repeater {
+                                            model: providerViews
+
+                                            delegate: ProviderRow {
+                                                width: providerList.width
+                                                providerData: modelData
+                                            }
                                         }
                                     }
-                                }
-
-                                Item {
-                                    Layout.fillHeight: true
                                 }
                             }
                         }
