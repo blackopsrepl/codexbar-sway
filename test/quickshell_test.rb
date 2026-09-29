@@ -17,6 +17,37 @@ class QuickShellTest < Minitest::Test
     )
   end
 
+  # The trailing peak marker sits at the end of a row whose right edge is the
+  # card's content edge — where the detail view's scrollbar overlays the card's
+  # padding. Everyone renders it through PeakGlyph, which owns the fixed slot and
+  # the right inset; a raw glyph at a row's end is drawn flush against that edge.
+  def test_peak_markers_render_through_the_slotted_component
+    qml = File.read(File.expand_path("../frontend/quickshell/shell.qml", __dir__))
+
+    component = qml[/component PeakGlyph: Text \{.*?\n    \}/m]
+
+    refute_nil component, "peak markers need the PeakGlyph component"
+    assert_includes component, "Layout.preferredWidth:"
+    assert_includes component, "Layout.rightMargin:", "the marker must be inset from the card's content edge"
+    assert_includes component, "text: root.peakBadgeIcon(peak)"
+    refute_match(
+      /text: root\.peakBadgeIcon\(modelData\.peak\)/,
+      qml,
+      "a raw glyph at a row's end is drawn flush against the card's content edge"
+    )
+    assert_equal 2, qml.scan(/^\s+PeakGlyph \{$/).length,
+                 "the overview card row and the model local usage row both need the marker"
+  end
+
+  def test_peak_row_labels_can_shrink_below_their_text_width
+    qml = File.read(File.expand_path("../frontend/quickshell/shell.qml", __dir__))
+
+    rows = qml.scan(/Layout\.fillWidth: true\n\s+Layout\.minimumWidth: 0\n(?:\s+.*\n)*?\s+elide: Text\.ElideRight/)
+
+    assert_equal 2, rows.length,
+                 "the label before a peak marker must elide instead of pushing the marker off the row"
+  end
+
   def test_running_pid_rejects_a_shell_command_that_only_mentions_the_qml_path
     config = build_config
     result = {

@@ -788,6 +788,34 @@ ShellRoot {
         clip: true
     }
 
+    // Trailing peak marker for rows whose right end is the card's content edge.
+    // The slot is explicit so the glyph keeps its place whatever the row's text
+    // length is, and the right inset keeps it clear of that edge — which is also
+    // where the detail view's scrollbar overlays the card's padding. The width is
+    // the glyph advance plus room for the tooltip hover area.
+    component PeakGlyph: Text {
+        property var peak: null
+        visible: !!peak
+        Layout.preferredWidth: 14
+        Layout.rightMargin: 6
+        Layout.alignment: Qt.AlignVCenter
+        horizontalAlignment: Text.AlignHCenter
+        text: root.peakBadgeIcon(peak)
+        color: root.peakBadgeAccent(peak)
+        font.family: root.iconFont
+        font.pixelSize: 11
+
+        MouseArea {
+            id: peakGlyphHover
+            anchors.fill: parent
+            hoverEnabled: true
+        }
+
+        ToolTip.visible: peakGlyphHover.containsMouse
+        ToolTip.delay: 150
+        ToolTip.text: root.peakBadgeDetail(peak)
+    }
+
     component UsageHeatmap: CardFrame {
         id: usageHeatmap
         property var heatmapData: null
@@ -1562,6 +1590,7 @@ ShellRoot {
 
                                                                 Label {
                                                                     Layout.fillWidth: true
+                                                                    Layout.minimumWidth: 0
                                                                     text: modelData.label
                                                                     color: root.theme.text
                                                                     font.family: root.textFont
@@ -1570,23 +1599,8 @@ ShellRoot {
                                                                     elide: Text.ElideRight
                                                                 }
 
-                                                                Text {
-                                                                    id: peakGlyph
-                                                                    visible: !!(modelData.peak)
-                                                                    text: root.peakBadgeIcon(modelData.peak)
-                                                                    color: root.peakBadgeAccent(modelData.peak)
-                                                                    font.family: root.iconFont
-                                                                    font.pixelSize: 11
-
-                                                                    MouseArea {
-                                                                        id: peakGlyphHover
-                                                                        anchors.fill: parent
-                                                                        hoverEnabled: true
-                                                                    }
-
-                                                                    ToolTip.visible: peakGlyphHover.containsMouse
-                                                                    ToolTip.delay: 150
-                                                                    ToolTip.text: root.peakBadgeDetail(modelData.peak)
+                                                                PeakGlyph {
+                                                                    peak: modelData.peak
                                                                 }
                                                             }
 
@@ -1933,6 +1947,7 @@ ShellRoot {
 
                                                         Label {
                                                             Layout.fillWidth: true
+                                                            Layout.minimumWidth: 0
                                                             text: modelData.label || "--"
                                                             color: root.theme.textBody
                                                             font.family: root.textFont
@@ -1955,12 +1970,8 @@ ShellRoot {
                                                             font.pixelSize: 10
                                                         }
 
-                                                        Text {
-                                                            visible: !!(modelData.peak)
-                                                            text: root.peakBadgeIcon(modelData.peak)
-                                                            color: root.peakBadgeAccent(modelData.peak)
-                                                            font.family: root.iconFont
-                                                            font.pixelSize: 11
+                                                        PeakGlyph {
+                                                            peak: modelData.peak
                                                         }
                                                     }
                                                 }
