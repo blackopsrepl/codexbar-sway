@@ -10,6 +10,29 @@ require "time"
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 require "codexbar"
 
+# Minitest 6 (the Ruby 4.0 default) removed minitest/mock and the
+# Object#stub helper this suite was written against. Restore the scoped
+# single-method form the tests use: stub a method for the duration of the
+# block, call the replacement with the original arguments when it is
+# callable, and put the original method back afterwards.
+module MinitestStubCompat
+  def stub(name, value_or_callable)
+    original = method(name)
+    define_singleton_method(name) do |*arguments, **keywords, &block|
+      if value_or_callable.respond_to?(:call)
+        value_or_callable.call(*arguments, **keywords, &block)
+      else
+        value_or_callable
+      end
+    end
+    yield
+  ensure
+    define_singleton_method(name, original)
+  end
+end
+
+Object.include(MinitestStubCompat)
+
 module CodexBarTestHelpers
   def build_config
     CodexBar::Core::Config.normalize_config(CodexBar::Core::Config.default_config)
