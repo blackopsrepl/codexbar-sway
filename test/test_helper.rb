@@ -11,10 +11,18 @@ $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 require "codexbar"
 
 # Minitest 6 (the Ruby 4.0 default) removed minitest/mock and the
-# Object#stub helper this suite was written against. Restore the scoped
-# single-method form the tests use: stub a method for the duration of the
-# block, call the replacement with the original arguments when it is
-# callable, and put the original method back afterwards.
+# Object#stub helper this suite was written against, so the stub-based tests
+# error with NoMethodError before they run. Keep the upstream helper wherever
+# the toolchain still ships it, and restore the scoped single-method form the
+# tests use where it does not: stub a method for the duration of the block, call
+# the replacement with the original arguments when it is callable, and put the
+# original method back afterwards.
+begin
+  require "minitest/mock"
+rescue LoadError
+  nil
+end
+
 module MinitestStubCompat
   def stub(name, value_or_callable)
     original = method(name)
@@ -31,7 +39,7 @@ module MinitestStubCompat
   end
 end
 
-Object.include(MinitestStubCompat)
+Object.include(MinitestStubCompat) unless Object.method_defined?(:stub)
 
 module CodexBarTestHelpers
   def build_config
