@@ -81,6 +81,49 @@ class RuntimeTest < Minitest::Test
     assert_equal true, day_cells.first[:present]
   end
 
+  def test_peak_view_contract_exposes_timelines_and_schedule_ids
+    now = Time.utc(2026, 9, 29, 9, 0)
+    config = build_config
+    config = with_provider_state(config, "zai", enabled: true, visible: true, showInOverview: true)
+    results = {
+      "zai" => provider_result(
+        provider: "zai",
+        usage: usage_payload(
+          provider: "zai",
+          now: now,
+          primary: window(used_percent: 12, window_minutes: 300, now: now, resets_in_minutes: 180),
+          secondary: window(used_percent: 34, window_minutes: 10_080, now: now, resets_in_minutes: 5_400)
+        )
+      )
+    }
+
+    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[zai], results, now)
+    view = snapshot[:view]
+
+    schedules = view[:peakSchedules]
+    assert_equal ["ollama:deepseek", "opencode:deepseek", "zai"], schedules.keys.sort
+    transitions = schedules.fetch("zai")[:transitions]
+    assert transitions.length > 2
+    assert_equal 0, transitions.first[1]
+    assert transitions.each_cons(2).all? { |first, second| first[0] < second[0] }
+    assert transitions.each_cons(2).all? { |first, second| first[1] != second[1] }
+
+    zai_view = view[:providers].find { |entry| entry[:id] == "zai" }
+    peak = zai_view[:peak]
+    refute_nil peak
+    assert_equal "zai", peak[:scheduleId]
+    assert_equal "peak", peak[:state]
+    assert_equal "Peak", peak[:label]
+    assert peak[:windowText].to_s.include?("\u2013")
+
+    peak_card = zai_view[:detailCards].find { |card| card[:key] == "peak" }
+    refute_nil peak_card
+    assert_equal "zai", peak_card[:scheduleId]
+
+    codex_view = view[:providers].find { |entry| entry[:id] == "codex" }
+    assert_nil codex_view[:peak]
+  end
+
   def test_history_heatmap_buckets_tokens_and_aligns_week_rows
     history = {
       generatedAt: "2026-08-09T12:00:00Z",

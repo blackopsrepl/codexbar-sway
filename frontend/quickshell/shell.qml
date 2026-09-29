@@ -2150,66 +2150,90 @@ ShellRoot {
                                 }
                             }
 
-                            UsageHeatmap {
-                                id: heatmapCard
-                                heatmapData: historyHeatmap()
-                                accent: focusProvider() ? statusColor(focusProvider()) : root.theme.warn
-                            }
-
-                            GridLayout {
-                                id: historyGrid
+                            ScrollView {
+                                id: historyScroll
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                columns: 4
-                                columnSpacing: 10
-                                rowSpacing: 10
-                                visible: root.providerHistory().length > 0
+                                clip: true
+                                contentWidth: availableWidth
+                                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                                ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
-                                Repeater {
-                                    model: root.providerHistory()
+                                Item {
+                                    width: historyScroll.availableWidth
+                                    height: historyContent.implicitHeight + 12
 
-                                    delegate: HistoryDayTile {
-                                        required property var modelData
-                                        itemData: modelData
-                                        Layout.preferredWidth: Math.max(0, (historyColumn.width - (historyGrid.columns - 1) * historyGrid.columnSpacing) / historyGrid.columns)
-                                    }
-                                }
-                            }
+                                    ColumnLayout {
+                                        id: historyContent
+                                        anchors.top: parent.top
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        spacing: 12
 
-                            CardFrame {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                visible: root.providerHistory().length === 0
-                                accent: root.theme.textMuted
-                                color: root.theme.surface
+                                        UsageHeatmap {
+                                            id: heatmapCard
+                                            heatmapData: historyHeatmap()
+                                            accent: focusProvider() ? statusColor(focusProvider()) : root.theme.warn
+                                        }
 
-                                ColumnLayout {
-                                    anchors.centerIn: parent
-                                    spacing: 10
+                                        GridLayout {
+                                            id: historyGrid
+                                            Layout.fillWidth: true
+                                            columns: 4
+                                            columnSpacing: 10
+                                            rowSpacing: 10
+                                            visible: root.providerHistory().length > 0
 
-                                    Text {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        text: root.glyphs.history
-                                        color: root.theme.textMuted
-                                        font.family: root.iconFont
-                                        font.pixelSize: 30
-                                    }
+                                            Repeater {
+                                                model: root.providerHistory()
 
-                                    Label {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        text: "No retained history yet"
-                                        color: root.theme.text
-                                        font.family: root.textFont
-                                        font.pixelSize: 16
-                                        font.bold: true
-                                    }
+                                                delegate: HistoryDayTile {
+                                                    required property var modelData
+                                                    itemData: modelData
+                                                    Layout.preferredWidth: Math.max(0, (historyContent.width - (historyGrid.columns - 1) * historyGrid.columnSpacing) / historyGrid.columns)
+                                                }
+                                            }
+                                        }
 
-                                    Label {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        text: "History appears after the daemon writes daily quota or local usage snapshots."
-                                        color: root.theme.textDim
-                                        font.family: root.textFont
-                                        font.pixelSize: 11
+                                        CardFrame {
+                                            id: historyEmpty
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: Math.max(180, historyEmptyColumn.implicitHeight + 40)
+                                            visible: root.providerHistory().length === 0
+                                            accent: root.theme.textMuted
+                                            color: root.theme.surface
+
+                                            ColumnLayout {
+                                                id: historyEmptyColumn
+                                                anchors.centerIn: parent
+                                                spacing: 10
+
+                                                Text {
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                    text: root.glyphs.history
+                                                    color: root.theme.textMuted
+                                                    font.family: root.iconFont
+                                                    font.pixelSize: 30
+                                                }
+
+                                                Label {
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                    text: "No retained history yet"
+                                                    color: root.theme.text
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 16
+                                                    font.bold: true
+                                                }
+
+                                                Label {
+                                                    Layout.alignment: Qt.AlignHCenter
+                                                    text: "History appears after the daemon writes daily quota or local usage snapshots."
+                                                    color: root.theme.textDim
+                                                    font.family: root.textFont
+                                                    font.pixelSize: 11
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
