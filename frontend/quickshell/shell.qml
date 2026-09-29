@@ -1579,11 +1579,12 @@ ShellRoot {
                                                                     font.pixelSize: 11
 
                                                                     MouseArea {
+                                                                        id: peakGlyphHover
                                                                         anchors.fill: parent
                                                                         hoverEnabled: true
                                                                     }
 
-                                                                    ToolTip.visible: peakGlyph.MouseArea.hovered
+                                                                    ToolTip.visible: peakGlyphHover.containsMouse
                                                                     ToolTip.delay: 150
                                                                     ToolTip.text: root.peakBadgeDetail(modelData.peak)
                                                                 }
