@@ -17,6 +17,22 @@ class QuickShellTest < Minitest::Test
     )
   end
 
+  # A glyph concatenated into a label string inherits the text font, and Fira Code
+  # has no Nerd Font codepoints — fontconfig then resolves each glyph on its own,
+  # which rendered the settings codicon as a stray mark beside a History clock that
+  # happened to land on the icon font. Draw the glyph as its own Text.
+  def test_icon_glyphs_are_not_concatenated_into_text_font_strings
+    qml = File.read(File.expand_path("../frontend/quickshell/shell.qml", __dir__))
+
+    refute_match(
+      /text:\s*[^\n]*(?:root\.glyphs\.\w+|control\.glyph|tab\.glyph)[^\n]*\+/,
+      qml,
+      "a glyph inside a label string is drawn in the text font, not the icon font"
+    )
+    assert_operator qml.scan("font.family: root.iconFont").length, :>=, 4,
+                    "the tab, button, note and rail-title glyphs all need the icon font"
+  end
+
   # The trailing peak marker sits at the end of a row whose right edge is the
   # card's content edge — where the detail view's scrollbar overlays the card's
   # padding. Everyone renders it through PeakGlyph, which owns the fixed slot and

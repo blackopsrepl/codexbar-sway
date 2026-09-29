@@ -625,13 +625,35 @@ ShellRoot {
             }
         }
 
-        contentItem: Label {
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: control.glyph ? (control.glyph + (control.text ? "  " + control.text : "")) : control.text
-            color: root.theme.textSoft
-            font: control.font
-            elide: Text.ElideRight
+        // The glyph and the label are separate runs so each gets its own font:
+        // Fira Code has no Nerd Font codepoints, and leaving a glyph to
+        // fontconfig's per-character fallback resolves some of them in unrelated
+        // fonts (U+EB51 came out as a stray mark instead of the settings gear).
+        contentItem: Item {
+            implicitWidth: controlRow.implicitWidth
+            implicitHeight: controlRow.implicitHeight
+
+            RowLayout {
+                id: controlRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Text {
+                    visible: !!control.glyph
+                    text: control.glyph
+                    color: root.theme.textSoft
+                    font.family: root.iconFont
+                    font.pixelSize: control.font.pixelSize
+                }
+
+                Label {
+                    text: control.text
+                    color: root.theme.textSoft
+                    font.family: root.textFont
+                    font.pixelSize: control.font.pixelSize
+                    font.bold: control.font.bold
+                }
+            }
         }
     }
 
@@ -666,13 +688,33 @@ ShellRoot {
             }
         }
 
-        contentItem: Label {
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: tab.glyph ? (tab.glyph + "  " + tab.text) : tab.text
-            color: tab.selected ? root.theme.text : root.theme.textBody
-            font: tab.font
-            elide: Text.ElideRight
+        // Same split as CodexButton: the glyph is drawn in the icon font, the
+        // label in the text font, so neither depends on fontconfig's fallback.
+        contentItem: Item {
+            implicitWidth: tabRow.implicitWidth
+            implicitHeight: tabRow.implicitHeight
+
+            RowLayout {
+                id: tabRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Text {
+                    visible: !!tab.glyph
+                    text: tab.glyph
+                    color: tab.selected ? root.theme.text : root.theme.textBody
+                    font.family: root.iconFont
+                    font.pixelSize: tab.font.pixelSize
+                }
+
+                Label {
+                    text: tab.text
+                    color: tab.selected ? root.theme.text : root.theme.textBody
+                    font.family: root.textFont
+                    font.pixelSize: tab.font.pixelSize
+                    font.bold: tab.font.bold
+                }
+            }
         }
     }
 
@@ -2033,14 +2075,27 @@ ShellRoot {
                                                 Repeater {
                                                     model: focusProvider() ? focusProvider().notes : []
 
-                                                    delegate: Label {
+                                                    delegate: RowLayout {
                                                         required property string modelData
-                                                        text: root.glyphs.note + "  " + modelData
-                                                        color: root.theme.textSoft
-                                                        font.family: root.textFont
-                                                        font.pixelSize: 10
-                                                        wrapMode: Text.Wrap
                                                         Layout.fillWidth: true
+                                                        spacing: 6
+
+                                                        Text {
+                                                            text: root.glyphs.note
+                                                            color: root.theme.textSoft
+                                                            font.family: root.iconFont
+                                                            font.pixelSize: 10
+                                                            Layout.alignment: Qt.AlignTop
+                                                        }
+
+                                                        Label {
+                                                            text: modelData
+                                                            color: root.theme.textSoft
+                                                            font.family: root.textFont
+                                                            font.pixelSize: 10
+                                                            wrapMode: Text.Wrap
+                                                            Layout.fillWidth: true
+                                                        }
                                                     }
                                                 }
                                             }
@@ -2068,12 +2123,23 @@ ShellRoot {
                                 anchors.margins: 16
                                 spacing: 12
 
-                                Label {
-                                    text: root.glyphs.provider + " Providers"
-                                    color: root.theme.text
-                                    font.family: root.textFont
-                                    font.pixelSize: 12
-                                    font.bold: true
+                                RowLayout {
+                                    spacing: 8
+
+                                    Text {
+                                        text: root.glyphs.provider
+                                        color: root.theme.text
+                                        font.family: root.iconFont
+                                        font.pixelSize: 12
+                                    }
+
+                                    Label {
+                                        text: "Providers"
+                                        color: root.theme.text
+                                        font.family: root.textFont
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                    }
                                 }
 
                                 ScrollView {
