@@ -1186,6 +1186,12 @@ ShellRoot {
                 color: Qt.rgba(0, 0, 0, 0.34)
             }
 
+            MouseArea {
+                anchors.fill: parent
+                enabled: uiAdapter.open
+                onClicked: root.closePanel()
+            }
+
             FocusScope {
                 id: modalFrame
                 anchors.centerIn: parent
@@ -1199,6 +1205,10 @@ ShellRoot {
                     anchors.fill: parent
                     accent: focusProvider() ? statusColor(focusProvider()) : root.theme.good
                     color: root.theme.bg
+
+                MouseArea {
+                    anchors.fill: parent
+                }
 
                 Rectangle {
                     anchors.fill: parent
