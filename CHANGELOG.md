@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.8.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.7.0...v1.8.0) (2026-09-29)
+
+
+### Features
+
+* **ui:** tighten panel chrome on short screens c0e0f32
+
+
+### Bug Fixes
+
+* **peak:** name the current rate period in the static peak fields 8a192e2
+* **ui:** bind the overview peak tooltip to its own hover area ed2c6b0
+* **ui:** close the panel when the dimmed backdrop is clicked 96d8c7a
+* **ui:** keep every provider in the rail reachable on short screens d25ec49
+* **ui:** keep peak badges alive when compiled timelines are absent 3dad521
+* **ui:** run every queued bar command instead of the latest 8e98285
+* **ui:** scroll the history view and pin the peak view contract a080e01
+
 ## [1.7.0](https://github.com/blackopsrepl/codexbar-sway/compare/v1.6.3...v1.7.0) (2026-09-28)
 
 
