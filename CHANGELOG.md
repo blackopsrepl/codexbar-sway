@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.8.2](https://github.com/blackopsrepl/codexbar-sway/compare/v1.8.1...v1.8.2) (2026-09-29)
+
+
+### Bug Fixes
+
+* **ui:** draw icon glyphs in the icon font, not a text-font fallback 1466ee2
+
 ## [1.8.1](https://github.com/blackopsrepl/codexbar-sway/compare/v1.8.0...v1.8.1) (2026-09-29)
 
 
