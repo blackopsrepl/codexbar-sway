@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [2.0.0](https://github.com/blackopsrepl/tokenmaxx/compare/v1.8.2...v2.0.0) (2026-09-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* CLI, config path, env var names, and install paths
+all change; pre-rebrand installs need the one-time migration in
+docs/installation.md
+
+### Features
+
+* rebrand CodexBar as TokenMaxx 5d76c57
+
+
+### Bug Fixes
+
+* **config:** seed config init from the legacy config and persist remapped paths 3b67101
+* **runtime:** import legacy state files once on first state-dir creation 7e66c0a
+
 ## [1.8.2](https://github.com/blackopsrepl/codexbar-sway/compare/v1.8.1...v1.8.2) (2026-09-29)
 
 
