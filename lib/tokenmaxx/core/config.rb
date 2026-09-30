@@ -77,19 +77,7 @@ module TokenMaxx
       end
 
       def load_config(config_path = default_config_path)
-        # no_fallback: old paths are imported once, never read afterwards. A
-        # stale config silently resurrecting as defaults is the failure mode
-        # this refuses to allow. Old files are left in place, never deleted.
-        # Scoped to the default path so tools passing an explicit --config
-        # (release checks, tests) stay hermetic.
-        default_path = default_config_path
-        legacy_path = File.join(Dir.home, ".codexbar", "config.json")
-        if config_path == default_path && !File.exist?(default_path) && File.size?(legacy_path)
-          require "fileutils"
-          FileUtils.mkdir_p(File.dirname(default_path))
-          FileUtils.cp(legacy_path, default_path)
-          FileUtils.chmod(0o600, default_path)
-        end
+        import_legacy_config!(config_path)
         raw = File.read(config_path)
         normalize_config(JSON.parse(raw, symbolize_names: true))
       rescue Errno::ENOENT
@@ -114,7 +102,35 @@ module TokenMaxx
         FileUtils.rm_f(temp_path) if temp_path && File.exist?(temp_path)
       end
 
+      # One-time import of the pre-rebrand default config. no_fallback: the
+      # old path is imported once, never read afterwards, and old files stay
+      # in place. Scoped to the default path so tools passing a custom
+      # --config (release checks, tests) stay hermetic. Called from both
+      # load_config and init_config: an installer running `config init` on a
+      # fresh install must seed from the legacy config, not clobber it with
+      # defaults.
+      def import_legacy_config!(target_path = default_config_path)
+        target = File.expand_path(target_path)
+        default_path = File.expand_path(default_config_path)
+        legacy_path = File.expand_path(File.join(Dir.home, ".codexbar", "config.json"))
+        return if target != default_path || File.exist?(target) || !File.size?(legacy_path)
+
+        require "fileutils"
+        FileUtils.mkdir_p(File.dirname(target))
+        FileUtils.cp(legacy_path, target)
+        FileUtils.chmod(0o600, target)
+      end
+
       def init_config(config_path = default_config_path)
+        import_legacy_config!(config_path)
+        if File.exist?(config_path)
+          # Persist the normalized form so remapped legacy paths (stateDir,
+          # quickShellShell) do not survive verbatim on disk.
+          config = load_config(config_path)
+          save_config(config, config_path)
+          return config
+        end
+
         config = normalize_config(default_config)
         save_config(config, config_path)
         config
@@ -329,6 +345,10 @@ module TokenMaxx
         legacy_state_dir = File.join(Dir.home, ".local", "state", "codexbar")
         state_dir = defaults[:stateDir] if File.expand_path(legacy_state_dir) == state_dir
 
+        quick_shell_shell = File.expand_path(clean_string(input[:quickShellShell]) || defaults[:quickShellShell])
+        legacy_quick_shell_shell = File.join(Dir.home, ".local", "share", "codexbar", "frontend", "quickshell", "shell.qml")
+        quick_shell_shell = defaults[:quickShellShell] if File.expand_path(legacy_quick_shell_shell) == quick_shell_shell
+
         {
           refreshSeconds: refresh_seconds,
           refreshMode: %w[interval manual].include?(input[:refreshMode].to_s) ? input[:refreshMode].to_s : defaults[:refreshMode],
@@ -336,7 +356,7 @@ module TokenMaxx
           stateDir: state_dir,
           waybarSignal: normalize_waybar_signal(input[:waybarSignal], defaults[:waybarSignal]),
           quickShellCommand: clean_string(input[:quickShellCommand]) || defaults[:quickShellCommand],
-          quickShellShell: File.expand_path(clean_string(input[:quickShellShell]) || defaults[:quickShellShell])
+          quickShellShell: quick_shell_shell
         }
       end
 

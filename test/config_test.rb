@@ -170,4 +170,36 @@ class ConfigTest < Minitest::Test
 
     assert_equal custom, kept.dig(:runtime, :stateDir)
   end
+
+  def test_normalize_runtime_remaps_only_the_legacy_default_quick_shell_shell
+    legacy = File.join(Dir.home, ".local", "share", "codexbar", "frontend", "quickshell", "shell.qml")
+    config = TokenMaxx::Core::Config.normalize_config(runtime: { quickShellShell: legacy })
+
+    assert_equal File.expand_path(TokenMaxx::Core::Config.default_config.dig(:runtime, :quickShellShell)),
+                 config.dig(:runtime, :quickShellShell)
+  end
+
+  def test_init_config_seeds_from_the_legacy_config_instead_of_defaults
+    Dir.mktmpdir("tokenmaxx-init-import") do |home|
+      old_home = ENV["HOME"]
+      ENV["HOME"] = home
+      begin
+        legacy_dir = File.join(home, ".codexbar")
+        FileUtils.mkdir_p(legacy_dir)
+        legacy_config = TokenMaxx::Core::Config.default_config
+        legacy_config = with_provider_state(legacy_config, "zai", enabled: true)
+        legacy_config[:display][:selectedProvider] = "zai"
+        TokenMaxx::Core::Config.save_config(legacy_config, File.join(legacy_dir, "config.json"))
+
+        new_path = File.join(home, ".config", "tokenmaxx", "config.json")
+        config = TokenMaxx::Core::Config.init_config(new_path)
+
+        zai = config[:providers].find { |p| p[:id] == "zai" }
+        assert zai[:enabled], "config init must seed from the legacy config"
+        assert_equal "zai", config.dig(:display, :selectedProvider)
+      ensure
+        ENV["HOME"] = old_home
+      end
+    end
+  end
 end
