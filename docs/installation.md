@@ -128,6 +128,7 @@ Behavior on first run:
 
 - If `~/.config/tokenmaxx/config.json` does not exist and the legacy default config does, it is imported once. There is no fallback: the legacy path is never read again, and old files are left in place, not deleted.
 - An imported config that still carries the legacy default `runtime.stateDir` (`~/.local/state/codexbar`) is remapped to the new default. Custom stateDir values are preserved.
+- When the new state dir is first created, legacy state files (`snapshot.json`, `history.json`, `local_usage.json`, `status.json`, `ui.json`, `storage.json`, `notification_state.json`) are imported once, preserving quota history and local usage. Legacy lock files never migrate. There is no fallback and nothing is deleted.
 - An explicit `--config` path is never auto-imported; release checks and scripts stay hermetic.
 - `tokenmaxx omarchy remove` also removes bar modules installed under the legacy `codexbar` module id; `tokenmaxx omarchy install` writes the `tokenmaxx` id.
 

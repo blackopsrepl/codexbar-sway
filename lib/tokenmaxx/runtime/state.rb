@@ -272,7 +272,28 @@ module TokenMaxx
       end
 
       def ensure_state_dir(config)
-        FileUtils.mkdir_p(state_dir(config))
+        dir = state_dir(config)
+        return dir if File.directory?(dir)
+
+        # One-time import of pre-rebrand state (history, local usage, ui and
+        # notification state) when the state dir is first created. Locked to
+        # directory creation so a later delete never resurrects old files.
+        # *.json only: legacy daemon/refresh locks must never migrate. Old
+        # files are left in place, never deleted.
+        legacy_dir = File.join(Dir.home, ".local", "state", "codexbar")
+        legacy_files = dir == File.expand_path(legacy_dir) ? [] : Dir.glob(File.join(legacy_dir, "*.json"))
+
+        FileUtils.mkdir_p(dir)
+        legacy_files.each do |source|
+          target = File.join(dir, File.basename(source))
+          next if File.exist?(target)
+
+          temp = "#{target}.import.#{::Process.pid}"
+          FileUtils.cp(source, temp)
+          FileUtils.chmod(0o600, temp)
+          File.rename(temp, target)
+        end
+        dir
       end
 
       def ensure_ui_state(config)

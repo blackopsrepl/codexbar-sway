@@ -669,4 +669,58 @@ class RuntimeTest < Minitest::Test
     refute_nil history[:providers]
     assert_includes TokenMaxx::Runtime::Storage::PROVIDER_PATHS.keys, "ollama"
   end
+
+  def test_ensure_state_dir_imports_legacy_state_files_once
+    Dir.mktmpdir("tokenmaxx-state-migrate") do |home|
+      old_home = ENV["HOME"]
+      ENV["HOME"] = home
+      begin
+        legacy_dir = File.join(home, ".local", "state", "codexbar")
+        FileUtils.mkdir_p(legacy_dir)
+        history_payload = "{\"providers\":{}}"
+        File.write(File.join(legacy_dir, "history.json"), history_payload)
+        File.write(File.join(legacy_dir, "daemon.lock"), "12345\n")
+
+        config = build_config
+        config[:runtime][:stateDir] = File.join(home, ".local", "state", "tokenmaxx")
+
+        dir = TokenMaxx::Runtime::State.ensure_state_dir(config)
+
+        assert File.file?(File.join(dir, "history.json")), "history state was not imported"
+        assert_equal history_payload, File.read(File.join(dir, "history.json"))
+        assert_equal 0o600, File.stat(File.join(dir, "history.json")).mode & 0o777
+        refute File.file?(File.join(dir, "daemon.lock")), "legacy locks must never migrate"
+        assert File.file?(File.join(legacy_dir, "history.json")), "legacy files must be left in place"
+
+        # No-fallback semantics: after the import, removing the legacy dir
+        # must not affect the migrated state dir.
+        FileUtils.rm_rf(legacy_dir)
+        TokenMaxx::Runtime::State.ensure_ui_state(config)
+        assert File.file?(File.join(dir, "ui.json"))
+      ensure
+        ENV["HOME"] = old_home
+      end
+    end
+  end
+
+  def test_ensure_state_dir_never_imports_into_the_legacy_dir_itself
+    Dir.mktmpdir("tokenmaxx-state-legacy") do |home|
+      old_home = ENV["HOME"]
+      ENV["HOME"] = home
+      begin
+        legacy_dir = File.join(home, ".local", "state", "codexbar")
+        FileUtils.mkdir_p(legacy_dir)
+        File.write(File.join(legacy_dir, "snapshot.json"), "{}")
+
+        config = build_config
+        config[:runtime][:stateDir] = legacy_dir
+
+        TokenMaxx::Runtime::State.ensure_state_dir(config)
+
+        assert_equal ["snapshot.json"], Dir.glob(File.join(legacy_dir, "*.json")).map { |p| File.basename(p) }
+      ensure
+        ENV["HOME"] = old_home
+      end
+    end
+  end
 end
