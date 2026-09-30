@@ -1,13 +1,13 @@
 # Runtime Contracts
 
-CodexBar uses files and CLI commands as the boundary between the Ruby backend, QuickShell, and Waybar.
+TokenMaxx uses files and CLI commands as the boundary between the Ruby backend, QuickShell, and Waybar.
 
 ## Config
 
 Location:
 
 ```text
-~/.codexbar/config.json
+~/.config/tokenmaxx/config.json
 ```
 
 Important fields:
@@ -37,7 +37,7 @@ Important fields:
 Location:
 
 ```text
-~/.local/state/codexbar/snapshot.json
+~/.local/state/tokenmaxx/snapshot.json
 ```
 
 Current shape:
@@ -73,7 +73,7 @@ When a provider refresh fails after a successful sample, the daemon retains that
 All files live under `runtime.stateDir`, are owned by Ruby, and are written with `0600` permissions:
 
 - `status.json`: current external service state for Codex/OpenAI, Claude, and Gemini/Google Cloud.
-- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs plus Gemini CLI chat token summaries and OpenCode usage database summaries. Every provider summary can include a `models` map keyed by model id: Codex uses the session `turn_context` model, Claude the record `message.model`, and Gemini and OpenCode the source model id. Z.ai entries summarize Z.ai-routed assistant messages (`providerID` `zai-coding-plan`/`zai`) from the OpenCode usage database, Ollama Cloud entries summarize only assistant messages with `providerID` `ollama-cloud`, and OpenCode Go entries summarize only assistant messages with `providerID` `opencode-go`, so Z.ai and Ollama Cloud rows and other harness-routed providers are never attributed to OpenCode Go. Every provider summary also carries `sources`, the list of stores it covers (`codex-jsonl`, `claude-jsonl`, `gemini-jsonl`, `opencode-db`, and `hermes` when the Hermes usage database is readable and the provider is not excluded): a provider driven through Hermes is merged from `~/.hermes/state.db`'s `session_model_usage` rows on top of its CLI store, attributed by Hermes provider id through the mapping in `docs/providers.md`, so the two clients sum into one provider's totals, model rows, and days. The payload also carries `hermes` with `available`, `dbPath`, `note` (read failures), and `unattributedProviders` (records and tokens per Hermes provider id that deliberately maps to no CodexBar provider).
+- `local_usage.json`: exact local token/cost summaries from Codex and Claude logs plus Gemini CLI chat token summaries and OpenCode usage database summaries. Every provider summary can include a `models` map keyed by model id: Codex uses the session `turn_context` model, Claude the record `message.model`, and Gemini and OpenCode the source model id. Z.ai entries summarize Z.ai-routed assistant messages (`providerID` `zai-coding-plan`/`zai`) from the OpenCode usage database, Ollama Cloud entries summarize only assistant messages with `providerID` `ollama-cloud`, and OpenCode Go entries summarize only assistant messages with `providerID` `opencode-go`, so Z.ai and Ollama Cloud rows and other harness-routed providers are never attributed to OpenCode Go. Every provider summary also carries `sources`, the list of stores it covers (`codex-jsonl`, `claude-jsonl`, `gemini-jsonl`, `opencode-db`, and `hermes` when the Hermes usage database is readable and the provider is not excluded): a provider driven through Hermes is merged from `~/.hermes/state.db`'s `session_model_usage` rows on top of its CLI store, attributed by Hermes provider id through the mapping in `docs/providers.md`, so the two clients sum into one provider's totals, model rows, and days. The payload also carries `hermes` with `available`, `dbPath`, `note` (read failures), and `unattributedProviders` (records and tokens per Hermes provider id that deliberately maps to no TokenMaxx provider).
 - `history.json`: daily retained quota/local-usage summaries. Window providers keep primary/secondary/tertiary samples; Gemini meter providers keep per-model quota in `modelQuota` and model usage in `modelUsage` keyed by raw model id without synthesizing window lanes. Local-usage fields (tokens, records, cost, `modelUsage`) are re-merged from the current scan window on every update, so a corrected local scanner repairs already-retained days. Days with neither a quota sample nor local usage are omitted from the presenter's `historyDays`, so a provider with no samples yields the History empty state.
 - `storage.json`: optional provider storage footprint summaries.
 - `notification_state.json`: last notification state to prevent repeated alerts.
@@ -83,7 +83,7 @@ All files live under `runtime.stateDir`, are owned by Ruby, and are written with
 Location:
 
 ```text
-~/.local/state/codexbar/ui.json
+~/.local/state/tokenmaxx/ui.json
 ```
 
 Shape:
@@ -100,12 +100,12 @@ Ruby CLI commands write this file when opening, closing, or focusing the panel.
 
 ## Omarchy Shell Config
 
-CodexBar can mount its cached-state chip as an Omarchy shell bar module so the same contract works on Hyprland.
+TokenMaxx can mount its cached-state chip as an Omarchy shell bar module so the same contract works on Hyprland.
 
 Command:
 
 ```bash
-codexbar omarchy install|remove|status
+tokenmaxx omarchy install|remove|status
 ```
 
 Location:
@@ -114,17 +114,17 @@ Location:
 ~/.config/omarchy/shell.json
 ```
 
-`Runtime::Omarchy` is the only CodexBar writer of this file. `install` seeds the user file from the Omarchy defaults (`$OMARCHY_PATH/config/omarchy/shell.json`, defaulting to `/usr/share/omarchy/config/omarchy/shell.json`) when it is missing, then inserts one `codexbar` entry of `type: command` into `bar.layout`:
+`Runtime::Omarchy` is the only TokenMaxx writer of this file. `install` seeds the user file from the Omarchy defaults (`$OMARCHY_PATH/config/omarchy/shell.json`, defaulting to `/usr/share/omarchy/config/omarchy/shell.json`) when it is missing, then inserts one `tokenmaxx` entry of `type: command` into `bar.layout`:
 
 ```json
 {
-  "id": "codexbar",
+  "id": "tokenmaxx",
   "type": "command",
-  "exec": "<codexbar> waybar render",
+  "exec": "<tokenmaxx> waybar render",
   "interval": 10,
-  "onClick": "<codexbar> panel",
-  "onMiddleClick": "<codexbar> refresh",
-  "tooltip": "CodexBar agent quota chip (left: panel, middle: refresh)"
+  "onClick": "<tokenmaxx> panel",
+  "onMiddleClick": "<tokenmaxx> refresh",
+  "tooltip": "TokenMaxx agent quota chip (left: panel, middle: refresh)"
 }
 ```
 
@@ -135,7 +135,7 @@ Default placement is immediately after `omarchy.weather`; `--after`, `--section`
 Command:
 
 ```bash
-codexbar waybar render
+tokenmaxx waybar render
 ```
 
 Shape:
@@ -144,7 +144,7 @@ Shape:
 {
   "text": "CX 97%",
   "tooltip": "Display: Codex",
-  "class": ["codexbar", "provider-codex", "healthy"]
+  "class": ["tokenmaxx", "provider-codex", "healthy"]
 }
 ```
 
@@ -153,7 +153,7 @@ Waybar text omits pace/reserve/hot labels and pace classes; those remain modal-o
 
 ## Local Server
 
-`codexbar serve` exposes read-only cached JSON endpoints on `server.host:server.port`:
+`tokenmaxx serve` exposes read-only cached JSON endpoints on `server.host:server.port`:
 
 - `/health`
 - `/usage`

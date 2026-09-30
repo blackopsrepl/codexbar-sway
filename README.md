@@ -1,30 +1,30 @@
 <p align="center">
-  <img src="./codexbar-mascot.png" alt="CodexBar mascot" width="320" />
+  <img src="./tokenmaxx-mascot.png" alt="TokenMaxx mascot" width="320" />
 </p>
 
-# CodexBar
+# TokenMaxx
 
-CodexBar is a Linux-first quota bar for Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud. It is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete).
+TokenMaxx is a Linux-first quota bar for Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud. It is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete).
 
 The current product is a Ruby CLI/backend, a resident snapshot daemon, a compact Waybar JSON renderer, and one QuickShell panel. The supported runtime is Ruby + QuickShell + Waybar.
 
 <p align="center">
-  <img src="./codexbar.png" alt="CodexBar QuickShell panel showing Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama Cloud quota state" />
+  <img src="./tokenmaxx.png" alt="TokenMaxx QuickShell panel showing Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama Cloud quota state" />
 </p>
 
 ## Current Contract
 
 - Runtime language: Ruby.
 - Human-facing UI: `frontend/quickshell/shell.qml`.
-- Bar surface: Waybar calls `codexbar waybar render` and receives cached JSON.
-- Background fetch path: `codexbar daemon` fetches providers and writes snapshots.
-- State files: `snapshot.json` and `ui.json` under `runtime.stateDir`, defaulting to `~/.local/state/codexbar`.
-- Config file: `~/.codexbar/config.json`, current config version `5`.
+- Bar surface: Waybar calls `tokenmaxx waybar render` and receives cached JSON.
+- Background fetch path: `tokenmaxx daemon` fetches providers and writes snapshots.
+- State files: `snapshot.json` and `ui.json` under `runtime.stateDir`, defaulting to `~/.local/state/tokenmaxx`.
+- Config file: `~/.config/tokenmaxx/config.json`, current config version `5`.
 - Supported providers: `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama`.
 
 Provider fetches do not run inside Waybar. Waybar is only a render/action surface.
 
-The QuickShell panel is split into Overview, Provider Detail, History, and Settings views. It reads presenter data from `snapshot.json` and sends mutations back through the Ruby CLI. Provider toggles update config and the cached snapshot immediately; provider quota fetches happen through `codexbar daemon`, `codexbar refresh`, or `codexbar usage`.
+The QuickShell panel is split into Overview, Provider Detail, History, and Settings views. It reads presenter data from `snapshot.json` and sends mutations back through the Ruby CLI. Provider toggles update config and the cached snapshot immediately; provider quota fetches happen through `tokenmaxx daemon`, `tokenmaxx refresh`, or `tokenmaxx usage`.
 
 The Waybar chip shows compact provider quota percentages and health classes only. Pace labels such as `reserve` and `hot`, and peak/off-peak labels, stay out of the bar; they appear in the QuickShell panel, provider detail cards, and the Waybar tooltip.
 
@@ -38,29 +38,29 @@ Ollama Cloud quota is the account allowance reported by `https://ollama.com/api/
 
 ## Desktop Autostart
 
-CodexBar has two separate runtime pieces:
+TokenMaxx has two separate runtime pieces:
 
-- `codexbar daemon --config ~/.codexbar/config.json` refreshes provider quota state and writes `snapshot.json`.
-- `codexbar waybar render --config ~/.codexbar/config.json` reads that cached snapshot and returns Waybar JSON.
+- `tokenmaxx daemon --config ~/.config/tokenmaxx/config.json` refreshes provider quota state and writes `snapshot.json`.
+- `tokenmaxx waybar render --config ~/.config/tokenmaxx/config.json` reads that cached snapshot and returns Waybar JSON.
 
 Waybar does not refresh Codex, Claude, Gemini, OpenCode, or Z.ai by itself. If the daemon is not running after login or reboot, the Waybar chip can keep rendering, but it will render stale cached state. A desktop integration should therefore start and supervise the daemon at session startup.
 
-On SolverForge Linux, the managed Waybar integration starts companion daemons through `solverforge-waybar-companions-start`, launched from Sway `exec_always` beside Waybar. That launcher restarts `codexbar daemon` if an early boot-time refresh failure makes it exit.
+On SolverForge Linux, the managed Waybar integration starts companion daemons through `solverforge-waybar-companions-start`, launched from Sway `exec_always` beside Waybar. That launcher restarts `tokenmaxx daemon` if an early boot-time refresh failure makes it exit.
 
 ## Hyprland + Omarchy
 
 On a Hyprland desktop running the Omarchy shell, the Waybar chip mounts as a bar command module:
 
 ```bash
-codexbar omarchy install   # adds the codexbar module next to omarchy.weather
-codexbar omarchy status
-codexbar omarchy remove
+tokenmaxx omarchy install   # adds the tokenmaxx module next to omarchy.weather
+tokenmaxx omarchy status
+tokenmaxx omarchy remove
 ```
 
-`omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults when the user file does not exist yet, inserts a `type: command` module (default placement: `--after omarchy.weather`), and asks the running shell to reload its config. The module polls `codexbar waybar render` on an interval (`--interval`, default 10), opens the QuickShell panel on left click, and triggers a daemon refresh on middle click. The daemon itself is not started by the module; launch it at session startup, for example from Hyprland:
+`omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults when the user file does not exist yet, inserts a `type: command` module (default placement: `--after omarchy.weather`), and asks the running shell to reload its config. The module polls `tokenmaxx waybar render` on an interval (`--interval`, default 10), opens the QuickShell panel on left click, and triggers a daemon refresh on middle click. The daemon itself is not started by the module; launch it at session startup, for example from Hyprland:
 
 ```ini
-exec-once = codexbar daemon
+exec-once = tokenmaxx daemon
 ```
 
 The `waybar` chip contract is unchanged: Waybar on sway and the Omarchy shell on Hyprland both render the same cached-state JSON. The QuickShell panel follows the active Omarchy theme (live, via `theme/colors.toml`); outside Omarchy it keeps the built-in palette.
@@ -74,10 +74,10 @@ make configure-user
 
 By default this installs to:
 
-- app tree: `~/.local/share/codexbar`
-- CLI: `~/.local/bin/codexbar`
-- config: `~/.codexbar/config.json`
-- state: `~/.local/state/codexbar`
+- app tree: `~/.local/share/tokenmaxx`
+- CLI: `~/.local/bin/tokenmaxx`
+- config: `~/.config/tokenmaxx/config.json`
+- state: `~/.local/state/tokenmaxx`
 
 `make configure-user` creates the config if missing, preserves provider and display settings, and updates only `runtime.quickShellShell` to the installed QuickShell file.
 
@@ -94,32 +94,32 @@ That installs the checked-in wrapper used by the existing SolverForge Waybar mod
 Core commands:
 
 ```bash
-codexbar daemon
-codexbar refresh
-codexbar usage --provider codex,claude,gemini,opencode,zai,ollama --format json --pretty
-codexbar config validate
-codexbar waybar render
-codexbar omarchy install
-codexbar omarchy status
-codexbar omarchy remove
-codexbar panel
-codexbar ui open|close|toggle|status
+tokenmaxx daemon
+tokenmaxx refresh
+tokenmaxx usage --provider codex,claude,gemini,opencode,zai,ollama --format json --pretty
+tokenmaxx config validate
+tokenmaxx waybar render
+tokenmaxx omarchy install
+tokenmaxx omarchy status
+tokenmaxx omarchy remove
+tokenmaxx panel
+tokenmaxx ui open|close|toggle|status
 ```
 
 Provider controls:
 
 ```bash
-codexbar providers list
-codexbar providers activate codex
-codexbar providers deactivate claude
-codexbar providers show gemini
-codexbar providers hide gemini
-codexbar providers pin codex
-codexbar providers auto
-codexbar providers overview add claude
-codexbar providers overview remove claude
-codexbar providers allow-auto gemini
-codexbar providers block-auto gemini
+tokenmaxx providers list
+tokenmaxx providers activate codex
+tokenmaxx providers deactivate claude
+tokenmaxx providers show gemini
+tokenmaxx providers hide gemini
+tokenmaxx providers pin codex
+tokenmaxx providers auto
+tokenmaxx providers overview add claude
+tokenmaxx providers overview remove claude
+tokenmaxx providers allow-auto gemini
+tokenmaxx providers block-auto gemini
 ```
 
 `activate`, `deactivate`, `show`, `hide`, overview membership, and auto-select changes are local config/snapshot mutations. They do not synchronously fetch provider quota, so UI controls should feel immediate even when a provider credential path is slow or unavailable.
@@ -127,51 +127,51 @@ codexbar providers block-auto gemini
 Display controls:
 
 ```bash
-codexbar display status
-codexbar display used
-codexbar display remaining
-codexbar display mode both
-codexbar display mode percent
-codexbar display mode pace
+tokenmaxx display status
+tokenmaxx display used
+tokenmaxx display remaining
+tokenmaxx display mode both
+tokenmaxx display mode percent
+tokenmaxx display mode pace
 ```
 
 Runtime, status, and cached local intelligence:
 
 ```bash
-codexbar runtime status
-codexbar runtime cadence manual
-codexbar runtime cadence interval 120
-codexbar notifications enable
-codexbar privacy hide
-codexbar status
-codexbar cost
-codexbar history --format json --pretty
-codexbar storage
-codexbar cache clear status
-codexbar serve --host 127.0.0.1 --port 8765
+tokenmaxx runtime status
+tokenmaxx runtime cadence manual
+tokenmaxx runtime cadence interval 120
+tokenmaxx notifications enable
+tokenmaxx privacy hide
+tokenmaxx status
+tokenmaxx cost
+tokenmaxx history --format json --pretty
+tokenmaxx storage
+tokenmaxx cache clear status
+tokenmaxx serve --host 127.0.0.1 --port 8765
 ```
 
-`codexbar serve` exposes cached JSON at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`. It does not fetch providers from request handlers.
+`tokenmaxx serve` exposes cached JSON at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`. It does not fetch providers from request handlers.
 
 All providers are present in the default config, but provider entries default to disabled. Activate the providers this machine should fetch.
 
-`codexbar bar` remains in the codebase as a bounded legacy direct-bar command. It is not the release UI path.
+`tokenmaxx bar` remains in the codebase as a bounded legacy direct-bar command. It is not the release UI path.
 
 ## Source-Tree Development
 
 ```bash
-bin/codexbar config validate
-bin/codexbar waybar render
-bin/codexbar ui status --format json --pretty
+bin/tokenmaxx config validate
+bin/tokenmaxx waybar render
+bin/tokenmaxx ui status --format json --pretty
 ```
 
 Open the panel from the checkout:
 
 ```bash
 env QT_QPA_PLATFORM=wayland \
-  CODEXBAR_BIN=$PWD/bin/codexbar \
-  CODEXBAR_CONFIG=$HOME/.codexbar/config.json \
-  CODEXBAR_STATE_DIR=$HOME/.local/state/codexbar \
+  TOKENMAXX_BIN=$PWD/bin/tokenmaxx \
+  TOKENMAXX_CONFIG=$HOME/.config/tokenmaxx/config.json \
+  TOKENMAXX_STATE_DIR=$HOME/.local/state/tokenmaxx \
   quickshell --path $PWD/frontend/quickshell/shell.qml
 ```
 
@@ -188,7 +188,7 @@ The release surface is exactly:
 - `zai`
 - `ollama`
 
-Codex and Claude expose named quota windows. CodexBar identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud; every summary preserves per-model token totals when the source records a model (Codex from `turn_context`, Claude from `message.model`, Gemini from CLI chat logs, OpenCode Go, Z.ai, and Ollama Cloud from the OpenCode usage database).
+Codex and Claude expose named quota windows. TokenMaxx identifies Codex's five-hour and weekly windows from the durations returned by the Codex app-server rather than relying on response field order. A missing weekly window stays absent. On non-Pro ChatGPT plans, a missing five-hour value remains visibly unavailable in Waybar and QuickShell instead of being assigned a fabricated percentage; Pro displays only the returned account windows. Claude also exposes its Sonnet-specific tertiary window when present. Gemini exposes raw model-meter buckets such as `gemini-2.5-flash`, `gemini-2.5-pro`, and preview model buckets as returned by the Code Assist quota API. Local usage summaries cover Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud; every summary preserves per-model token totals when the source records a model (Codex from `turn_context`, Claude from `message.model`, Gemini from CLI chat logs, OpenCode Go, Z.ai, and Ollama Cloud from the OpenCode usage database).
 
 OpenCode Go exposes its five-hour rolling, weekly, and monthly allowance windows as returned by `https://opencode.ai/zen/go/v1/usage`. Percentages are used percentages, matching the OpenCode console. The five-hour, weekly, and monthly windows map to the primary, secondary, and tertiary lanes respectively; a missing window stays absent.
 
@@ -198,7 +198,7 @@ Ollama Cloud exposes the account allowance as normalized used fractions from `ht
 
 Retained history keeps each provider's shape: window providers store their primary/secondary/tertiary samples, Gemini stores per-model quota in `modelQuota` and model usage in `modelUsage`, and days with neither a quota sample nor local usage are omitted so the History view falls back to its empty state. The Overview renders every enabled, visible provider marked `showInOverview`; there is no fixed provider cap.
 
-Some providers bill by time of day. CodexBar labels the current peak/off-peak period per model from a static schedule table, because no provider API exposes the schedule. Z.ai's GLM Coding Plan is provider-wide (peak Mon-Fri 14:00-18:00 UTC+8, off-peak at 50% credits). Ollama Cloud and OpenCode Go are model-scoped: only their `deepseek-*` models are time-priced (Ollama peak Mon-Fri 12:00-18:00 UTC; DeepSeek peak Mon-Fri 01:00-04:00 and 06:00-10:00 UTC). Providers and models without time-of-day pricing report no peak state rather than a guess. Only standing recurring schedules are encoded; limited-time promotions are intentionally not tracked so a discount is never reported after it expires. Schedules are compiled into timezone-absolute transition timelines, so the indicator is identical from any timezone, flips exactly at each boundary, and shows the current window in your local time. See `docs/providers.md` for the schedule table and timezone handling.
+Some providers bill by time of day. TokenMaxx labels the current peak/off-peak period per model from a static schedule table, because no provider API exposes the schedule. Z.ai's GLM Coding Plan is provider-wide (peak Mon-Fri 14:00-18:00 UTC+8, off-peak at 50% credits). Ollama Cloud and OpenCode Go are model-scoped: only their `deepseek-*` models are time-priced (Ollama peak Mon-Fri 12:00-18:00 UTC; DeepSeek peak Mon-Fri 01:00-04:00 and 06:00-10:00 UTC). Providers and models without time-of-day pricing report no peak state rather than a guess. Only standing recurring schedules are encoded; limited-time promotions are intentionally not tracked so a discount is never reported after it expires. Schedules are compiled into timezone-absolute transition timelines, so the indicator is identical from any timezone, flips exactly at each boundary, and shows the current window in your local time. See `docs/providers.md` for the schedule table and timezone handling.
 
 Other providers are not part of this Linux release.
 

@@ -28,7 +28,7 @@ class OmarchyTest < Minitest::Test
   end
 
   def test_install_seeds_user_config_from_defaults_after_weather
-    result = CodexBar::Runtime::Omarchy.install(bin: fake_bin)
+    result = TokenMaxx::Runtime::Omarchy.install(bin: fake_bin)
 
     assert result[:installed]
     assert_equal "defaults", result[:seededFrom]
@@ -36,57 +36,57 @@ class OmarchyTest < Minitest::Test
     assert_equal 2, result[:index]
 
     center = read_user_shell.dig("bar", "layout", "center")
-    assert_equal %w[omarchy.clock omarchy.weather codexbar omarchy.system-update], ids(center)
+    assert_equal %w[omarchy.clock omarchy.weather tokenmaxx omarchy.system-update], ids(center)
   end
 
   def test_install_is_idempotent_and_updates_entry
-    CodexBar::Runtime::Omarchy.install(bin: fake_bin)
-    CodexBar::Runtime::Omarchy.install(bin: fake_bin, interval: 30)
+    TokenMaxx::Runtime::Omarchy.install(bin: fake_bin)
+    TokenMaxx::Runtime::Omarchy.install(bin: fake_bin, interval: 30)
 
     center = read_user_shell.dig("bar", "layout", "center")
-    assert_equal 1, ids(center).count("codexbar")
-    assert_equal 30, center.find { |item| item["id"] == "codexbar" }["interval"]
+    assert_equal 1, ids(center).count("tokenmaxx")
+    assert_equal 30, center.find { |item| item["id"] == "tokenmaxx" }["interval"]
   end
 
   def test_install_honors_explicit_section_and_index
-    result = CodexBar::Runtime::Omarchy.install(bin: fake_bin, section: "right", index: 1)
+    result = TokenMaxx::Runtime::Omarchy.install(bin: fake_bin, section: "right", index: 1)
 
     assert_equal "right", result[:section]
     assert_equal 1, result[:index]
     right = read_user_shell.dig("bar", "layout", "right")
-    assert_equal %w[omarchy.tray codexbar], ids(right)
+    assert_equal %w[omarchy.tray tokenmaxx], ids(right)
   end
 
   def test_install_rejects_index_beyond_section_length
     error = assert_raises(ArgumentError) do
-      CodexBar::Runtime::Omarchy.install(bin: fake_bin, section: "right", index: 5)
+      TokenMaxx::Runtime::Omarchy.install(bin: fake_bin, section: "right", index: 5)
     end
 
     assert_match(/out of range/, error.message)
-    refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
+    refute File.exist?(TokenMaxx::Runtime::Omarchy.shell_config_path)
   end
 
   def test_install_rejects_after_and_section_together
     error = assert_raises(ArgumentError) do
-      CodexBar::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.weather", section: "right")
+      TokenMaxx::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.weather", section: "right")
     end
 
     assert_match(/either after: or section:/, error.message)
-    refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
+    refute File.exist?(TokenMaxx::Runtime::Omarchy.shell_config_path)
   end
 
   def test_install_rejects_index_without_section
     error = assert_raises(ArgumentError) do
-      CodexBar::Runtime::Omarchy.install(bin: fake_bin, index: 1)
+      TokenMaxx::Runtime::Omarchy.install(bin: fake_bin, index: 1)
     end
 
     assert_match(/index requires section:/, error.message)
-    refute File.exist?(CodexBar::Runtime::Omarchy.shell_config_path)
+    refute File.exist?(TokenMaxx::Runtime::Omarchy.shell_config_path)
   end
 
   def test_cli_rejects_placement_flags_on_status
     error = capture_stderr do
-      CodexBar::CLI.run(["omarchy", "status", "--interval", "5"])
+      TokenMaxx::CLI.run(["omarchy", "status", "--interval", "5"])
     end
 
     assert_match(/omarchy status does not accept --interval/, error)
@@ -94,28 +94,28 @@ class OmarchyTest < Minitest::Test
 
   def test_cli_rejects_placement_flags_on_remove
     error = capture_stderr do
-      CodexBar::CLI.run(["omarchy", "remove", "--section", "right"])
+      TokenMaxx::CLI.run(["omarchy", "remove", "--section", "right"])
     end
 
     assert_match(/omarchy remove does not accept --section/, error)
   end
 
   def test_install_falls_back_to_center_end_for_unknown_anchor
-    result = CodexBar::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.does-not-exist")
+    result = TokenMaxx::Runtime::Omarchy.install(bin: fake_bin, after: "omarchy.does-not-exist")
 
     assert result[:fallback]
-    assert_equal "codexbar", ids(read_user_shell.dig("bar", "layout", "center")).last
+    assert_equal "tokenmaxx", ids(read_user_shell.dig("bar", "layout", "center")).last
   end
 
   def test_install_quotes_exec_paths_with_spaces
     @fake_bin_dir = Dir.mktmpdir
     spaced = File.join(@fake_bin_dir, "my tools")
     FileUtils.mkdir_p(spaced)
-    bin = File.join(spaced, "codexbar")
+    bin = File.join(spaced, "tokenmaxx")
     File.write(bin, "#!/bin/sh\nexit 0\n")
     File.chmod(0o755, bin)
 
-    CodexBar::Runtime::Omarchy.install(bin: bin)
+    TokenMaxx::Runtime::Omarchy.install(bin: bin)
 
     entry = module_entry
     escaped = Shellwords.escape(bin)
@@ -125,14 +125,14 @@ class OmarchyTest < Minitest::Test
   end
 
   def test_install_rejects_unknown_binary
-    error = assert_raises(RuntimeError) { CodexBar::Runtime::Omarchy.install(bin: "/nonexistent/codexbar") }
+    error = assert_raises(RuntimeError) { TokenMaxx::Runtime::Omarchy.install(bin: "/nonexistent/tokenmaxx") }
     assert_match(/not found or not executable/, error.message)
   end
 
   def test_remove_drops_module_and_keeps_neighbors
-    CodexBar::Runtime::Omarchy.install(bin: fake_bin)
+    TokenMaxx::Runtime::Omarchy.install(bin: fake_bin)
 
-    result = CodexBar::Runtime::Omarchy.remove
+    result = TokenMaxx::Runtime::Omarchy.remove
 
     assert result[:removed]
     center = read_user_shell.dig("bar", "layout", "center")
@@ -142,28 +142,50 @@ class OmarchyTest < Minitest::Test
   def test_remove_without_install_reports_not_installed
     write_user_shell(default_shell)
 
-    result = CodexBar::Runtime::Omarchy.remove
+    result = TokenMaxx::Runtime::Omarchy.remove
 
     refute result[:removed]
     assert_equal "module not installed", result[:reason]
   end
 
   def test_status_reflects_install_state
-    refute CodexBar::Runtime::Omarchy.status[:installed]
+    refute TokenMaxx::Runtime::Omarchy.status[:installed]
 
-    CodexBar::Runtime::Omarchy.install(bin: fake_bin)
-    status = CodexBar::Runtime::Omarchy.status
+    TokenMaxx::Runtime::Omarchy.install(bin: fake_bin)
+    status = TokenMaxx::Runtime::Omarchy.status
 
     assert status[:installed]
     assert_equal "center", status[:section]
-    assert_equal "codexbar", status[:entry]["id"]
+    assert_equal "tokenmaxx", status[:entry]["id"]
     assert_equal "command", status[:entry]["type"]
+  end
+
+  def test_remove_sweeps_legacy_codexbar_module_entries
+    shell = default_shell
+    shell[:bar][:layout][:center] << {
+      "id" => "codexbar", "type" => "command", "exec" => "codexbar waybar render"
+    }
+    write_user_shell(shell)
+
+    result = TokenMaxx::Runtime::Omarchy.remove
+
+    assert result[:removed]
+    center = read_user_shell.dig("bar", "layout", "center")
+    assert_equal %w[omarchy.clock omarchy.weather omarchy.system-update], ids(center)
+  end
+
+  def test_status_ignores_legacy_codexbar_module_entries
+    shell = default_shell
+    shell[:bar][:layout][:center] << { "id" => "codexbar", "type" => "command" }
+    write_user_shell(shell)
+
+    refute TokenMaxx::Runtime::Omarchy.status[:installed]
   end
 
   def test_install_preserves_other_user_config_keys
     write_user_shell("custom" => { "note" => "keep me" })
 
-    CodexBar::Runtime::Omarchy.install(bin: fake_bin)
+    TokenMaxx::Runtime::Omarchy.install(bin: fake_bin)
 
     assert_equal({ "note" => "keep me" }, read_user_shell["custom"])
   end
@@ -175,15 +197,15 @@ class OmarchyTest < Minitest::Test
   end
 
   def read_user_shell
-    JSON.parse(File.read(CodexBar::Runtime::Omarchy.shell_config_path))
+    JSON.parse(File.read(TokenMaxx::Runtime::Omarchy.shell_config_path))
   end
 
   def module_entry
-    read_user_shell.dig("bar", "layout", "center").find { |item| item["id"] == "codexbar" }
+    read_user_shell.dig("bar", "layout", "center").find { |item| item["id"] == "tokenmaxx" }
   end
 
   def write_user_shell(document)
-    path = CodexBar::Runtime::Omarchy.shell_config_path
+    path = TokenMaxx::Runtime::Omarchy.shell_config_path
     FileUtils.mkdir_p(File.dirname(path))
     File.write(path, JSON.pretty_generate(document))
   end
@@ -215,7 +237,7 @@ class OmarchyTest < Minitest::Test
 
   def fake_bin
     @fake_bin_dir = Dir.mktmpdir
-    path = File.join(@fake_bin_dir, "codexbar")
+    path = File.join(@fake_bin_dir, "tokenmaxx")
     File.write(path, "#!/bin/sh\nexit 0\n")
     File.chmod(0o755, path)
     path

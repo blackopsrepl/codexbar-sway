@@ -32,11 +32,11 @@ Install and rename-safety validation:
 make install
 make configure-user
 make install-solverforge-linux-integration
-readlink -f ~/.local/bin/codexbar
-codexbar config validate
-codexbar waybar render
-codexbar ui status --format json --pretty
-rg "<old checkout directory name>" ~/.codexbar ~/.local/bin ~/.local/share/solverforge
+readlink -f ~/.local/bin/tokenmaxx
+tokenmaxx config validate
+tokenmaxx waybar render
+tokenmaxx ui status --format json --pretty
+rg "<old checkout directory name>" ~/.config/tokenmaxx ~/.local/bin ~/.local/share/solverforge
 ```
 
 The final `rg` command must have no live integration hits. Use the actual old checkout directory name when running it.
@@ -55,7 +55,7 @@ Any hit for retired upstream product, packaging, or provider claims must be remo
 
 Before tagging, re-verify every peak/off-peak window against the vendor's current documentation. No supported provider API exposes the schedule and no runtime source can correct it, so this cannot be automated.
 
-1. Open each vendor's current pricing/plan documentation for the entries in `Core::Peak::SCHEDULES` (`lib/codexbar/core/peak.rb`).
+1. Open each vendor's current pricing/plan documentation for the entries in `Core::Peak::SCHEDULES` (`lib/tokenmaxx/core/peak.rb`).
 2. Confirm the peak weekday range, UTC start, and UTC end for every entry, and the model scope.
 3. If any window changed, update `Core::Peak::SCHEDULES` and the matching table in `docs/providers.md` in the same release.
 4. Re-check the boundaries in the machine's local zone (including DST and non-hour offsets) before finishing.
@@ -73,7 +73,7 @@ The release may claim support for exactly:
 - `zai`
 - `ollama`
 
-Provider behavior must match `lib/codexbar/providers/*`.
+Provider behavior must match `lib/tokenmaxx/providers/*`.
 
 ## Release Workflow
 
@@ -86,7 +86,7 @@ Provider behavior must match `lib/codexbar/providers/*`.
    commit-and-tag-version --release-as vX.Y.Z
    ```
 
-   The tool bumps `version.env` and the Codex app-server client identity in `lib/codexbar/providers/codex.rb`, regenerates `CHANGELOG.md`, creates the release commit, and tags it.
+   The tool bumps `version.env` and the Codex app-server client identity in `lib/tokenmaxx/providers/codex.rb`, regenerates `CHANGELOG.md`, creates the release commit, and tags it.
 
 5. Verify the release before publishing:
 
@@ -101,7 +101,7 @@ Provider behavior must match `lib/codexbar/providers/*`.
 
    ```bash
    make install
-   # restart codexbar daemon, then restart the panel and run: codexbar ui open
+   # restart tokenmaxx daemon, then restart the panel and run: tokenmaxx ui open
    ```
 
 7. Publish to both remotes and prove the remote state:

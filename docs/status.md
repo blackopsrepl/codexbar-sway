@@ -1,6 +1,6 @@
 # Status
 
-CodexBar tracks two status layers for the supported providers.
+TokenMaxx tracks two status layers for the supported providers.
 
 Provider health is still derived from quota fetch results:
 
@@ -20,8 +20,8 @@ External service status is cached in `status.json`:
 Use:
 
 ```bash
-codexbar status
-codexbar status --cached --format json --pretty
+tokenmaxx status
+tokenmaxx status --cached --format json --pretty
 ```
 
 Waybar and QuickShell consume the cached status through `snapshot.json`; they do not poll status feeds directly.

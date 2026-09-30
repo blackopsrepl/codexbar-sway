@@ -1,18 +1,18 @@
-# CodexBar CLI
+# TokenMaxx CLI
 
 Installed entrypoint:
 
 ```bash
-codexbar
+tokenmaxx
 ```
 
 Source-tree entrypoint:
 
 ```bash
-bin/codexbar
+bin/tokenmaxx
 ```
 
-Default config: `~/.codexbar/config.json`.
+Default config: `~/.config/tokenmaxx/config.json`.
 
 ## Global Flags
 
@@ -29,54 +29,54 @@ Default config: `~/.codexbar/config.json`.
 ## Commands
 
 ```bash
-codexbar usage
-codexbar refresh
-codexbar daemon
-codexbar panel
-codexbar ui open|close|toggle|status
-codexbar waybar render|refresh|panel|cycle-next|cycle-prev
-codexbar omarchy install|remove|status
-codexbar providers list
-codexbar providers activate <id>
-codexbar providers deactivate <id>
-codexbar providers show <id>
-codexbar providers hide <id>
-codexbar providers allow-auto <id>
-codexbar providers block-auto <id>
-codexbar providers overview add <id>
-codexbar providers overview remove <id>
-codexbar providers pin <id>
-codexbar providers auto
-codexbar display status
-codexbar display used
-codexbar display remaining
-codexbar display mode both|percent|pace
-codexbar config init
-codexbar config validate
-codexbar config dump
-codexbar open dashboard codex|claude|gemini|opencode|zai|ollama
-codexbar runtime status
-codexbar runtime cadence manual
-codexbar runtime cadence interval 60
-codexbar notifications status|enable|disable
-codexbar privacy status|hide|show
-codexbar status [--cached]
-codexbar cost [--cached]
-codexbar history
-codexbar storage [--cached]
-codexbar cache clear status|history|cost|storage|snapshot|notifications|all
-codexbar serve [--host 127.0.0.1] [--port 8765]
+tokenmaxx usage
+tokenmaxx refresh
+tokenmaxx daemon
+tokenmaxx panel
+tokenmaxx ui open|close|toggle|status
+tokenmaxx waybar render|refresh|panel|cycle-next|cycle-prev
+tokenmaxx omarchy install|remove|status
+tokenmaxx providers list
+tokenmaxx providers activate <id>
+tokenmaxx providers deactivate <id>
+tokenmaxx providers show <id>
+tokenmaxx providers hide <id>
+tokenmaxx providers allow-auto <id>
+tokenmaxx providers block-auto <id>
+tokenmaxx providers overview add <id>
+tokenmaxx providers overview remove <id>
+tokenmaxx providers pin <id>
+tokenmaxx providers auto
+tokenmaxx display status
+tokenmaxx display used
+tokenmaxx display remaining
+tokenmaxx display mode both|percent|pace
+tokenmaxx config init
+tokenmaxx config validate
+tokenmaxx config dump
+tokenmaxx open dashboard codex|claude|gemini|opencode|zai|ollama
+tokenmaxx runtime status
+tokenmaxx runtime cadence manual
+tokenmaxx runtime cadence interval 60
+tokenmaxx notifications status|enable|disable
+tokenmaxx privacy status|hide|show
+tokenmaxx status [--cached]
+tokenmaxx cost [--cached]
+tokenmaxx history
+tokenmaxx storage [--cached]
+tokenmaxx cache clear status|history|cost|storage|snapshot|notifications|all
+tokenmaxx serve [--host 127.0.0.1] [--port 8765]
 ```
 
-`codexbar bar` still exists as legacy direct-bar compatibility. The release path is QuickShell plus Waybar.
+`tokenmaxx bar` still exists as legacy direct-bar compatibility. The release path is QuickShell plus Waybar.
 
-`codexbar omarchy install` mounts the Waybar chip as an Omarchy shell bar command module in `~/.config/omarchy/shell.json`, by default after `omarchy.weather`; it seeds the user file from the Omarchy defaults when missing. Flags: `--after ID`, `--section left|center|right`, `--index N`, `--interval SECONDS` (default 10), `--exec PATH`. `omarchy status` reports the installed module, and `omarchy remove` drops it.
+`tokenmaxx omarchy install` mounts the Waybar chip as an Omarchy shell bar command module in `~/.config/omarchy/shell.json`, by default after `omarchy.weather`; it seeds the user file from the Omarchy defaults when missing. Flags: `--after ID`, `--section left|center|right`, `--index N`, `--interval SECONDS` (default 10), `--exec PATH`. `omarchy status` reports the installed module, and `omarchy remove` drops it.
 
-`codexbar serve` is read-only and serves cached state at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`.
+`tokenmaxx serve` is read-only and serves cached state at `/health`, `/usage`, `/status`, `/cost`, `/history`, and `/storage`.
 
 `--cached` avoids network or filesystem scans where a command supports an explicit refresh path.
 
-Provider activation, deactivation, show/hide, overview, and auto-select commands mutate local config and cached snapshot state immediately. They do not synchronously fetch provider quota; use `codexbar refresh` or `codexbar usage` for explicit provider fetches.
+Provider activation, deactivation, show/hide, overview, and auto-select commands mutate local config and cached snapshot state immediately. They do not synchronously fetch provider quota; use `tokenmaxx refresh` or `tokenmaxx usage` for explicit provider fetches.
 
 ## Supported Providers
 

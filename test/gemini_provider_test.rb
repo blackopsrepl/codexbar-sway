@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class GeminiProviderTest < Minitest::Test
   def test_oauth_client_is_read_from_bundled_gemini_cli_install
-    Dir.mktmpdir("codexbar-gemini-cli") do |dir|
+    Dir.mktmpdir("tokenmaxx-gemini-cli") do |dir|
       prefix = File.join(dir, "usr", "local")
       bin_dir = File.join(prefix, "bin")
       package_root = File.join(prefix, "lib", "node_modules", "@google", "gemini-cli")
@@ -22,7 +22,7 @@ class GeminiProviderTest < Minitest::Test
       File.symlink("../lib/node_modules/@google/gemini-cli/bundle/gemini.js", File.join(bin_dir, "gemini"))
 
       with_gemini_cli_path(File.join(bin_dir, "gemini")) do
-        client = CodexBar::Providers::Gemini.find_oauth_client
+        client = TokenMaxx::Providers::Gemini.find_oauth_client
         assert_equal "test-client.apps.googleusercontent.com", client[:clientId]
         assert_equal "test-secret", client[:clientSecret]
       end
@@ -30,7 +30,7 @@ class GeminiProviderTest < Minitest::Test
   end
 
   def test_quota_meters_preserve_each_model_bucket
-    meters = CodexBar::Providers::Gemini.quota_meters([
+    meters = TokenMaxx::Providers::Gemini.quota_meters([
       { modelId: "gemini-2.5-flash", remainingFraction: 1, resetTime: "2026-05-17T15:22:36Z" },
       { modelId: "gemini-2.5-pro", remainingFraction: 0, resetTime: "1970-01-01T00:00:00Z" },
       { modelId: "gemini-3.1-flash-lite-preview", remainingFraction: 0.998, resetTime: "2026-05-17T13:38:16Z" }
@@ -44,7 +44,7 @@ class GeminiProviderTest < Minitest::Test
   end
 
   def test_auth_type_prefers_selected_auth_type_and_flags_unsupported_quota_modes
-    provider = CodexBar::Providers::Gemini
+    provider = TokenMaxx::Providers::Gemini
 
     assert_equal "gemini-api-key", provider.gemini_auth_type(authType: "oauth-personal", selectedAuthType: "gemini-api-key")
     assert provider.unsupported_quota_auth_type?("gemini-api-key")
@@ -53,7 +53,7 @@ class GeminiProviderTest < Minitest::Test
   end
 
   def test_http_error_message_surfaces_api_reason_and_status
-    response = CodexBar::Core::Http::Response.new(
+    response = TokenMaxx::Core::Http::Response.new(
       status: 403,
       body: JSON.generate(
         error: {
@@ -68,7 +68,7 @@ class GeminiProviderTest < Minitest::Test
       headers: {}
     )
 
-    message = CodexBar::Providers::Gemini.http_error_message("Gemini quota request", response)
+    message = TokenMaxx::Providers::Gemini.http_error_message("Gemini quota request", response)
 
     assert_includes message, "Gemini quota request failed with HTTP 403"
     assert_includes message, "valid license"
@@ -76,14 +76,14 @@ class GeminiProviderTest < Minitest::Test
   end
 
   def test_http_error_message_falls_back_when_body_is_not_json
-    response = CodexBar::Core::Http::Response.new(status: 500, body: "<html>boom</html>", headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 500, body: "<html>boom</html>", headers: {})
 
     assert_equal "Gemini quota request failed with HTTP 500",
-                 CodexBar::Providers::Gemini.http_error_message("Gemini quota request", response)
+                 TokenMaxx::Providers::Gemini.http_error_message("Gemini quota request", response)
   end
 
   def test_project_id_extraction_accepts_string_and_hash_shapes
-    provider = CodexBar::Providers::Gemini
+    provider = TokenMaxx::Providers::Gemini
 
     assert_equal "project-a", provider.extract_project_id(cloudaicompanionProject: "project-a")
     assert_equal "project-b", provider.extract_project_id(cloudaicompanionProject: { id: "project-b" })

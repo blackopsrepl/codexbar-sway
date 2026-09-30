@@ -1,4 +1,4 @@
-# CodexBar Repo Wireframe
+# TokenMaxx Repo Wireframe
 
 ## Purpose
 
@@ -18,37 +18,37 @@ Codex and Claude expose named quota windows. Codex five-hour and weekly windows 
 
 Retained history follows the same provider shape. Window providers keep their primary/secondary/tertiary samples, model-meter providers keep per-model quota without copying model buckets into window lanes, and local-usage fields are re-merged from the current scan window so a corrected local scanner repairs already-retained days. Days with neither a quota sample nor local usage are omitted from the History view.
 
-Peak/off-peak rate state is declared per model in `lib/codexbar/core/peak.rb` from vendor-documented UTC schedules, because no provider API exposes the schedule: Z.ai is provider-wide, and Ollama Cloud and OpenCode Go apply only to their `deepseek-*` models. Providers and models without time-of-day pricing report no state rather than a guess. Only standing recurring schedules are encoded; limited-time promotions are not, so the label never reports a discount after it expires. Peak state surfaces on Overview cards, Provider Detail, model usage rows, model metric cards, and the Waybar tooltip, and never in the compact Waybar text or CSS classes. Schedules are compiled into the view as timezone-absolute `[epoch, state]` transitions; the panel resolves state and formats the current window against its own clock, so the badge is exact at every boundary, correct under DST and non-hour offsets, and shown in local time without repeating the schedule in QML.
+Peak/off-peak rate state is declared per model in `lib/tokenmaxx/core/peak.rb` from vendor-documented UTC schedules, because no provider API exposes the schedule: Z.ai is provider-wide, and Ollama Cloud and OpenCode Go apply only to their `deepseek-*` models. Providers and models without time-of-day pricing report no state rather than a guess. Only standing recurring schedules are encoded; limited-time promotions are not, so the label never reports a discount after it expires. Peak state surfaces on Overview cards, Provider Detail, model usage rows, model metric cards, and the Waybar tooltip, and never in the compact Waybar text or CSS classes. Schedules are compiled into the view as timezone-absolute `[epoch, state]` transitions; the panel resolves state and formats the current window against its own clock, so the badge is exact at every boundary, correct under DST and non-hour offsets, and shown in local time without repeating the schedule in QML.
 
 ## Repository Map
 
 ### Runtime
 
-- `bin/codexbar`: executable Ruby entrypoint.
-- `lib/codexbar.rb`: top-level load file.
-- `lib/codexbar/cli.rb`: command dispatcher and config mutation surface.
-- `lib/codexbar/core/`: config version 5, provider metadata, formatting, metrics, peak/off-peak schedules, process, HTTP.
-- `lib/codexbar/providers/`: Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama fetchers and registry.
-- `lib/codexbar/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
-- `lib/codexbar/runtime/status.rb`: external service status cache for the supported providers.
-- `lib/codexbar/runtime/local_usage.rb`: local Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud token usage scanner, attributing OpenCode database messages by provider id and merging the Hermes usage database into every provider its rows name.
-- `lib/codexbar/runtime/hermes_usage.rb`: Hermes `state.db` reader, mapping Hermes provider ids to CodexBar providers and accounting for rows that map to none.
-- `lib/codexbar/runtime/history.rb`: retained daily usage/history summaries, keeping model-meter quota in per-model maps rather than window lanes.
-- `lib/codexbar/runtime/storage.rb`: optional provider storage footprint scanner.
-- `lib/codexbar/runtime/notifications.rb`: quota and incident notification transitions.
-- `lib/codexbar/runtime/server.rb`: read-only cached localhost JSON server.
-- `lib/codexbar/runtime/state.rb`: `snapshot.json` and `ui.json` ownership.
-- `lib/codexbar/runtime/presenter.rb`: normalized view model for QuickShell and Waybar.
-- `lib/codexbar/runtime/quickshell.rb`: QuickShell process and UI-state control.
-- `lib/codexbar/runtime/waybar.rb`: cached Waybar render/action commands.
-- `lib/codexbar/runtime/omarchy.rb`: sole writer of the Omarchy shell bar module in `~/.config/omarchy/shell.json`.
-- `lib/codexbar/runtime/swaybar.rb`: bounded legacy direct-bar command, not the release UI.
+- `bin/tokenmaxx`: executable Ruby entrypoint.
+- `lib/tokenmaxx.rb`: top-level load file.
+- `lib/tokenmaxx/cli.rb`: command dispatcher and config mutation surface.
+- `lib/tokenmaxx/core/`: config version 5, provider metadata, formatting, metrics, peak/off-peak schedules, process, HTTP.
+- `lib/tokenmaxx/providers/`: Codex, Claude, Gemini, OpenCode, Z.ai, and Ollama fetchers and registry.
+- `lib/tokenmaxx/runtime/daemon.rb`: provider refresh loop and Waybar signaling.
+- `lib/tokenmaxx/runtime/status.rb`: external service status cache for the supported providers.
+- `lib/tokenmaxx/runtime/local_usage.rb`: local Codex, Claude, Gemini, OpenCode Go, Z.ai, and Ollama Cloud token usage scanner, attributing OpenCode database messages by provider id and merging the Hermes usage database into every provider its rows name.
+- `lib/tokenmaxx/runtime/hermes_usage.rb`: Hermes `state.db` reader, mapping Hermes provider ids to TokenMaxx providers and accounting for rows that map to none.
+- `lib/tokenmaxx/runtime/history.rb`: retained daily usage/history summaries, keeping model-meter quota in per-model maps rather than window lanes.
+- `lib/tokenmaxx/runtime/storage.rb`: optional provider storage footprint scanner.
+- `lib/tokenmaxx/runtime/notifications.rb`: quota and incident notification transitions.
+- `lib/tokenmaxx/runtime/server.rb`: read-only cached localhost JSON server.
+- `lib/tokenmaxx/runtime/state.rb`: `snapshot.json` and `ui.json` ownership.
+- `lib/tokenmaxx/runtime/presenter.rb`: normalized view model for QuickShell and Waybar.
+- `lib/tokenmaxx/runtime/quickshell.rb`: QuickShell process and UI-state control.
+- `lib/tokenmaxx/runtime/waybar.rb`: cached Waybar render/action commands.
+- `lib/tokenmaxx/runtime/omarchy.rb`: sole writer of the Omarchy shell bar module in `~/.config/omarchy/shell.json`.
+- `lib/tokenmaxx/runtime/swaybar.rb`: bounded legacy direct-bar command, not the release UI.
 - `frontend/quickshell/shell.qml`: panel UI.
 
 ### Install and Release
 
 - `Makefile`: install, configure, validation, smoke, and SolverForge integration targets.
-- `packaging/solverforge-linux/solverforge-waybar-codexbar`: checked-in source for the SolverForge Waybar wrapper.
+- `packaging/solverforge-linux/solverforge-waybar-tokenmaxx`: checked-in source for the SolverForge Waybar wrapper.
 - `bin/release-check`: canonical release validation script used by `make check`.
 - `version.env`: current release version metadata.
 - Release publication pushes `main` and release tags to both remotes: `git.local` (Forgejo at `vigilance:3002`) and `blackopsrepl` (GitHub).
@@ -71,18 +71,18 @@ The top-level release truth is `README.md`, `AGENTS.md`, `WIREFRAME.md`, and `do
 
 ## Runtime Flow
 
-1. User session or desktop starts `codexbar daemon --config ~/.codexbar/config.json`.
+1. User session or desktop starts `tokenmaxx daemon --config ~/.config/tokenmaxx/config.json`.
 2. The daemon reads enabled providers from config.
 3. Provider fetchers return raw usage payloads or explicit provider errors.
 4. Auxiliary runtime modules refresh due status, local-usage, storage, notification, and history caches.
 5. `Runtime::Usage` resolves the display provider, visible providers, overview providers, and auto-select candidates.
 6. `Runtime::Presenter` builds the normalized view model.
 7. `Runtime::State` writes `snapshot.json` under `runtime.stateDir`.
-8. Waybar calls `codexbar waybar render` and reads cached state only.
+8. Waybar calls `tokenmaxx waybar render` and reads cached state only.
 9. Waybar clicks call the wrapper, which opens the QuickShell panel or refreshes.
 10. QuickShell reads `snapshot.json` and `ui.json`, then sends mutations back through CLI commands.
 
-On a Hyprland/Omarchy desktop, step 8 runs through the `codexbar` module that `codexbar omarchy install` places in `~/.config/omarchy/shell.json`; the Omarchy shell invokes the same `codexbar waybar render` cached-state contract, and `Runtime::Omarchy` is the sole writer of that config.
+On a Hyprland/Omarchy desktop, step 8 runs through the `tokenmaxx` module that `tokenmaxx omarchy install` places in `~/.config/omarchy/shell.json`; the Omarchy shell invokes the same `tokenmaxx waybar render` cached-state contract, and `Runtime::Omarchy` is the sole writer of that config.
 
 Provider visibility, activation, overview membership, and auto-select commands update local config and rebuild cached snapshot state immediately. They do not synchronously fetch provider quota.
 
@@ -103,7 +103,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 
 ### Config
 
-- Default path: `~/.codexbar/config.json`.
+- Default path: `~/.config/tokenmaxx/config.json`.
 - Version: `5`.
 - Provider fields: `id`, `enabled`, `visible`, `showInOverview`, `allowAutoSelect`, `source`.
 - Display fields: `mergeIcons`, `showHighestUsage`, `showUsed`, `resetStyle`, `displayMode`, `metricPreferences`, `overviewProviders`, `selectedProvider`. `overviewProviders` is an ordering preference for the overview set, not a cap; every enabled, visible provider with `showInOverview` renders.
@@ -112,7 +112,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 
 ### Snapshot
 
-- Default path: `~/.local/state/codexbar/snapshot.json`.
+- Default path: `~/.local/state/tokenmaxx/snapshot.json`.
 - Owned by Ruby runtime.
 - Read by QuickShell and Waybar.
 - Contains enabled/visible/hidden/overview/auto-select provider lists, selected/display provider ids, provider results, and rendered view data.
@@ -121,7 +121,7 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 
 ### UI State
 
-- Default path: `~/.local/state/codexbar/ui.json`.
+- Default path: `~/.local/state/tokenmaxx/ui.json`.
 - Owned by Ruby CLI commands.
 - Read by QuickShell.
 - Tracks whether the panel is open and which provider should be focused.
@@ -130,37 +130,37 @@ Waybar is intentionally smaller than the modal: it renders provider icon, quota 
 
 ### Runtime Commands
 
-- `codexbar daemon`: run the resident refresh loop.
-- `codexbar refresh`: fetch once and signal Waybar.
-- `codexbar usage`: fetch usage directly for CLI output.
-- `codexbar panel`: open QuickShell.
-- `codexbar ui open|close|toggle|status`: control or inspect panel state.
-- `codexbar waybar render|refresh|panel|cycle-next|cycle-prev`: Waybar render and action hooks.
-- `codexbar omarchy install|remove|status`: mount or drop the cached-state chip as an Omarchy shell bar module.
-- `codexbar status|cost|history|storage`: auxiliary cached status and local intelligence.
-- `codexbar serve`: read-only local JSON endpoints.
+- `tokenmaxx daemon`: run the resident refresh loop.
+- `tokenmaxx refresh`: fetch once and signal Waybar.
+- `tokenmaxx usage`: fetch usage directly for CLI output.
+- `tokenmaxx panel`: open QuickShell.
+- `tokenmaxx ui open|close|toggle|status`: control or inspect panel state.
+- `tokenmaxx waybar render|refresh|panel|cycle-next|cycle-prev`: Waybar render and action hooks.
+- `tokenmaxx omarchy install|remove|status`: mount or drop the cached-state chip as an Omarchy shell bar module.
+- `tokenmaxx status|cost|history|storage`: auxiliary cached status and local intelligence.
+- `tokenmaxx serve`: read-only local JSON endpoints.
 
 ### Config Commands
 
-- `codexbar config init|validate`
-- `codexbar providers list|activate|deactivate|show|hide|allow-auto|block-auto|pin|auto`
-- `codexbar providers overview add|remove`
-- `codexbar display status|used|remaining|mode`
-- `codexbar runtime status|cadence`
-- `codexbar notifications status|enable|disable`
-- `codexbar privacy status|hide|show`
-- `codexbar cache clear ...`
-- `codexbar open dashboard codex|claude|gemini|opencode|zai|ollama`
+- `tokenmaxx config init|validate`
+- `tokenmaxx providers list|activate|deactivate|show|hide|allow-auto|block-auto|pin|auto`
+- `tokenmaxx providers overview add|remove`
+- `tokenmaxx display status|used|remaining|mode`
+- `tokenmaxx runtime status|cadence`
+- `tokenmaxx notifications status|enable|disable`
+- `tokenmaxx privacy status|hide|show`
+- `tokenmaxx cache clear ...`
+- `tokenmaxx open dashboard codex|claude|gemini|opencode|zai|ollama`
 
 ## Install Flow
 
-1. `make install` copies a manifest of release files into `~/.local/share/codexbar`.
-2. `make install` links `~/.local/bin/codexbar` to the installed entrypoint.
+1. `make install` copies a manifest of release files into `~/.local/share/tokenmaxx`.
+2. `make install` links `~/.local/bin/tokenmaxx` to the installed entrypoint.
 3. `make configure-user` creates config if missing.
 4. `make configure-user` preserves user provider/display settings and updates only `runtime.quickShellShell`.
 5. `make install-solverforge-linux-integration` installs the SolverForge wrapper only when explicitly requested.
-6. `make install` does not touch the Omarchy shell config. On a Hyprland/Omarchy desktop, `codexbar omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults if needed and inserts the `codexbar` command module; `codexbar omarchy remove` drops it.
-7. Restart `codexbar daemon` and the QuickShell panel after installing: the install swaps the installed directory, so running processes keep executing the previous code and file watchers do not fire (see "Restart After Install" in `docs/installation.md`).
+6. `make install` does not touch the Omarchy shell config. On a Hyprland/Omarchy desktop, `tokenmaxx omarchy install` seeds `~/.config/omarchy/shell.json` from the Omarchy defaults if needed and inserts the `tokenmaxx` command module; `tokenmaxx omarchy remove` drops it.
+7. Restart `tokenmaxx daemon` and the QuickShell panel after installing: the install swaps the installed directory, so running processes keep executing the previous code and file watchers do not fire (see "Restart After Install" in `docs/installation.md`).
 
 After install/configure, the live desktop must not depend on the checkout directory path.
 
@@ -182,7 +182,7 @@ Release cutting, deployment, and publication to both remotes follow the step-by-
 - no macOS runtime surface
 - no Homebrew, Sparkle, or WebKit release path
 - no Swift or TypeScript runtime
-- no alternate CodexBar product fallback
+- no alternate TokenMaxx product fallback
 - no providers outside the implemented Linux scope
 - no provider fetches from Waybar
 - no provider fetches from local server request handlers

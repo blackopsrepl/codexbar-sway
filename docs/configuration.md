@@ -1,9 +1,9 @@
 # Configuration
 
-CodexBar reads one JSON config file:
+TokenMaxx reads one JSON config file:
 
 ```text
-~/.codexbar/config.json
+~/.config/tokenmaxx/config.json
 ```
 
 The file is written with `0600` permissions.
@@ -73,10 +73,10 @@ The file is written with `0600` permissions.
     "refreshSeconds": 120,
     "refreshMode": "interval",
     "notificationCommand": "notify-send",
-    "stateDir": "/home/user/.local/state/codexbar",
+    "stateDir": "/home/user/.local/state/tokenmaxx",
     "waybarSignal": 9,
     "quickShellCommand": "quickshell",
-    "quickShellShell": "/home/user/.local/share/codexbar/frontend/quickshell/shell.qml"
+    "quickShellShell": "/home/user/.local/share/tokenmaxx/frontend/quickshell/shell.qml"
   },
   "status": {
     "enabled": true,
@@ -128,7 +128,7 @@ The file is written with `0600` permissions.
 - `status`: polls external service-status feeds for the supported providers.
 - `notifications`: controls quota and incident desktop notifications through `runtime.notificationCommand`.
 - `history`: retains daily cached quota/local-usage summaries.
-- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records. Z.ai and Ollama Cloud read their routed assistant messages from the OpenCode usage database; the coding plan reports no per-token cost. Every provider summary is cumulative across the clients that can drive it: the Hermes usage database is merged into each provider its rows name, and each summary carries a `sources` list naming the stores it covers. `localUsage.hermesSkipProviders` excludes specific providers from the Hermes merge, which is the documented remedy when a CLI already logs the same turns (for example Hermes driving the Codex app-server) or when an API key and a subscription share one Hermes provider id. The Hermes database path comes from `CODEXBAR_HERMES_DB`, else `HERMES_HOME/state.db`, else `~/.hermes/state.db`.
+- `localUsage`: scans local Codex, Claude, Gemini, and OpenCode logs for exact token records and Claude/OpenCode cost records. Z.ai and Ollama Cloud read their routed assistant messages from the OpenCode usage database; the coding plan reports no per-token cost. Every provider summary is cumulative across the clients that can drive it: the Hermes usage database is merged into each provider its rows name, and each summary carries a `sources` list naming the stores it covers. `localUsage.hermesSkipProviders` excludes specific providers from the Hermes merge, which is the documented remedy when a CLI already logs the same turns (for example Hermes driving the Codex app-server) or when an API key and a subscription share one Hermes provider id. The Hermes database path comes from `TOKENMAXX_HERMES_DB`, else `HERMES_HOME/state.db`, else `~/.hermes/state.db`.
 - `storage`: optionally scans local provider state directories for footprint summaries.
 - `privacy.hidePersonalInfo`: redacts account identity text in the UI.
 - `server`: controls the read-only cached JSON server.
@@ -141,5 +141,5 @@ Default provider entries are present but disabled; activate only the providers t
 Validate with:
 
 ```bash
-codexbar config validate
+tokenmaxx config validate
 ```

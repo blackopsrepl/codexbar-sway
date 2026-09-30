@@ -3,7 +3,7 @@
 require_relative "test_helper"
 
 class PeakTest < Minitest::Test
-  PEAK = CodexBar::Core::Peak
+  PEAK = TokenMaxx::Core::Peak
 
   def test_zai_peaks_weekdays_14_to_18_utc8
     # 2026-09-28 is a Monday. 06:00-10:00 UTC == 14:00-18:00 UTC+8.
@@ -61,7 +61,7 @@ class PeakTest < Minitest::Test
       "glm-5.3" => { modelId: "glm-5.3", totalTokens: 50, records: 1 }
     }
 
-    rows = CodexBar::Runtime::Presenter.model_usage_rows("opencode", models, now)
+    rows = TokenMaxx::Runtime::Presenter.model_usage_rows("opencode", models, now)
 
     assert_equal "peak", rows.find { |row| row[:modelId] == "deepseek-v4-pro" }[:peak][:state]
     assert_nil rows.find { |row| row[:modelId] == "glm-5.3" }[:peak]
@@ -80,9 +80,9 @@ class PeakTest < Minitest::Test
       }
     }
 
-    assert_nil CodexBar::Runtime::Presenter.provider_peak("opencode", {}, [], nil, now)
+    assert_nil TokenMaxx::Runtime::Presenter.provider_peak("opencode", {}, [], nil, now)
 
-    state = CodexBar::Runtime::Presenter.provider_peak("opencode", {}, [], local_usage, now)
+    state = TokenMaxx::Runtime::Presenter.provider_peak("opencode", {}, [], local_usage, now)
 
     assert_equal "peak", state[:state]
     assert_equal ["deepseek-v4.1-flash"], state[:models]
@@ -151,7 +151,7 @@ class PeakTest < Minitest::Test
     state = PEAK.model_state("zai", nil, Time.utc(2026, 9, 28, 7, 0))
 
     with_zone("Europe/Rome") do
-      card = CodexBar::Runtime::Presenter.peak_card(state)
+      card = TokenMaxx::Runtime::Presenter.peak_card(state)
 
       assert_equal "Rate period", card[:label]
       assert_equal "Peak", card[:value]
@@ -161,7 +161,7 @@ class PeakTest < Minitest::Test
   end
 
   def test_presenter_view_exposes_compiled_schedules
-    view = CodexBar::Runtime::Presenter.build_snapshot_view(build_config, { results: {}, overviewProviders: [] }, Time.utc(2026, 9, 28, 7, 0))
+    view = TokenMaxx::Runtime::Presenter.build_snapshot_view(build_config, { results: {}, overviewProviders: [] }, Time.utc(2026, 9, 28, 7, 0))
     schedules = view[:peakSchedules]
 
     assert schedules.key?("zai")

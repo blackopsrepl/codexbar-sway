@@ -19,10 +19,10 @@ The Linux release supports exactly:
   - `account/rateLimits/read`
 - Dashboard: `https://chatgpt.com/codex`
 
-CodexBar reads the `codex` entry from `rateLimitsByLimitId` when present and falls back to the backward-compatible `rateLimits` snapshot. It identifies the five-hour and weekly windows by their declared 300-minute and 10,080-minute durations instead of assuming that `primary` and `secondary` always retain fixed meanings. A missing weekly window remains absent. For non-Pro ChatGPT plans, an omitted five-hour value is surfaced as unavailable rather than converted into a fabricated percentage; Pro continues to expose only the windows returned for that account.
+TokenMaxx reads the `codex` entry from `rateLimitsByLimitId` when present and falls back to the backward-compatible `rateLimits` snapshot. It identifies the five-hour and weekly windows by their declared 300-minute and 10,080-minute durations instead of assuming that `primary` and `secondary` always retain fixed meanings. A missing weekly window remains absent. For non-Pro ChatGPT plans, an omitted five-hour value is surfaced as unavailable rather than converted into a fabricated percentage; Pro continues to expose only the windows returned for that account.
 
 There is no PTY fallback in the current Ruby implementation.
-Local token summaries are read from Codex session JSONL logs by `codexbar cost`; monetary cost is reported only when an exact cost exists in the source record. Token counts are attributed to the model declared by the session's `turn_context` records, so summaries preserve per-model token totals alongside the daily breakdown.
+Local token summaries are read from Codex session JSONL logs by `tokenmaxx cost`; monetary cost is reported only when an exact cost exists in the source record. Token counts are attributed to the model declared by the session's `turn_context` records, so summaries preserve per-model token totals alongside the daily breakdown.
 
 ## Claude
 
@@ -33,7 +33,7 @@ Local token summaries are read from Codex session JSONL logs by `codexbar cost`;
 - Dashboard: `https://claude.ai/`
 
 There is no browser-cookie, secret-store, or CLI scrape in the current Ruby implementation.
-Local token summaries are read from Claude project JSONL logs by `codexbar cost`; telemetry files are ignored. Token counts are attributed to each record's `message.model`, so summaries preserve per-model token totals alongside the daily breakdown.
+Local token summaries are read from Claude project JSONL logs by `tokenmaxx cost`; telemetry files are ignored. Token counts are attributed to each record's `message.model`, so summaries preserve per-model token totals alongside the daily breakdown.
 
 ## Gemini
 
@@ -63,7 +63,7 @@ API-key and Vertex auth modes are not supported for quota in the current indepen
 - Local usage source: `~/.local/share/opencode/opencode.db` (the OpenCode SQLite usage database).
 - Dashboard: `https://opencode.ai/`
 
-OpenCode Go exposes three subscription allowance windows as returned by the usage endpoint: `rolling` (five-hour), `weekly`, and `monthly`. Each window reports a used `percent` and a `resetsAt` timestamp. CodexBar maps `rolling` to the primary lane, `weekly` to the secondary lane, and `monthly` to the tertiary lane, matching the Codex window shape. Percentages are used percentages, matching the OpenCode console; a missing window stays absent.
+OpenCode Go exposes three subscription allowance windows as returned by the usage endpoint: `rolling` (five-hour), `weekly`, and `monthly`. Each window reports a used `percent` and a `resetsAt` timestamp. TokenMaxx maps `rolling` to the primary lane, `weekly` to the secondary lane, and `monthly` to the tertiary lane, matching the Codex window shape. Percentages are used percentages, matching the OpenCode console; a missing window stays absent.
 
 OpenCode Go local usage is read from assistant messages in the OpenCode usage database whose `providerID` is `opencode-go`, so usage driven through other providers in the same harness (for example OpenAI/ChatGPT, Moonshot/Kimi, or the free Zen models under `providerID` `opencode`) is not attributed to the subscription. Each message contributes its input, cached read/write, output, and reasoning tokens plus monetary cost to the message's activity date and model id. This preserves model switches and sessions that span multiple days. The scanner groups these message records in SQLite before Ruby summarizes them, keeping refreshes bounded even for larger databases. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
 
@@ -74,7 +74,7 @@ OpenCode Go local usage is read from assistant messages in the OpenCode usage da
 - Quota endpoint: `https://api.z.ai/api/monitor/usage/quota/limit`.
 - Dashboard: `https://z.ai/manage-apikey/coding-plan/personal/my-plan`
 
-Z.ai tracks the GLM Coding Plan subscription allowance, not pay-as-you-go API credit. The quota endpoint returns a `limits` array of used-percentage windows; CodexBar reads each `TOKENS_LIMIT`/`CREDIT_LIMIT` entry and maps the five-hour unit (3) to the primary lane and the weekly unit (6) to the secondary lane. A monthly `TIME_LIMIT` entry maps to the tertiary lane when the account returns one; a missing window stays absent. Reset times are returned as epoch milliseconds. The account plan tier is shown in the provider identity.
+Z.ai tracks the GLM Coding Plan subscription allowance, not pay-as-you-go API credit. The quota endpoint returns a `limits` array of used-percentage windows; TokenMaxx reads each `TOKENS_LIMIT`/`CREDIT_LIMIT` entry and maps the five-hour unit (3) to the primary lane and the weekly unit (6) to the secondary lane. A monthly `TIME_LIMIT` entry maps to the tertiary lane when the account returns one; a missing window stays absent. Reset times are returned as epoch milliseconds. The account plan tier is shown in the provider identity.
 
 Z.ai local usage is read from the OpenCode usage database, filtered to assistant messages whose provider is `zai-coding-plan` or `zai`; those messages are excluded from the OpenCode Go totals (which include only `providerID` `opencode-go`), so no usage is double-counted. The GLM Coding Plan reports no per-token cost, so the Z.ai cost total stays zero.
 
@@ -87,17 +87,17 @@ Z.ai local usage is read from the OpenCode usage database, filtered to assistant
 - Local usage source: `~/.local/share/opencode/opencode.db` (the OpenCode SQLite usage database).
 - Dashboard: `https://ollama.com/settings`
 
-Ollama Cloud exposes an authenticated account usage endpoint that reports allowance windows as normalized `0..1` used fractions, not token counts. Its shape depends on the account's plan: an account migrated to monthly credits returns a single `monthly` allowance (with per-model request counts), while an account still on the legacy plan returns `session` (five-hour) and `weekly` allowances. The two shapes are mutually exclusive per account, so a missing key simply yields no window. CodexBar maps the `monthly` allowance to the primary lane with the `Monthly`/`mo` labels, and the legacy `session` and `weekly` allowances to the primary and secondary lanes. The response carries no reset timestamps, so Ollama windows have no reset countdown or pace; a missing window stays absent. The usage endpoint does not return the plan tier, so the provider identity reports the fixed `Ollama Cloud` login method.
+Ollama Cloud exposes an authenticated account usage endpoint that reports allowance windows as normalized `0..1` used fractions, not token counts. Its shape depends on the account's plan: an account migrated to monthly credits returns a single `monthly` allowance (with per-model request counts), while an account still on the legacy plan returns `session` (five-hour) and `weekly` allowances. The two shapes are mutually exclusive per account, so a missing key simply yields no window. TokenMaxx maps the `monthly` allowance to the primary lane with the `Monthly`/`mo` labels, and the legacy `session` and `weekly` allowances to the primary and secondary lanes. The response carries no reset timestamps, so Ollama windows have no reset countdown or pace; a missing window stays absent. The usage endpoint does not return the plan tier, so the provider identity reports the fixed `Ollama Cloud` login method.
 
 Ollama Cloud local usage is read from assistant messages in the OpenCode usage database whose `providerID` is `ollama-cloud`, so usage routed through other providers in the same harness is not attributed to the account. Each message contributes its input, cached read/write, output, reasoning, and total tokens plus monetary cost to the message's activity date and model id. Reading requires the `sqlite3` binary; when it is unavailable the provider is reported as unsupported rather than fabricated.
 
 ## Hermes local usage
 
-Hermes Agent keeps its own accounting in `~/.hermes/state.db`: every API call it makes is booked in `session_model_usage`, keyed by session, model, `billing_provider`, route, mode, and task. Auxiliary work (title generation, approvals, background review) is recorded there under its own task id and is never folded into the per-session counters, so reading the table cannot double-count against anything else. CodexBar reads that table as an additional local usage source for the providers it can drive, so a provider used through Hermes is counted cumulatively with the same provider used through its own CLI.
+Hermes Agent keeps its own accounting in `~/.hermes/state.db`: every API call it makes is booked in `session_model_usage`, keyed by session, model, `billing_provider`, route, mode, and task. Auxiliary work (title generation, approvals, background review) is recorded there under its own task id and is never folded into the per-session counters, so reading the table cannot double-count against anything else. TokenMaxx reads that table as an additional local usage source for the providers it can drive, so a provider used through Hermes is counted cumulatively with the same provider used through its own CLI.
 
-Rows are attributed only when the Hermes provider id names the same product CodexBar meters:
+Rows are attributed only when the Hermes provider id names the same product TokenMaxx meters:
 
-| Hermes `billing_provider` | CodexBar provider |
+| Hermes `billing_provider` | TokenMaxx provider |
 | --- | --- |
 | `opencode-go` | `opencode` |
 | `zai` | `zai` |
@@ -117,13 +117,13 @@ Accounting rules:
 - Coverage, not row presence, decides a summary's `sources` entry: a provider the mapping feeds reports the Hermes source even when its Hermes traffic in the window is zero.
 - The store is read with the `sqlite3` binary, and a missing database is a no-op. When the database exists but cannot be read (missing `sqlite3`, or a query failure) the summary keeps its CLI source only and the payload records the reason in `localUsage.hermes.note`.
 
-Reads are bounded to the same `localUsage.scanDays` window as every other source, and `CODEXBAR_HERMES_DB` overrides the database path.
+Reads are bounded to the same `localUsage.scanDays` window as every other source, and `TOKENMAXX_HERMES_DB` overrides the database path.
 
 Browser-cookie scraping, WebKit probes, Keychain/libsecret integration, and providers outside `codex`, `claude`, `gemini`, `opencode`, `zai`, and `ollama` are out of scope for this release line.
 
 ## Peak / Off-Peak Rate Windows
 
-Some providers bill by time of day. CodexBar labels the current period per model from a static schedule table in `lib/codexbar/core/peak.rb`, because none of the supported provider APIs expose the schedule at runtime: the Ollama usage endpoint returns only fraction windows and the Z.ai quota endpoint only `limits[]`.
+Some providers bill by time of day. TokenMaxx labels the current period per model from a static schedule table in `lib/tokenmaxx/core/peak.rb`, because none of the supported provider APIs expose the schedule at runtime: the Ollama usage endpoint returns only fraction windows and the Z.ai quota endpoint only `limits[]`.
 
 | Provider | Time-priced models | Peak window (UTC) | Off-peak |
 | --- | --- | --- | --- |

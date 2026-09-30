@@ -9,7 +9,7 @@ class CodexProviderTest < Minitest::Test
       "--sandbox", "read-only",
       "--ask-for-approval", "never",
       "app-server", "--stdio"
-    ], CodexBar::Providers::Codex::RpcClient.command
+    ], TokenMaxx::Providers::Codex::RpcClient.command
   end
 
   def test_rate_limit_windows_are_classified_by_duration
@@ -22,7 +22,7 @@ class CodexProviderTest < Minitest::Test
       }
     }
 
-    windows = CodexBar::Providers::Codex.rate_limit_windows(response)
+    windows = TokenMaxx::Providers::Codex.rate_limit_windows(response)
 
     assert_same five_hour, windows[:primary]
     assert_same weekly, windows[:secondary]
@@ -31,7 +31,7 @@ class CodexProviderTest < Minitest::Test
   def test_lone_weekly_window_does_not_become_the_five_hour_window
     weekly = { usedPercent: 7, windowDurationMins: 10_080 }
 
-    windows = CodexBar::Providers::Codex.rate_limit_windows(
+    windows = TokenMaxx::Providers::Codex.rate_limit_windows(
       rateLimits: { primary: weekly, secondary: nil }
     )
 
@@ -42,13 +42,13 @@ class CodexProviderTest < Minitest::Test
   def test_non_pro_chatgpt_plan_marks_an_unreported_five_hour_window_unavailable
     windows = { primary: nil, secondary: { usedPercent: 7, windowDurationMins: 10_080 } }
 
-    assert_equal ["primary"], CodexBar::Providers::Codex.unavailable_windows(windows, "plus")
+    assert_equal ["primary"], TokenMaxx::Providers::Codex.unavailable_windows(windows, "plus")
   end
 
   def test_pro_plan_does_not_invent_an_unreported_five_hour_window
     windows = { primary: nil, secondary: { usedPercent: 7, windowDurationMins: 10_080 } }
 
-    assert_empty CodexBar::Providers::Codex.unavailable_windows(windows, "pro")
+    assert_empty TokenMaxx::Providers::Codex.unavailable_windows(windows, "pro")
   end
 
   def test_credits_are_absent_when_account_has_no_credit_balance
@@ -58,7 +58,7 @@ class CodexProviderTest < Minitest::Test
       }
     }
 
-    assert_nil CodexBar::Providers::Codex.make_credits(response)
+    assert_nil TokenMaxx::Providers::Codex.make_credits(response)
   end
 
   def test_credits_use_the_codex_limit_bucket
@@ -69,7 +69,7 @@ class CodexProviderTest < Minitest::Test
       }
     }
 
-    credits = CodexBar::Providers::Codex.make_credits(response)
+    credits = TokenMaxx::Providers::Codex.make_credits(response)
 
     assert_equal 2.5, credits[:remaining]
   end

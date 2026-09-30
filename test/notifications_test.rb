@@ -4,13 +4,13 @@ require_relative "test_helper"
 
 class NotificationsTest < Minitest::Test
   def test_notifications_fire_on_quota_warning_and_recovery_once
-    Dir.mktmpdir("codexbar-state") do |dir|
+    Dir.mktmpdir("tokenmaxx-state") do |dir|
       now = Time.now.utc
       config = build_config
       config[:runtime][:stateDir] = dir
       config[:notifications][:enabled] = true
       config = with_provider_state(config, "codex", enabled: true, visible: true)
-      warning_snapshot = CodexBar::Runtime::State.build_snapshot(
+      warning_snapshot = TokenMaxx::Runtime::State.build_snapshot(
         config,
         %w[codex],
         {
@@ -21,7 +21,7 @@ class NotificationsTest < Minitest::Test
         },
         now
       )
-      recovered_snapshot = CodexBar::Runtime::State.build_snapshot(
+      recovered_snapshot = TokenMaxx::Runtime::State.build_snapshot(
         config,
         %w[codex],
         {
@@ -34,10 +34,10 @@ class NotificationsTest < Minitest::Test
       )
       messages = []
 
-      CodexBar::Runtime::Notifications.stub(:notify, ->(_config, _title, message) { messages << message }) do
-        CodexBar::Runtime::Notifications.process(config, nil, warning_snapshot, now: now)
-        CodexBar::Runtime::Notifications.process(config, warning_snapshot, warning_snapshot, now: now)
-        CodexBar::Runtime::Notifications.process(config, warning_snapshot, recovered_snapshot, now: now)
+      TokenMaxx::Runtime::Notifications.stub(:notify, ->(_config, _title, message) { messages << message }) do
+        TokenMaxx::Runtime::Notifications.process(config, nil, warning_snapshot, now: now)
+        TokenMaxx::Runtime::Notifications.process(config, warning_snapshot, warning_snapshot, now: now)
+        TokenMaxx::Runtime::Notifications.process(config, warning_snapshot, recovered_snapshot, now: now)
       end
 
       assert_equal 2, messages.length

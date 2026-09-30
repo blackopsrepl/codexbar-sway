@@ -11,12 +11,12 @@ class OpencodeProviderTest < Minitest::Test
         monthly: { status: "ok", percent: 0, resetsAt: "2026-10-14T04:00:14.771Z" }
       }
     }
-    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
 
     result = nil
     with_temp_auth(key: "sk-test") do
-      CodexBar::Core::Http.stub(:request, response) do
-        result = CodexBar::Providers::Opencode.fetch(source: "auto")
+      TokenMaxx::Core::Http.stub(:request, response) do
+        result = TokenMaxx::Providers::Opencode.fetch(source: "auto")
       end
     end
 
@@ -36,32 +36,32 @@ class OpencodeProviderTest < Minitest::Test
   end
 
   def test_missing_windows_stay_absent_and_percent_is_clamped
-    assert_nil CodexBar::Providers::Opencode.make_window(nil, 300)
-    assert_nil CodexBar::Providers::Opencode.make_window({ status: "ok" }, 300)
-    assert_equal 100.0, CodexBar::Providers::Opencode.make_window({ percent: 140, resetsAt: "2026-09-14T09:04:57Z" }, 300)[:usedPercent]
-    assert_nil CodexBar::Providers::Opencode.make_window({ percent: 1, resetsAt: "1970-01-01T00:00:00Z" }, 300)[:resetsAt]
+    assert_nil TokenMaxx::Providers::Opencode.make_window(nil, 300)
+    assert_nil TokenMaxx::Providers::Opencode.make_window({ status: "ok" }, 300)
+    assert_equal 100.0, TokenMaxx::Providers::Opencode.make_window({ percent: 140, resetsAt: "2026-09-14T09:04:57Z" }, 300)[:usedPercent]
+    assert_nil TokenMaxx::Providers::Opencode.make_window({ percent: 1, resetsAt: "1970-01-01T00:00:00Z" }, 300)[:resetsAt]
   end
 
   def test_resolve_api_key_prefers_opencode_go_then_opencode
     with_temp_auth(key: "sk-go") do
-      assert_equal "sk-go", CodexBar::Providers::Opencode.resolve_api_key
+      assert_equal "sk-go", TokenMaxx::Providers::Opencode.resolve_api_key
     end
   end
 
   private
 
   def with_temp_auth(key:)
-    Dir.mktmpdir("codexbar-opencode") do |dir|
-      previous = ENV["CODEXBAR_OPENCODE_AUTH"]
+    Dir.mktmpdir("tokenmaxx-opencode") do |dir|
+      previous = ENV["TOKENMAXX_OPENCODE_AUTH"]
       path = File.join(dir, "auth.json")
       File.write(path, JSON.generate(
         "opencode-go" => { type: "api", key: key },
         "opencode" => { type: "api", key: "sk-fallback" }
       ))
-      ENV["CODEXBAR_OPENCODE_AUTH"] = path
+      ENV["TOKENMAXX_OPENCODE_AUTH"] = path
       yield path
     ensure
-      ENV["CODEXBAR_OPENCODE_AUTH"] = previous
+      ENV["TOKENMAXX_OPENCODE_AUTH"] = previous
     end
   end
 end

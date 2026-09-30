@@ -24,7 +24,7 @@ class LocalUsageTest < Minitest::Test
         }
       ])
 
-      summary = CodexBar::Runtime::LocalUsage.scan_codex(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_codex(Time.now.utc - 86_400)
 
       assert_equal 1, summary[:records]
       assert_equal 17, summary[:totalTokens]
@@ -58,7 +58,7 @@ class LocalUsageTest < Minitest::Test
         }
       ])
 
-      summary = CodexBar::Runtime::LocalUsage.scan_codex(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_codex(Time.now.utc - 86_400)
 
       assert_equal ["gpt-5.6-sol"], summary[:models].keys
       assert_equal 17, summary.dig(:models, "gpt-5.6-sol", :totalTokens)
@@ -83,7 +83,7 @@ class LocalUsageTest < Minitest::Test
         }
       ])
 
-      summary = CodexBar::Runtime::LocalUsage.scan_claude(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_claude(Time.now.utc - 86_400)
 
       assert_equal ["claude-sonnet-4-5"], summary[:models].keys
       assert_equal 31, summary.dig(:models, "claude-sonnet-4-5", :totalTokens)
@@ -110,7 +110,7 @@ class LocalUsageTest < Minitest::Test
       FileUtils.mkdir_p(File.dirname(telemetry_path))
       File.write(telemetry_path, JSON.generate(event_data: { additional_metadata: { last_session_total_input_tokens: 999 } }))
 
-      summary = CodexBar::Runtime::LocalUsage.scan_claude(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_claude(Time.now.utc - 86_400)
 
       assert_equal 1, summary[:records]
       assert_equal 31, summary[:totalTokens]
@@ -159,7 +159,7 @@ class LocalUsageTest < Minitest::Test
         }
       ])
 
-      summary = CodexBar::Runtime::LocalUsage.scan_gemini(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_gemini(Time.now.utc - 86_400)
 
       assert_equal true, summary[:supported]
       assert_equal 2, summary[:records]
@@ -199,7 +199,7 @@ class LocalUsageTest < Minitest::Test
       }
     ]
 
-    summary = CodexBar::Runtime::LocalUsage.summarize_opencode_messages(rows)
+    summary = TokenMaxx::Runtime::LocalUsage.summarize_opencode_messages(rows)
 
     assert_equal true, summary[:supported]
     assert_equal 2, summary[:records]
@@ -227,8 +227,8 @@ class LocalUsageTest < Minitest::Test
       end
     end
 
-    CodexBar::Core::Process.stub(:run_command, result) do
-      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14))
+    TokenMaxx::Core::Process.stub(:run_command, result) do
+      TokenMaxx::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14))
     end
 
     assert_equal 2, calls.length
@@ -239,26 +239,26 @@ class LocalUsageTest < Minitest::Test
   end
 
   def test_scan_opencode_returns_empty_summary_without_database
-    Dir.mktmpdir("codexbar-opencode") do |dir|
-      previous = ENV["CODEXBAR_OPENCODE_DB"]
-      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing.db")
+    Dir.mktmpdir("tokenmaxx-opencode") do |dir|
+      previous = ENV["TOKENMAXX_OPENCODE_DB"]
+      ENV["TOKENMAXX_OPENCODE_DB"] = File.join(dir, "missing.db")
 
-      summary = CodexBar::Runtime::LocalUsage.scan_opencode(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_opencode(Time.now.utc - 86_400)
 
       assert_equal true, summary[:supported]
       assert_equal 0, summary[:records]
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
   def test_opencode_db_path_uses_custom_home
     with_temp_home do |home|
-      previous = ENV.delete("CODEXBAR_OPENCODE_DB")
+      previous = ENV.delete("TOKENMAXX_OPENCODE_DB")
 
-      assert_equal File.join(home, ".local", "share", "opencode", "opencode.db"), CodexBar::Runtime::LocalUsage.opencode_db_path
+      assert_equal File.join(home, ".local", "share", "opencode", "opencode.db"), TokenMaxx::Runtime::LocalUsage.opencode_db_path
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
@@ -285,7 +285,7 @@ class LocalUsageTest < Minitest::Test
         ].join("\n")
       )
 
-      summary = CodexBar::Runtime::LocalUsage.scan_gemini(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_gemini(Time.now.utc - 86_400)
 
       assert_equal 1, summary[:records]
       assert_equal 3, summary[:totalTokens]
@@ -302,9 +302,9 @@ class LocalUsageTest < Minitest::Test
       end
     end
 
-    CodexBar::Core::Process.stub(:run_command, result) do
-      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :opencode_go_only)
-      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :zai_only)
+    TokenMaxx::Core::Process.stub(:run_command, result) do
+      TokenMaxx::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :opencode_go_only)
+      TokenMaxx::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :zai_only)
     end
 
     assert_includes calls[1].last, "json_extract(data, '$.providerID') = 'opencode-go'"
@@ -335,21 +335,21 @@ class LocalUsageTest < Minitest::Test
       end
     end
 
-    previous = ENV["CODEXBAR_OPENCODE_DB"]
-    Dir.mktmpdir("codexbar-opencode") do |dir|
+    previous = ENV["TOKENMAXX_OPENCODE_DB"]
+    Dir.mktmpdir("tokenmaxx-opencode") do |dir|
       db_path = File.join(dir, "opencode.db")
       File.write(db_path, "")
-      ENV["CODEXBAR_OPENCODE_DB"] = db_path
+      ENV["TOKENMAXX_OPENCODE_DB"] = db_path
       summary = nil
-      CodexBar::Core::Process.stub(:run_command, result) do
-        summary = CodexBar::Runtime::LocalUsage.scan_opencode(Time.now.utc - 86_400)
+      TokenMaxx::Core::Process.stub(:run_command, result) do
+        summary = TokenMaxx::Runtime::LocalUsage.scan_opencode(Time.now.utc - 86_400)
       end
 
       assert_equal "opencode", summary[:provider]
       assert_equal 150, summary[:totalTokens]
       assert_includes queries.last, "json_extract(data, '$.providerID') = 'opencode-go'"
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
@@ -375,14 +375,14 @@ class LocalUsageTest < Minitest::Test
       end
     end
 
-    previous = ENV["CODEXBAR_OPENCODE_DB"]
-    Dir.mktmpdir("codexbar-zai") do |dir|
+    previous = ENV["TOKENMAXX_OPENCODE_DB"]
+    Dir.mktmpdir("tokenmaxx-zai") do |dir|
       db_path = File.join(dir, "opencode.db")
       File.write(db_path, "")
-      ENV["CODEXBAR_OPENCODE_DB"] = db_path
+      ENV["TOKENMAXX_OPENCODE_DB"] = db_path
       summary = nil
-      CodexBar::Core::Process.stub(:run_command, result) do
-        summary = CodexBar::Runtime::LocalUsage.scan_zai(Time.now.utc - 86_400)
+      TokenMaxx::Core::Process.stub(:run_command, result) do
+        summary = TokenMaxx::Runtime::LocalUsage.scan_zai(Time.now.utc - 86_400)
       end
 
       assert_equal "zai", summary[:provider]
@@ -391,21 +391,21 @@ class LocalUsageTest < Minitest::Test
       assert_equal 315, summary[:totalTokens]
       assert_equal "glm-5.3-flash", summary[:models].keys.first
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
   def test_scan_zai_reports_supported_without_database
-    Dir.mktmpdir("codexbar-zai") do |dir|
-      previous = ENV["CODEXBAR_OPENCODE_DB"]
-      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing.db")
+    Dir.mktmpdir("tokenmaxx-zai") do |dir|
+      previous = ENV["TOKENMAXX_OPENCODE_DB"]
+      ENV["TOKENMAXX_OPENCODE_DB"] = File.join(dir, "missing.db")
 
-      summary = CodexBar::Runtime::LocalUsage.scan_zai(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_zai(Time.now.utc - 86_400)
 
       assert_equal true, summary[:supported]
       assert_equal 0, summary[:records]
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
@@ -420,8 +420,8 @@ class LocalUsageTest < Minitest::Test
       end
     end
 
-    CodexBar::Core::Process.stub(:run_command, result) do
-      CodexBar::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :ollama_cloud_only)
+    TokenMaxx::Core::Process.stub(:run_command, result) do
+      TokenMaxx::Runtime::LocalUsage.opencode_messages("/tmp/opencode.db", Time.utc(2026, 9, 14), providers: :ollama_cloud_only)
     end
 
     assert_includes calls.last.last, "json_extract(data, '$.providerID') = 'ollama-cloud'"
@@ -452,14 +452,14 @@ class LocalUsageTest < Minitest::Test
       end
     end
 
-    previous = ENV["CODEXBAR_OPENCODE_DB"]
-    Dir.mktmpdir("codexbar-ollama") do |dir|
+    previous = ENV["TOKENMAXX_OPENCODE_DB"]
+    Dir.mktmpdir("tokenmaxx-ollama") do |dir|
       db_path = File.join(dir, "opencode.db")
       File.write(db_path, "")
-      ENV["CODEXBAR_OPENCODE_DB"] = db_path
+      ENV["TOKENMAXX_OPENCODE_DB"] = db_path
       summary = nil
-      CodexBar::Core::Process.stub(:run_command, result) do
-        summary = CodexBar::Runtime::LocalUsage.scan_ollama(Time.now.utc - 86_400)
+      TokenMaxx::Core::Process.stub(:run_command, result) do
+        summary = TokenMaxx::Runtime::LocalUsage.scan_ollama(Time.now.utc - 86_400)
       end
 
       assert_equal "ollama", summary[:provider]
@@ -469,21 +469,21 @@ class LocalUsageTest < Minitest::Test
       assert_equal "deepseek-v4.1-flash", summary[:models].keys.first
       assert_includes queries.last, "json_extract(data, '$.providerID') = 'ollama-cloud'"
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
   def test_scan_ollama_reports_supported_without_database
-    Dir.mktmpdir("codexbar-ollama") do |dir|
-      previous = ENV["CODEXBAR_OPENCODE_DB"]
-      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing.db")
+    Dir.mktmpdir("tokenmaxx-ollama") do |dir|
+      previous = ENV["TOKENMAXX_OPENCODE_DB"]
+      ENV["TOKENMAXX_OPENCODE_DB"] = File.join(dir, "missing.db")
 
-      summary = CodexBar::Runtime::LocalUsage.scan_ollama(Time.now.utc - 86_400)
+      summary = TokenMaxx::Runtime::LocalUsage.scan_ollama(Time.now.utc - 86_400)
 
       assert_equal true, summary[:supported]
       assert_equal 0, summary[:records]
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous
     end
   end
 
@@ -502,7 +502,7 @@ class LocalUsageTest < Minitest::Test
         )
       ]
 
-      payload = stub_hermes_rows(rows) { CodexBar::Runtime::LocalUsage.refresh(config) }
+      payload = stub_hermes_rows(rows) { TokenMaxx::Runtime::LocalUsage.refresh(config) }
       opencode = payload[:providers]["opencode"]
 
       assert_equal %w[opencode-db hermes], opencode[:sources]
@@ -522,7 +522,7 @@ class LocalUsageTest < Minitest::Test
       assert_equal File.join(dir, "state.db"), payload[:hermes][:dbPath]
       assert_empty payload[:hermes][:unattributedProviders]
 
-      persisted = CodexBar::Runtime::State.read_local_usage(config)
+      persisted = TokenMaxx::Runtime::State.read_local_usage(config)
       assert_equal 3_110, persisted.dig(:providers, :opencode, :totalTokens)
       assert_equal %w[opencode-db hermes], persisted.dig(:providers, :opencode, :sources)
     end
@@ -530,7 +530,7 @@ class LocalUsageTest < Minitest::Test
 
   def test_refresh_records_only_the_base_source_when_hermes_is_unavailable
     with_local_usage_sandbox(hermes_db: false) do |config, _dir|
-      payload = CodexBar::Runtime::LocalUsage.refresh(config)
+      payload = TokenMaxx::Runtime::LocalUsage.refresh(config)
 
       assert_equal %w[opencode-db], payload[:providers]["opencode"][:sources]
       assert_equal 0, payload[:providers]["opencode"][:totalTokens]
@@ -545,7 +545,7 @@ class LocalUsageTest < Minitest::Test
         hermes_row(provider: "opencode-go", model: "deepseek-v4.1-flash", records: 4, input: 1_000, total: 1_000)
       ]
 
-      payload = stub_hermes_rows(rows) { CodexBar::Runtime::LocalUsage.refresh(config) }
+      payload = stub_hermes_rows(rows) { TokenMaxx::Runtime::LocalUsage.refresh(config) }
       opencode = payload[:providers]["opencode"]
 
       assert_equal %w[opencode-db], opencode[:sources]
@@ -561,7 +561,7 @@ class LocalUsageTest < Minitest::Test
         hermes_row(provider: "opencode-go", model: "deepseek-v4.1-flash", records: 3, input: 50, total: 50)
       ]
 
-      payload = stub_hermes_rows(rows) { CodexBar::Runtime::LocalUsage.refresh(config) }
+      payload = stub_hermes_rows(rows) { TokenMaxx::Runtime::LocalUsage.refresh(config) }
 
       assert_equal 5, payload.dig(:providers, "opencode", :records)
       assert_equal 1_050, payload.dig(:providers, "opencode", :totalTokens)
@@ -588,17 +588,17 @@ class LocalUsageTest < Minitest::Test
   # A config whose state dir, OpenCode database, and Hermes database are all
   # inside a temp dir, so a refresh never reads or writes the real machine.
   def with_local_usage_sandbox(hermes_db: true)
-    Dir.mktmpdir("codexbar-local-usage") do |dir|
-      previous_opencode = ENV["CODEXBAR_OPENCODE_DB"]
-      previous_hermes = ENV["CODEXBAR_HERMES_DB"]
-      ENV["CODEXBAR_OPENCODE_DB"] = File.join(dir, "missing-opencode.db")
+    Dir.mktmpdir("tokenmaxx-local-usage") do |dir|
+      previous_opencode = ENV["TOKENMAXX_OPENCODE_DB"]
+      previous_hermes = ENV["TOKENMAXX_HERMES_DB"]
+      ENV["TOKENMAXX_OPENCODE_DB"] = File.join(dir, "missing-opencode.db")
 
       hermes_path = File.join(dir, "state.db")
       if hermes_db
         File.write(hermes_path, "")
-        ENV["CODEXBAR_HERMES_DB"] = hermes_path
+        ENV["TOKENMAXX_HERMES_DB"] = hermes_path
       else
-        ENV["CODEXBAR_HERMES_DB"] = File.join(dir, "missing-hermes.db")
+        ENV["TOKENMAXX_HERMES_DB"] = File.join(dir, "missing-hermes.db")
       end
 
       with_temp_home do
@@ -607,8 +607,8 @@ class LocalUsageTest < Minitest::Test
         yield config, dir
       end
     ensure
-      ENV["CODEXBAR_OPENCODE_DB"] = previous_opencode
-      ENV["CODEXBAR_HERMES_DB"] = previous_hermes
+      ENV["TOKENMAXX_OPENCODE_DB"] = previous_opencode
+      ENV["TOKENMAXX_HERMES_DB"] = previous_hermes
     end
   end
 
@@ -622,7 +622,7 @@ class LocalUsageTest < Minitest::Test
     end
 
     payload = nil
-    CodexBar::Core::Process.stub(:run_command, result) { payload = yield }
+    TokenMaxx::Core::Process.stub(:run_command, result) { payload = yield }
     payload
   end
 end

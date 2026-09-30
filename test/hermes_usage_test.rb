@@ -3,9 +3,9 @@
 require_relative "test_helper"
 
 class HermesUsageTest < Minitest::Test
-  HERMES = CodexBar::Runtime::HermesUsage
+  HERMES = TokenMaxx::Runtime::HermesUsage
 
-  def test_maps_only_the_products_codexbar_meters
+  def test_maps_only_the_products_tokenmaxx_meters
     assert_equal "opencode", HERMES::PROVIDER_MAP["opencode-go"]
     assert_equal "zai", HERMES::PROVIDER_MAP["zai"]
     assert_equal "ollama", HERMES::PROVIDER_MAP["ollama-cloud"]
@@ -14,9 +14,9 @@ class HermesUsageTest < Minitest::Test
     assert_equal "gemini", HERMES::PROVIDER_MAP["gemini"]
   end
 
-  def test_products_codexbar_does_not_meter_stay_unmapped
+  def test_products_tokenmaxx_does_not_meter_stay_unmapped
     %w[opencode opencode-zen openai-api openai ollama vertex deepseek xai alibaba bedrock lmstudio].each do |billing|
-      assert_nil HERMES::PROVIDER_MAP[billing], "#{billing} must not be attributed to a CodexBar provider"
+      assert_nil HERMES::PROVIDER_MAP[billing], "#{billing} must not be attributed to a TokenMaxx provider"
     end
   end
 
@@ -55,8 +55,8 @@ class HermesUsageTest < Minitest::Test
   end
 
   def test_read_reports_unavailable_without_a_database
-    Dir.mktmpdir("codexbar-hermes") do |dir|
-      with_env("CODEXBAR_HERMES_DB", File.join(dir, "missing.db")) do
+    Dir.mktmpdir("tokenmaxx-hermes") do |dir|
+      with_env("TOKENMAXX_HERMES_DB", File.join(dir, "missing.db")) do
         result = HERMES.read(Time.now.utc - 86_400)
 
         assert_equal false, result[:available]
@@ -69,7 +69,7 @@ class HermesUsageTest < Minitest::Test
 
   def test_read_reports_a_note_when_sqlite_is_unavailable
     with_hermes_db do |_path|
-      CodexBar::Core::Process.stub(:run_command, ->(*_args, **_options) { raise Errno::ENOENT }) do
+      TokenMaxx::Core::Process.stub(:run_command, ->(*_args, **_options) { raise Errno::ENOENT }) do
         result = HERMES.read(Time.now.utc - 86_400)
 
         assert_equal false, result[:available]
@@ -80,7 +80,7 @@ class HermesUsageTest < Minitest::Test
 
   def test_read_reports_a_note_when_the_query_fails
     with_hermes_db do |_path|
-      CodexBar::Core::Process.stub(:run_command, ->(*_args, **_options) { { exitCode: 1, stdout: "", stderr: "no such table" } }) do
+      TokenMaxx::Core::Process.stub(:run_command, ->(*_args, **_options) { { exitCode: 1, stdout: "", stderr: "no such table" } }) do
         result = HERMES.read(Time.now.utc - 86_400)
 
         assert_equal false, result[:available]
@@ -101,7 +101,7 @@ class HermesUsageTest < Minitest::Test
   end
 
   def test_db_path_follows_environment_overrides
-    with_env("CODEXBAR_HERMES_DB", nil) do
+    with_env("TOKENMAXX_HERMES_DB", nil) do
       with_env("HERMES_HOME", "/srv/hermes-home") do
         assert_equal "/srv/hermes-home/state.db", HERMES.db_path
       end
@@ -110,7 +110,7 @@ class HermesUsageTest < Minitest::Test
           assert_equal File.join(home, ".hermes", "state.db"), HERMES.db_path
         end
       end
-      assert_equal "/tmp/explicit.db", with_env("CODEXBAR_HERMES_DB", "/tmp/explicit.db") { HERMES.db_path }
+      assert_equal "/tmp/explicit.db", with_env("TOKENMAXX_HERMES_DB", "/tmp/explicit.db") { HERMES.db_path }
     end
   end
 
@@ -120,7 +120,7 @@ class HermesUsageTest < Minitest::Test
     recent = now - 3_600
     stale = now - (10 * 86_400)
 
-    Dir.mktmpdir("codexbar-hermes") do |dir|
+    Dir.mktmpdir("tokenmaxx-hermes") do |dir|
       path = File.join(dir, "state.db")
       build_state_database(
         path,
@@ -147,7 +147,7 @@ class HermesUsageTest < Minitest::Test
         ]
       )
 
-      with_env("CODEXBAR_HERMES_DB", path) do
+      with_env("TOKENMAXX_HERMES_DB", path) do
         # A two-day window excludes the ten-day-old session below.
         result = HERMES.read(now - (2 * 86_400))
         day = recent.utc.strftime("%Y-%m-%d")
@@ -189,10 +189,10 @@ class HermesUsageTest < Minitest::Test
   end
 
   def with_hermes_db
-    Dir.mktmpdir("codexbar-hermes") do |dir|
+    Dir.mktmpdir("tokenmaxx-hermes") do |dir|
       path = File.join(dir, "state.db")
       File.write(path, "")
-      with_env("CODEXBAR_HERMES_DB", path) { yield path }
+      with_env("TOKENMAXX_HERMES_DB", path) { yield path }
     end
   end
 
@@ -205,7 +205,7 @@ class HermesUsageTest < Minitest::Test
       end
     end
 
-    CodexBar::Core::Process.stub(:run_command, result) { yield }
+    TokenMaxx::Core::Process.stub(:run_command, result) { yield }
   end
 
   def with_env(name, value)
@@ -225,7 +225,7 @@ class HermesUsageTest < Minitest::Test
   end
 
   def skip_without_sqlite3
-    path = CodexBar::Core::Process.executable_path("sqlite3")
+    path = TokenMaxx::Core::Process.executable_path("sqlite3")
     skip("sqlite3 is unavailable") if path.to_s.strip.empty?
   end
 
@@ -280,7 +280,7 @@ class HermesUsageTest < Minitest::Test
       #{usage_rows.join("\n")}
     SQL
 
-    result = CodexBar::Core::Process.run_command("sqlite3", [path, sql])
+    result = TokenMaxx::Core::Process.run_command("sqlite3", [path, sql])
     assert_equal 0, result[:exitCode], "fixture state database failed to build: #{result[:stderr]}"
   end
 end

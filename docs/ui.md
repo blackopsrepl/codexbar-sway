@@ -1,13 +1,13 @@
 # UI
 
-CodexBar has one human-facing UI: `frontend/quickshell/shell.qml`.
+TokenMaxx has one human-facing UI: `frontend/quickshell/shell.qml`.
 
 ## Waybar Chip
 
 Waybar calls:
 
 ```bash
-codexbar waybar render
+tokenmaxx waybar render
 ```
 
 The payload includes:

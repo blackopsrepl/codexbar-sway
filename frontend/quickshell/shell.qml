@@ -9,9 +9,9 @@ import Quickshell.Io
 ShellRoot {
     id: root
 
-    property string configPath: Quickshell.env("CODEXBAR_CONFIG") || ((Quickshell.env("HOME") || "") + "/.codexbar/config.json")
-    property string stateDir: Quickshell.env("CODEXBAR_STATE_DIR") || ((Quickshell.env("HOME") || "") + "/.local/state/codexbar")
-    property string codexbarBin: Quickshell.env("CODEXBAR_BIN") || "codexbar"
+    property string configPath: Quickshell.env("TOKENMAXX_CONFIG") || ((Quickshell.env("HOME") || "") + "/.config/tokenmaxx/config.json")
+    property string stateDir: Quickshell.env("TOKENMAXX_STATE_DIR") || ((Quickshell.env("HOME") || "") + "/.local/state/tokenmaxx")
+    property string tokenmaxxBin: Quickshell.env("TOKENMAXX_BIN") || "tokenmaxx"
     property string snapshotPath: stateDir + "/snapshot.json"
     property string uiPath: stateDir + "/ui.json"
     property string textFont: "Fira Code"
@@ -368,8 +368,8 @@ ShellRoot {
         return root.theme.border
     }
 
-    function runCodexbar(args) {
-        var command = [root.codexbarBin].concat(args).concat(["--config", root.configPath])
+    function runTokenMaxx(args) {
+        var command = [root.config/tokenmaxxBin].concat(args).concat(["--config", root.configPath])
         if (actionRunner.running) {
             if (actionRunner.queue.length < 8) {
                 actionRunner.queue.push(command)
@@ -428,7 +428,7 @@ ShellRoot {
     }
 
     function cacheCommand(target) {
-        runCodexbar(["cache", "clear", target])
+        runTokenMaxx(["cache", "clear", target])
     }
 
     function compactJoin(parts) {
@@ -496,11 +496,11 @@ ShellRoot {
     }
 
     function providerCommand(action, providerId) {
-        runCodexbar(["providers", action, providerId])
+        runTokenMaxx(["providers", action, providerId])
     }
 
     function overviewCommand(action, providerId) {
-        runCodexbar(["providers", "overview", action, providerId])
+        runTokenMaxx(["providers", "overview", action, providerId])
     }
 
     function displayCommand(action, value) {
@@ -508,7 +508,7 @@ ShellRoot {
         if (value) {
             args.push(value)
         }
-        runCodexbar(args)
+        runTokenMaxx(args)
     }
 
     function runtimeCommand(mode, seconds) {
@@ -516,15 +516,15 @@ ShellRoot {
         if (seconds) {
             args.push(seconds)
         }
-        runCodexbar(args)
+        runTokenMaxx(args)
     }
 
     function notificationCommand(enabled) {
-        runCodexbar(["notifications", enabled ? "enable" : "disable"])
+        runTokenMaxx(["notifications", enabled ? "enable" : "disable"])
     }
 
     function privacyCommand(hidden) {
-        runCodexbar(["privacy", hidden ? "hide" : "show"])
+        runTokenMaxx(["privacy", hidden ? "hide" : "show"])
     }
 
     Process {
@@ -1353,7 +1353,7 @@ ShellRoot {
                                         spacing: 2
 
                                         Label {
-                                            text: viewData.summary && viewData.summary.displayLabel ? ("CodexBar / " + viewData.summary.displayLabel) : "CodexBar"
+                                            text: viewData.summary && viewData.summary.displayLabel ? ("TokenMaxx / " + viewData.summary.displayLabel) : "TokenMaxx"
                                             color: root.theme.text
                                             font.family: root.textFont
                                             font.pixelSize: root.dense ? 15 : 18
@@ -1422,7 +1422,7 @@ ShellRoot {
                                     accent: root.theme.good
                                     compact: true
                                     minimumWidth: 34
-                                    onClicked: root.runCodexbar(["refresh"])
+                                    onClicked: root.runTokenMaxx(["refresh"])
                                 }
 
                                 CodexButton {
@@ -1750,7 +1750,7 @@ ShellRoot {
                                                 glyph: root.glyphs.refresh
                                                 accent: root.theme.good
                                                 compact: true
-                                                onClicked: root.runCodexbar(["refresh"])
+                                                onClicked: root.runTokenMaxx(["refresh"])
                                             }
                                         }
                                     }
@@ -2418,7 +2418,7 @@ ShellRoot {
 
                                         CodexButton { Layout.fillWidth: true; text: viewData.summary.notificationsLabel === "Notify on" ? "Notify Off" : "Notify On"; glyph: root.glyphs.bell; accent: viewData.summary.notificationsLabel === "Notify on" ? root.theme.info : root.theme.textMuted; compact: true; onClicked: root.notificationCommand(viewData.summary.notificationsLabel !== "Notify on") }
                                         CodexButton { Layout.fillWidth: true; text: viewData.summary.privacyLabel === "Privacy on" ? "Show ID" : "Hide ID"; glyph: root.glyphs.privacy; accent: viewData.summary.privacyLabel === "Privacy on" ? root.theme.warn : root.theme.textMuted; compact: true; onClicked: root.privacyCommand(viewData.summary.privacyLabel !== "Privacy on") }
-                                        CodexButton { Layout.fillWidth: true; text: "Status"; glyph: root.glyphs.status; accent: root.theme.info; compact: true; onClicked: root.runCodexbar(["status"]) }
+                                        CodexButton { Layout.fillWidth: true; text: "Status"; glyph: root.glyphs.status; accent: root.theme.info; compact: true; onClicked: root.runTokenMaxx(["status"]) }
                                     }
                                 }
                             }
@@ -2435,9 +2435,9 @@ ShellRoot {
                                 columnSpacing: 8
                                 rowSpacing: 8
 
-                                CodexButton { Layout.fillWidth: true; text: "Usage Scan"; glyph: root.glyphs.cost; accent: root.theme.warn; compact: true; onClicked: root.runCodexbar(["cost"]) }
-                                CodexButton { Layout.fillWidth: true; text: "Storage Scan"; glyph: root.glyphs.storage; accent: root.theme.info; compact: true; onClicked: root.runCodexbar(["storage"]) }
-                                CodexButton { Layout.fillWidth: true; text: "Refresh Now"; glyph: root.glyphs.refresh; accent: root.theme.good; compact: true; onClicked: root.runCodexbar(["refresh"]) }
+                                CodexButton { Layout.fillWidth: true; text: "Usage Scan"; glyph: root.glyphs.cost; accent: root.theme.warn; compact: true; onClicked: root.runTokenMaxx(["cost"]) }
+                                CodexButton { Layout.fillWidth: true; text: "Storage Scan"; glyph: root.glyphs.storage; accent: root.theme.info; compact: true; onClicked: root.runTokenMaxx(["storage"]) }
+                                CodexButton { Layout.fillWidth: true; text: "Refresh Now"; glyph: root.glyphs.refresh; accent: root.theme.good; compact: true; onClicked: root.runTokenMaxx(["refresh"]) }
                             }
 
                             SectionHeader {
@@ -2503,7 +2503,7 @@ ShellRoot {
                                             enabled: !!(focusProvider() && focusProvider().enabled)
                                             onClicked: {
                                                 if (focusProvider()) {
-                                                    root.runCodexbar(["providers", "pin", focusProvider().id])
+                                                    root.runTokenMaxx(["providers", "pin", focusProvider().id])
                                                 }
                                             }
                                         }
@@ -2514,7 +2514,7 @@ ShellRoot {
                                             glyph: root.glyphs.auto
                                             accent: root.theme.info
                                             compact: true
-                                            onClicked: root.runCodexbar(["providers", "auto"])
+                                            onClicked: root.runTokenMaxx(["providers", "auto"])
                                         }
 
                                         CodexButton {
@@ -2526,7 +2526,7 @@ ShellRoot {
                                             enabled: !!(focusProvider() && focusProvider().dashboardUrl)
                                             onClicked: {
                                                 if (focusProvider() && focusProvider().dashboardUrl) {
-                                                    root.runCodexbar(["open", "dashboard", focusProvider().id])
+                                                    root.runTokenMaxx(["open", "dashboard", focusProvider().id])
                                                 }
                                             }
                                         }
@@ -2739,7 +2739,7 @@ ShellRoot {
                                         glyph: root.glyphs.status
                                         accent: root.theme.info
                                         compact: true
-                                        onClicked: root.runCodexbar(["status"])
+                                        onClicked: root.runTokenMaxx(["status"])
                                     }
 
                                     CodexButton {
@@ -2748,7 +2748,7 @@ ShellRoot {
                                         glyph: root.glyphs.cost
                                         accent: root.theme.warn
                                         compact: true
-                                        onClicked: root.runCodexbar(["cost"])
+                                        onClicked: root.runTokenMaxx(["cost"])
                                     }
                                 }
                             }

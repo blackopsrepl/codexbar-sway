@@ -16,16 +16,18 @@ const versionEnv = {
 };
 
 const codexClientIdentity = {
-  filename: 'lib/codexbar/providers/codex.rb',
+  filename: 'lib/tokenmaxx/providers/codex.rb',
   updater: {
+    // Accepts the pre-rebrand "codexbar-linux" identity so a bump from an
+    // older checkout still works; writes are always the rebranded id.
     readVersion(contents) {
-      const match = contents.match(/initialize_client\("codexbar-linux", "([^"]+)"\)/);
+      const match = contents.match(/initialize_client\("(?:tokenmaxx|codexbar)-linux", "([^"]+)"\)/);
       return match ? match[1] : null;
     },
     writeVersion(contents, version) {
       return contents.replace(
-        /(initialize_client\("codexbar-linux", ")[^"]+("\))/,
-        `$1${version}$2`
+        /initialize_client\("(?:tokenmaxx|codexbar)-linux", "[^"]+"\)/,
+        `initialize_client("tokenmaxx-linux", "${version}")`
       );
     },
   },
@@ -36,6 +38,6 @@ module.exports = {
   bumpFiles: [versionEnv, codexClientIdentity],
   tagPrefix: 'v',
   releaseCommitMessageFormat: 'chore(release): {{currentTag}}',
-  commitUrlFormat: 'https://github.com/blackopsrepl/codexbar-sway/commit/{{hash}}',
-  compareUrlFormat: 'https://github.com/blackopsrepl/codexbar-sway/compare/{{previousTag}}...{{currentTag}}',
+  commitUrlFormat: 'https://github.com/blackopsrepl/tokenmaxx/commit/{{hash}}',
+  compareUrlFormat: 'https://github.com/blackopsrepl/tokenmaxx/compare/{{previousTag}}...{{currentTag}}',
 };

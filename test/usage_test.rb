@@ -28,7 +28,7 @@ class UsageTest < Minitest::Test
       )
     }
 
-    assert_equal "codex", CodexBar::Runtime::Usage.display_provider(config, %w[codex claude], results)
+    assert_equal "codex", TokenMaxx::Runtime::Usage.display_provider(config, %w[codex claude], results)
   end
 
   def test_pinned_hidden_provider_still_wins_when_auto_mode_is_disabled
@@ -36,7 +36,7 @@ class UsageTest < Minitest::Test
     config = build_config
     config = with_provider_state(config, "codex", enabled: true, visible: true)
     config = with_provider_state(config, "claude", enabled: true, visible: false)
-    config = CodexBar::Core::Config.set_selected_provider(config, "claude")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "claude")
 
     results = {
       "codex" => provider_result(
@@ -58,7 +58,7 @@ class UsageTest < Minitest::Test
     }
 
     assert_equal false, config.dig(:display, :showHighestUsage)
-    assert_equal "claude", CodexBar::Runtime::Usage.display_provider(config, %w[codex claude], results)
+    assert_equal "claude", TokenMaxx::Runtime::Usage.display_provider(config, %w[codex claude], results)
   end
 
   def test_cycle_provider_prefers_visible_providers
@@ -66,9 +66,9 @@ class UsageTest < Minitest::Test
     config = with_provider_state(config, "codex", enabled: true, visible: true)
     config = with_provider_state(config, "claude", enabled: true, visible: true)
     config = with_provider_state(config, "gemini", enabled: true, visible: false)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "codex")
 
-    next_provider = CodexBar::Runtime::Usage.cycle_provider(config, %w[codex claude gemini], 1)
+    next_provider = TokenMaxx::Runtime::Usage.cycle_provider(config, %w[codex claude gemini], 1)
 
     assert_equal "claude", next_provider
   end
@@ -89,6 +89,6 @@ class UsageTest < Minitest::Test
       )
     }
 
-    assert_equal "claude", CodexBar::Runtime::Usage.display_provider(config, %w[codex claude], results)
+    assert_equal "claude", TokenMaxx::Runtime::Usage.display_provider(config, %w[codex claude], results)
   end
 end

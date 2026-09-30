@@ -13,10 +13,10 @@ class StatusTest < Minitest::Test
         { name: "Codex API outage", status: "investigating", impact: "major" }
       ]
     }
-    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
 
-    CodexBar::Core::Http.stub(:request, response) do
-      status = CodexBar::Runtime::Status.fetch_provider("codex")
+    TokenMaxx::Core::Http.stub(:request, response) do
+      status = TokenMaxx::Runtime::Status.fetch_provider("codex")
 
       assert_equal "outage", status[:state]
       assert_includes status[:description], "Codex API"
@@ -33,10 +33,10 @@ class StatusTest < Minitest::Test
         affected_products: [{ title: "Vertex Gemini API" }]
       }
     ]
-    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
 
-    CodexBar::Core::Http.stub(:request, response) do
-      status = CodexBar::Runtime::Status.fetch_provider("gemini")
+    TokenMaxx::Core::Http.stub(:request, response) do
+      status = TokenMaxx::Runtime::Status.fetch_provider("gemini")
 
       assert_equal "degraded", status[:state]
       assert_includes status[:description], "Vertex Gemini API"
@@ -44,8 +44,8 @@ class StatusTest < Minitest::Test
   end
 
   def test_status_fetch_errors_are_unknown
-    CodexBar::Core::Http.stub(:request, ->(*) { raise "boom" }) do
-      status = CodexBar::Runtime::Status.fetch_provider("claude")
+    TokenMaxx::Core::Http.stub(:request, ->(*) { raise "boom" }) do
+      status = TokenMaxx::Runtime::Status.fetch_provider("claude")
 
       assert_equal "unknown", status[:state]
       assert_equal "boom", status[:error]
@@ -53,12 +53,12 @@ class StatusTest < Minitest::Test
   end
 
   def test_ollama_status_uses_the_usage_endpoint
-    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(limits: {}), headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 200, body: JSON.generate(limits: {}), headers: {})
     previous = ENV["OLLAMA_API_KEY"]
     ENV["OLLAMA_API_KEY"] = "sk-test"
 
-    CodexBar::Core::Http.stub(:request, response) do
-      status = CodexBar::Runtime::Status.fetch_provider("ollama")
+    TokenMaxx::Core::Http.stub(:request, response) do
+      status = TokenMaxx::Runtime::Status.fetch_provider("ollama")
 
       assert_equal "ok", status[:state]
       assert_equal "ollama", status[:provider]

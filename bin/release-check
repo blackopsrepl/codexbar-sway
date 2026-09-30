@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_ROOT="$(mktemp -d -t codexbar-release-check-XXXXXX)"
+TMP_ROOT="$(mktemp -d -t tokenmaxx-release-check-XXXXXX)"
 TMP_CONFIG="${TMP_ROOT}/config.json"
 WITH_LIVE=0
-LIVE_CONFIG="${HOME}/.codexbar/config.json"
+LIVE_CONFIG="${HOME}/.config/tokenmaxx/config.json"
 
 cleanup() {
   rm -rf "$TMP_ROOT"
@@ -16,7 +16,7 @@ usage() {
 Usage: bin/release-check [--with-live] [--live-config PATH]
 
   --with-live         Run live provider checks against a real config.
-  --live-config PATH  Config to use for live checks. Defaults to ~/.codexbar/config.json.
+  --live-config PATH  Config to use for live checks. Defaults to ~/.config/tokenmaxx/config.json.
 EOF
 }
 
@@ -78,17 +78,17 @@ cd "$ROOT_DIR"
 
 run_step "pre-commit" python3 -m pre_commit run --all-files
 run_step "bash syntax" bash -n bin/release-check
-run_step "ruby syntax" bash -lc 'for path in bin/codexbar $(rg --files lib test); do ruby -wc "$path"; done'
+run_step "ruby syntax" bash -lc 'for path in bin/tokenmaxx $(rg --files lib test); do ruby -wc "$path"; done'
 run_step "test suite" ruby -Itest test/run.rb
-run_quiet_step "config init" env HOME="$TMP_ROOT" bin/codexbar config init --config "$TMP_CONFIG"
-run_step "config validate" env HOME="$TMP_ROOT" bin/codexbar config validate --config "$TMP_CONFIG"
-run_quiet_step "config dump" env HOME="$TMP_ROOT" bin/codexbar config dump --config "$TMP_CONFIG" --format json
-run_quiet_step "waybar render" env HOME="$TMP_ROOT" bin/codexbar waybar render --config "$TMP_CONFIG"
-run_quiet_step "ui status" env HOME="$TMP_ROOT" bin/codexbar ui status --config "$TMP_CONFIG" --format json --pretty
-run_quiet_step "cached status" env HOME="$TMP_ROOT" bin/codexbar status --cached --config "$TMP_CONFIG" --format json
-run_quiet_step "cached cost" env HOME="$TMP_ROOT" bin/codexbar cost --cached --config "$TMP_CONFIG" --format json
-run_quiet_step "history" env HOME="$TMP_ROOT" bin/codexbar history --config "$TMP_CONFIG" --format json
-run_quiet_step "cache clear" env HOME="$TMP_ROOT" bin/codexbar cache clear all --config "$TMP_CONFIG" --format json
+run_quiet_step "config init" env HOME="$TMP_ROOT" bin/tokenmaxx config init --config "$TMP_CONFIG"
+run_step "config validate" env HOME="$TMP_ROOT" bin/tokenmaxx config validate --config "$TMP_CONFIG"
+run_quiet_step "config dump" env HOME="$TMP_ROOT" bin/tokenmaxx config dump --config "$TMP_CONFIG" --format json
+run_quiet_step "waybar render" env HOME="$TMP_ROOT" bin/tokenmaxx waybar render --config "$TMP_CONFIG"
+run_quiet_step "ui status" env HOME="$TMP_ROOT" bin/tokenmaxx ui status --config "$TMP_CONFIG" --format json --pretty
+run_quiet_step "cached status" env HOME="$TMP_ROOT" bin/tokenmaxx status --cached --config "$TMP_CONFIG" --format json
+run_quiet_step "cached cost" env HOME="$TMP_ROOT" bin/tokenmaxx cost --cached --config "$TMP_CONFIG" --format json
+run_quiet_step "history" env HOME="$TMP_ROOT" bin/tokenmaxx history --config "$TMP_CONFIG" --format json
+run_quiet_step "cache clear" env HOME="$TMP_ROOT" bin/tokenmaxx cache clear all --config "$TMP_CONFIG" --format json
 
 if command -v quickshell >/dev/null 2>&1; then
   echo
@@ -97,9 +97,9 @@ if command -v quickshell >/dev/null 2>&1; then
   env \
     HOME="$TMP_ROOT" \
     QT_QPA_PLATFORM=wayland \
-    CODEXBAR_BIN="$ROOT_DIR/bin/codexbar" \
-    CODEXBAR_CONFIG="$TMP_CONFIG" \
-    CODEXBAR_STATE_DIR="${TMP_ROOT}/.local/state/codexbar" \
+    TOKENMAXX_BIN="$ROOT_DIR/bin/tokenmaxx" \
+    TOKENMAXX_CONFIG="$TMP_CONFIG" \
+    TOKENMAXX_STATE_DIR="${TMP_ROOT}/.local/state/tokenmaxx" \
     timeout 8s quickshell --path "$ROOT_DIR/frontend/quickshell/shell.qml" >/dev/null
   status=$?
   set -e
@@ -115,16 +115,16 @@ if [[ "$WITH_LIVE" -eq 1 ]]; then
     exit 1
   }
 
-  run_step "live config validate" bin/codexbar config validate --config "$LIVE_CONFIG"
+  run_step "live config validate" bin/tokenmaxx config validate --config "$LIVE_CONFIG"
 
   for provider in codex claude gemini opencode zai ollama; do
     echo
     echo "==> live provider $provider"
-    bin/codexbar usage --provider "$provider" --format json --pretty --config "$LIVE_CONFIG" | validate_provider_json "$provider"
+    bin/tokenmaxx usage --provider "$provider" --format json --pretty --config "$LIVE_CONFIG" | validate_provider_json "$provider"
     echo "$provider validated"
   done
 
-  run_step "live service status" bin/codexbar status --config "$LIVE_CONFIG" --format json --pretty
+  run_step "live service status" bin/tokenmaxx status --config "$LIVE_CONFIG" --format json --pretty
 fi
 
 echo

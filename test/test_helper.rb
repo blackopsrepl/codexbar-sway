@@ -8,7 +8,7 @@ require "tmpdir"
 require "time"
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
-require "codexbar"
+require "tokenmaxx"
 
 # Minitest 6 (the Ruby 4.0 default) removed minitest/mock and the
 # Object#stub helper this suite was written against, so the stub-based tests
@@ -41,13 +41,13 @@ end
 
 Object.include(MinitestStubCompat) unless Object.method_defined?(:stub)
 
-module CodexBarTestHelpers
+module TokenMaxxTestHelpers
   def build_config
-    CodexBar::Core::Config.normalize_config(CodexBar::Core::Config.default_config)
+    TokenMaxx::Core::Config.normalize_config(TokenMaxx::Core::Config.default_config)
   end
 
   def with_provider_state(config, provider, **attrs)
-    CodexBar::Core::Config.update_provider(config, provider) do |entry|
+    TokenMaxx::Core::Config.update_provider(config, provider) do |entry|
       attrs.each do |key, value|
         entry[key] = value
       end
@@ -93,12 +93,12 @@ module CodexBarTestHelpers
   end
 
   def with_temp_home
-    Dir.mktmpdir("codexbar-home") do |dir|
-      previous = ENV["CODEXBAR_HOME"]
-      ENV["CODEXBAR_HOME"] = dir
+    Dir.mktmpdir("tokenmaxx-home") do |dir|
+      previous = ENV["TOKENMAXX_HOME"]
+      ENV["TOKENMAXX_HOME"] = dir
       yield dir
     ensure
-      ENV["CODEXBAR_HOME"] = previous
+      ENV["TOKENMAXX_HOME"] = previous
     end
   end
 
@@ -129,5 +129,5 @@ module CodexBarTestHelpers
 end
 
 class Minitest::Test
-  include CodexBarTestHelpers
+  include TokenMaxxTestHelpers
 end

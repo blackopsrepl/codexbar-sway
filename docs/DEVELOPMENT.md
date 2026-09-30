@@ -2,12 +2,12 @@
 
 ## Product Shape
 
-CodexBar is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete). It is built from:
+TokenMaxx is an independent Linux implementation inspired by [the original CodexBar](https://github.com/steipete/CodexBar) by [Steipete](https://github.com/steipete). It is built from:
 
 - Ruby backend
 - QuickShell panel
 - Waybar JSON renderer
-- cached runtime state in `~/.local/state/codexbar`
+- cached runtime state in `~/.local/state/tokenmaxx`
 
 It is independent from the retired upstream desktop runtime.
 
@@ -34,9 +34,9 @@ make check-live
 ## Source-Tree Runtime
 
 ```bash
-bin/codexbar config validate
-bin/codexbar waybar render
-bin/codexbar ui status --format json --pretty
+bin/tokenmaxx config validate
+bin/tokenmaxx waybar render
+bin/tokenmaxx ui status --format json --pretty
 ```
 
 Direct QuickShell load:
@@ -45,7 +45,7 @@ Direct QuickShell load:
 make quickshell-load
 ```
 
-The installed runtime lives under `~/.local/share/codexbar`. Use `make install && make configure-user` before relying on the app across checkout renames. The live desktop executes the installed copy, not this checkout: after every `make install`, restart `codexbar daemon` and the QuickShell panel (see "Restart After Install" in `docs/installation.md`) or you will keep observing the previous code.
+The installed runtime lives under `~/.local/share/tokenmaxx`. Use `make install && make configure-user` before relying on the app across checkout renames. The live desktop executes the installed copy, not this checkout: after every `make install`, restart `tokenmaxx daemon` and the QuickShell panel (see "Restart After Install" in `docs/installation.md`) or you will keep observing the previous code.
 
 ## Test Strategy
 
@@ -59,4 +59,4 @@ Prefer tests for:
 
 Live provider checks are smoke tests, not the primary regression suite.
 
-`make smoke` and the non-live portion of `make check` create an isolated temporary home and state directory. They must never read, rewrite, or clear the active user's CodexBar runtime caches.
+`make smoke` and the non-live portion of `make check` create an isolated temporary home and state directory. They must never read, rewrite, or clear the active user's TokenMaxx runtime caches.

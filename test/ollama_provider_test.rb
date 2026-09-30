@@ -51,33 +51,33 @@ class OllamaProviderTest < Minitest::Test
   end
 
   def test_usage_fraction_is_clamped_and_scale_is_normalized
-    assert_equal 100.0, CodexBar::Providers::Ollama.usage_window({ usage: 1.4 }, 43_200, "Monthly", "mo")[:usedPercent]
-    assert_equal 0.0, CodexBar::Providers::Ollama.usage_window({ usage: -0.5 }, 43_200, "Monthly", "mo")[:usedPercent]
-    assert_nil CodexBar::Providers::Ollama.usage_window(nil, 43_200, "Monthly", "mo")
-    assert_nil CodexBar::Providers::Ollama.usage_window({ usage: nil }, 43_200, "Monthly", "mo")
+    assert_equal 100.0, TokenMaxx::Providers::Ollama.usage_window({ usage: 1.4 }, 43_200, "Monthly", "mo")[:usedPercent]
+    assert_equal 0.0, TokenMaxx::Providers::Ollama.usage_window({ usage: -0.5 }, 43_200, "Monthly", "mo")[:usedPercent]
+    assert_nil TokenMaxx::Providers::Ollama.usage_window(nil, 43_200, "Monthly", "mo")
+    assert_nil TokenMaxx::Providers::Ollama.usage_window({ usage: nil }, 43_200, "Monthly", "mo")
   end
 
   def test_resolve_api_key_prefers_env_then_opencode_auth
     with_env("OLLAMA_API_KEY" => "sk-env") do
       with_temp_auth(key: "sk-auth") do
-        assert_equal "sk-env", CodexBar::Providers::Ollama.resolve_api_key
+        assert_equal "sk-env", TokenMaxx::Providers::Ollama.resolve_api_key
       end
     end
 
     with_env("OLLAMA_API_KEY" => nil) do
       with_temp_auth(key: "sk-auth") do
-        assert_equal "sk-auth", CodexBar::Providers::Ollama.resolve_api_key
+        assert_equal "sk-auth", TokenMaxx::Providers::Ollama.resolve_api_key
       end
     end
   end
 
   def test_missing_key_returns_error
     with_env("OLLAMA_API_KEY" => nil) do
-      Dir.mktmpdir("codexbar-ollama") do |dir|
+      Dir.mktmpdir("tokenmaxx-ollama") do |dir|
         path = File.join(dir, "auth.json")
         File.write(path, JSON.generate("opencode" => { type: "api", key: "sk-other" }))
-        with_env("CODEXBAR_OPENCODE_AUTH" => path) do
-          result = CodexBar::Providers::Ollama.fetch({})
+        with_env("TOKENMAXX_OPENCODE_AUTH" => path) do
+          result = TokenMaxx::Providers::Ollama.fetch({})
 
           assert_match(/API key not found/, result[:error])
           assert_nil result[:usage]
@@ -87,12 +87,12 @@ class OllamaProviderTest < Minitest::Test
   end
 
   def test_http_error_returns_error
-    response = CodexBar::Core::Http::Response.new(status: 401, body: "", headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 401, body: "", headers: {})
 
     result = nil
     with_temp_auth(key: "sk-auth") do
-      CodexBar::Core::Http.stub(:request, response) do
-        result = CodexBar::Providers::Ollama.fetch({})
+      TokenMaxx::Core::Http.stub(:request, response) do
+        result = TokenMaxx::Providers::Ollama.fetch({})
       end
     end
 
@@ -108,21 +108,21 @@ class OllamaProviderTest < Minitest::Test
   private
 
   def fetch_with(payload)
-    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
     result = nil
     with_temp_auth(key: "sk-auth") do
-      CodexBar::Core::Http.stub(:request, response) do
-        result = CodexBar::Providers::Ollama.fetch({})
+      TokenMaxx::Core::Http.stub(:request, response) do
+        result = TokenMaxx::Providers::Ollama.fetch({})
       end
     end
     result
   end
 
   def with_temp_auth(key:)
-    Dir.mktmpdir("codexbar-ollama") do |dir|
+    Dir.mktmpdir("tokenmaxx-ollama") do |dir|
       path = File.join(dir, "auth.json")
       File.write(path, JSON.generate("ollama-cloud" => { type: "api", key: key }))
-      with_env("CODEXBAR_OPENCODE_AUTH" => path) { yield path }
+      with_env("TOKENMAXX_OPENCODE_AUTH" => path) { yield path }
     end
   end
 

@@ -9,7 +9,7 @@ class RuntimeTest < Minitest::Test
     config = with_provider_state(config, "codex", enabled: true, visible: true, showInOverview: true)
     config = with_provider_state(config, "claude", enabled: true, visible: false, showInOverview: false, allowAutoSelect: false)
     config = with_provider_state(config, "gemini", enabled: false, visible: true)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "codex")
 
     results = {
       "codex" => provider_result(
@@ -51,7 +51,7 @@ class RuntimeTest < Minitest::Test
         }
       }
     }
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex claude], results, now, service_status: service_status, history: history)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex claude], results, now, service_status: service_status, history: history)
     summary = snapshot.dig(:view, :summary)
     codex_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "codex" }
     claude_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "claude" }
@@ -97,7 +97,7 @@ class RuntimeTest < Minitest::Test
       )
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[zai], results, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[zai], results, now)
     view = snapshot[:view]
 
     schedules = view[:peakSchedules]
@@ -140,7 +140,7 @@ class RuntimeTest < Minitest::Test
       }
     }
 
-    heatmap = CodexBar::Runtime::Presenter.history_heatmap_view(history.dig(:providers, "codex"))
+    heatmap = TokenMaxx::Runtime::Presenter.history_heatmap_view(history.dig(:providers, "codex"))
 
     assert heatmap[:available]
     assert_equal 49_000, heatmap[:totalTokens]
@@ -193,7 +193,7 @@ class RuntimeTest < Minitest::Test
   end
 
   def test_history_heatmap_reports_unavailable_without_days
-    heatmap = CodexBar::Runtime::Presenter.history_heatmap_view({ provider: "codex", daily: [] })
+    heatmap = TokenMaxx::Runtime::Presenter.history_heatmap_view({ provider: "codex", daily: [] })
 
     refute heatmap[:available]
     assert_equal [], heatmap[:rows]
@@ -224,7 +224,7 @@ class RuntimeTest < Minitest::Test
       }
     }
 
-    heatmap = CodexBar::Runtime::Presenter.cumulative_heatmap_view(history)
+    heatmap = TokenMaxx::Runtime::Presenter.cumulative_heatmap_view(history)
 
     assert heatmap[:available]
     assert_equal 25_000, heatmap[:totalTokens]
@@ -259,7 +259,7 @@ class RuntimeTest < Minitest::Test
     config = with_provider_state(config, "codex", enabled: true, visible: true)
     config = with_provider_state(config, "claude", enabled: true, visible: false, allowAutoSelect: false)
     config = with_provider_state(config, "gemini", enabled: false, visible: true)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "codex")
 
     results = {
       "codex" => provider_result(
@@ -277,8 +277,8 @@ class RuntimeTest < Minitest::Test
       )
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex claude], results, now)
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex claude], results, now)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, snapshot, now)
     codex_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "codex" }
 
     assert_equal "󰚩 95%  76%", payload[:text]
@@ -291,7 +291,7 @@ class RuntimeTest < Minitest::Test
   end
 
   def test_tooltip_provider_line_surfaces_provider_error_detail
-    line = CodexBar::Runtime::Presenter.tooltip_provider_line(
+    line = TokenMaxx::Runtime::Presenter.tooltip_provider_line(
       build_config,
       "gemini",
       nil,
@@ -306,7 +306,7 @@ class RuntimeTest < Minitest::Test
     now = Time.now.utc
     config = build_config
     config = with_provider_state(config, "codex", enabled: true, visible: true)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "codex")
     results = {
       "codex" => provider_result(
         provider: "codex",
@@ -318,8 +318,8 @@ class RuntimeTest < Minitest::Test
       )
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now)
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex], results, now)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, snapshot, now)
 
     assert_equal "󰚩  93%", payload[:text]
     assert_includes payload[:tooltip], "Weekly 93% left"
@@ -331,7 +331,7 @@ class RuntimeTest < Minitest::Test
     now = Time.now.utc
     config = build_config
     config = with_provider_state(config, "codex", enabled: true, visible: true)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "codex")
     usage = usage_payload(
       provider: "codex",
       now: now,
@@ -339,8 +339,8 @@ class RuntimeTest < Minitest::Test
     ).merge(unavailableWindows: ["primary"])
     results = { "codex" => provider_result(provider: "codex", usage: usage) }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now)
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex], results, now)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, snapshot, now)
     codex_view = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "codex" }
 
     assert_equal "󰚩 --  93%", payload[:text]
@@ -385,7 +385,7 @@ class RuntimeTest < Minitest::Test
       )
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex opencode gemini], results, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex opencode gemini], results, now)
     views = snapshot.dig(:view, :providers).each_with_object({}) { |entry, acc| acc[entry[:id]] = entry }
 
     assert_equal "5h 97% / W 94%", views["codex"][:quotaSummaryText]
@@ -409,7 +409,7 @@ class RuntimeTest < Minitest::Test
       "codex" => provider_result(provider: "codex", error: "Codex app-server closed stdout")
     }
 
-    retained = CodexBar::Runtime::Daemon.retain_cached_usage(failed, previous).fetch("codex")
+    retained = TokenMaxx::Runtime::Daemon.retain_cached_usage(failed, previous).fetch("codex")
 
     assert_same cached_usage, retained[:usage]
     assert_equal({ remaining: 2 }, retained[:credits])
@@ -421,7 +421,7 @@ class RuntimeTest < Minitest::Test
     now = Time.now.utc
     config = build_config
     config = with_provider_state(config, "codex", enabled: true, visible: true)
-    config = CodexBar::Core::Config.set_selected_provider(config, "codex")
+    config = TokenMaxx::Core::Config.set_selected_provider(config, "codex")
     results = {
       "codex" => provider_result(
         provider: "codex",
@@ -438,8 +438,8 @@ class RuntimeTest < Minitest::Test
       }
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now, service_status: service_status)
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex], results, now, service_status: service_status)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, snapshot, now)
 
     assert_includes payload[:class], "service-outage"
   end
@@ -468,9 +468,9 @@ class RuntimeTest < Minitest::Test
       )
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex gemini], results, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex gemini], results, now)
     gemini = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "gemini" }
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, snapshot, now)
 
     assert_equal "gemini", snapshot[:displayProvider]
     assert_equal ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-flash-lite-preview"], gemini[:metrics].map { |metric| metric[:label] }
@@ -500,11 +500,11 @@ class RuntimeTest < Minitest::Test
     }
     local_usage = {
       providers: {
-        "gemini" => CodexBar::Runtime::LocalUsage.unsupported_provider("gemini")
+        "gemini" => TokenMaxx::Runtime::LocalUsage.unsupported_provider("gemini")
       }
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[gemini], results, now, local_usage: local_usage)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[gemini], results, now, local_usage: local_usage)
     gemini = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "gemini" }
 
     assert_equal "Local usage unsupported", gemini[:localUsageText]
@@ -550,7 +550,7 @@ class RuntimeTest < Minitest::Test
       }
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[gemini], results, now, local_usage: local_usage)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[gemini], results, now, local_usage: local_usage)
     gemini = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "gemini" }
 
     assert_equal "12.3k tok · 3 records", gemini[:localUsageText]
@@ -561,22 +561,22 @@ class RuntimeTest < Minitest::Test
 
   def test_local_usage_source_labels_name_each_store
     assert_equal "Sources: OpenCode DB + Hermes",
-                 CodexBar::Runtime::Presenter.local_usage_sources_text(sources: %w[opencode-db hermes])
-    assert_equal "Sources: Codex CLI", CodexBar::Runtime::Presenter.local_usage_sources_text(sources: %w[codex-jsonl])
+                 TokenMaxx::Runtime::Presenter.local_usage_sources_text(sources: %w[opencode-db hermes])
+    assert_equal "Sources: Codex CLI", TokenMaxx::Runtime::Presenter.local_usage_sources_text(sources: %w[codex-jsonl])
     assert_equal "Sources: bespoke-store",
-                 CodexBar::Runtime::Presenter.local_usage_sources_text(sources: ["bespoke-store"])
-    assert_nil CodexBar::Runtime::Presenter.local_usage_sources_text(sources: [])
-    assert_nil CodexBar::Runtime::Presenter.local_usage_sources_text(nil)
+                 TokenMaxx::Runtime::Presenter.local_usage_sources_text(sources: ["bespoke-store"])
+    assert_nil TokenMaxx::Runtime::Presenter.local_usage_sources_text(sources: [])
+    assert_nil TokenMaxx::Runtime::Presenter.local_usage_sources_text(nil)
   end
 
   def test_local_usage_card_detail_names_the_stores_it_covers
-    card = CodexBar::Runtime::Presenter.local_usage_card(
+    card = TokenMaxx::Runtime::Presenter.local_usage_card(
       supported: true,
       totalTokens: 10,
       records: 1,
       sources: %w[opencode-db hermes]
     )
-    plain = CodexBar::Runtime::Presenter.local_usage_card(
+    plain = TokenMaxx::Runtime::Presenter.local_usage_card(
       supported: true,
       totalTokens: 10,
       records: 1,
@@ -621,7 +621,7 @@ class RuntimeTest < Minitest::Test
       }
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[opencode], results, now, local_usage: local_usage)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[opencode], results, now, local_usage: local_usage)
     opencode = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "opencode" }
     card = opencode[:detailCards].find { |entry| entry[:key] == "local-usage" }
 
@@ -631,10 +631,10 @@ class RuntimeTest < Minitest::Test
 
   def test_waybar_payload_reports_off_when_no_providers_are_enabled
     config = build_config
-    payload = CodexBar::Runtime::Waybar.payload(config, nil, Time.now)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, nil, Time.now)
 
     assert_equal "󰚩 off", payload[:text]
-    assert_includes payload[:class], "codexbar"
+    assert_includes payload[:class], "tokenmaxx"
     assert_includes payload[:tooltip], "no providers enabled"
   end
 
@@ -654,9 +654,9 @@ class RuntimeTest < Minitest::Test
       )
     }
 
-    snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[ollama], results, now)
+    snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[ollama], results, now)
     ollama = snapshot.dig(:view, :providers).find { |entry| entry[:id] == "ollama" }
-    payload = CodexBar::Runtime::Waybar.payload(config, snapshot, now)
+    payload = TokenMaxx::Runtime::Waybar.payload(config, snapshot, now)
 
     assert_equal "mo 12%", ollama[:quotaSummaryText]
     assert_equal "Monthly", ollama[:dominantMetric][:label]
@@ -665,8 +665,8 @@ class RuntimeTest < Minitest::Test
   end
 
   def test_history_and_storage_include_the_ollama_provider
-    history = CodexBar::Runtime::History.normalize_history({}, 30)
+    history = TokenMaxx::Runtime::History.normalize_history({}, 30)
     refute_nil history[:providers]
-    assert_includes CodexBar::Runtime::Storage::PROVIDER_PATHS.keys, "ollama"
+    assert_includes TokenMaxx::Runtime::Storage::PROVIDER_PATHS.keys, "ollama"
   end
 end

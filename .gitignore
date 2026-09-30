@@ -1,5 +1,5 @@
 # Local config and environment
-.codexbar/config.json
+.config/tokenmaxx/config.json
 *.env
 !version.env
 *.local

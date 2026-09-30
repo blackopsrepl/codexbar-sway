@@ -40,9 +40,9 @@ class ZaiProviderTest < Minitest::Test
   end
 
   def test_make_window_clamps_and_rejects_implausible_reset_times
-    assert_nil CodexBar::Providers::Zai.make_window(nil, 300)
+    assert_nil TokenMaxx::Providers::Zai.make_window(nil, 300)
 
-    clamped = CodexBar::Providers::Zai.make_window({ percentage: 140, nextResetTime: 0 }, 300)
+    clamped = TokenMaxx::Providers::Zai.make_window({ percentage: 140, nextResetTime: 0 }, 300)
     assert_equal 100.0, clamped[:usedPercent]
     assert_nil clamped[:resetsAt]
   end
@@ -50,30 +50,30 @@ class ZaiProviderTest < Minitest::Test
   def test_resolve_api_key_prefers_env_then_opencode_auth
     with_env("ZAI_API_KEY" => "sk-env") do
       with_temp_auth(key: "sk-auth") do
-        assert_equal "sk-env", CodexBar::Providers::Zai.resolve_api_key
+        assert_equal "sk-env", TokenMaxx::Providers::Zai.resolve_api_key
       end
     end
 
     with_env("ZAI_API_KEY" => nil, "GLM_API_KEY" => "sk-glm") do
       with_temp_auth(key: "sk-auth") do
-        assert_equal "sk-glm", CodexBar::Providers::Zai.resolve_api_key
+        assert_equal "sk-glm", TokenMaxx::Providers::Zai.resolve_api_key
       end
     end
 
     with_env("ZAI_API_KEY" => nil, "GLM_API_KEY" => nil) do
       with_temp_auth(key: "sk-auth") do
-        assert_equal "sk-auth", CodexBar::Providers::Zai.resolve_api_key
+        assert_equal "sk-auth", TokenMaxx::Providers::Zai.resolve_api_key
       end
     end
   end
 
   def test_missing_key_returns_error
     with_env("ZAI_API_KEY" => nil, "GLM_API_KEY" => nil) do
-      Dir.mktmpdir("codexbar-zai") do |dir|
+      Dir.mktmpdir("tokenmaxx-zai") do |dir|
         path = File.join(dir, "auth.json")
         File.write(path, JSON.generate("opencode" => { type: "api", key: "sk-other" }))
-        with_env("CODEXBAR_OPENCODE_AUTH" => path) do
-          result = CodexBar::Providers::Zai.fetch({})
+        with_env("TOKENMAXX_OPENCODE_AUTH" => path) do
+          result = TokenMaxx::Providers::Zai.fetch({})
 
           assert_match(/API key not found/, result[:error])
           assert_nil result[:usage]
@@ -83,12 +83,12 @@ class ZaiProviderTest < Minitest::Test
   end
 
   def test_http_error_returns_error
-    response = CodexBar::Core::Http::Response.new(status: 503, body: "", headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 503, body: "", headers: {})
 
     result = nil
     with_temp_auth(key: "sk-auth") do
-      CodexBar::Core::Http.stub(:request, response) do
-        result = CodexBar::Providers::Zai.fetch({})
+      TokenMaxx::Core::Http.stub(:request, response) do
+        result = TokenMaxx::Providers::Zai.fetch({})
       end
     end
 
@@ -104,11 +104,11 @@ class ZaiProviderTest < Minitest::Test
   private
 
   def fetch_with(payload)
-    response = CodexBar::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
+    response = TokenMaxx::Core::Http::Response.new(status: 200, body: JSON.generate(payload), headers: {})
     result = nil
     with_temp_auth(key: "sk-auth") do
-      CodexBar::Core::Http.stub(:request, response) do
-        result = CodexBar::Providers::Zai.fetch({})
+      TokenMaxx::Core::Http.stub(:request, response) do
+        result = TokenMaxx::Providers::Zai.fetch({})
       end
     end
     result
@@ -129,10 +129,10 @@ class ZaiProviderTest < Minitest::Test
   end
 
   def with_temp_auth(key:)
-    Dir.mktmpdir("codexbar-zai") do |dir|
+    Dir.mktmpdir("tokenmaxx-zai") do |dir|
       path = File.join(dir, "auth.json")
       File.write(path, JSON.generate("zai-coding-plan" => { type: "api", key: key }))
-      with_env("CODEXBAR_OPENCODE_AUTH" => path) { yield path }
+      with_env("TOKENMAXX_OPENCODE_AUTH" => path) { yield path }
     end
   end
 

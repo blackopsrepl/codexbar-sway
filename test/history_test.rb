@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class HistoryTest < Minitest::Test
   def test_history_updates_daily_usage_and_local_tokens
-    Dir.mktmpdir("codexbar-state") do |dir|
+    Dir.mktmpdir("tokenmaxx-state") do |dir|
       now = Time.now.utc
       config = build_config
       config[:runtime][:stateDir] = dir
@@ -19,7 +19,7 @@ class HistoryTest < Minitest::Test
           )
         )
       }
-      snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[codex], results, now)
+      snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[codex], results, now)
       local_usage = {
         providers: {
           "codex" => {
@@ -28,7 +28,7 @@ class HistoryTest < Minitest::Test
         }
       }
 
-      history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
+      history = TokenMaxx::Runtime::History.update(config, snapshot, local_usage, now: now)
       day = history.dig(:providers, "codex", :daily).last
 
       assert_equal 41, day[:latestPrimaryUsedPercent]
@@ -38,7 +38,7 @@ class HistoryTest < Minitest::Test
   end
 
   def test_history_retains_hermes_sourced_local_usage_in_model_usage
-    Dir.mktmpdir("codexbar-state") do |dir|
+    Dir.mktmpdir("tokenmaxx-state") do |dir|
       now = Time.now.utc
       config = build_config
       config[:runtime][:stateDir] = dir
@@ -53,7 +53,7 @@ class HistoryTest < Minitest::Test
           )
         )
       }
-      snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[opencode], results, now)
+      snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[opencode], results, now)
       models = {
         "deepseek-v4.1-flash" => {
           modelId: "deepseek-v4.1-flash",
@@ -80,7 +80,7 @@ class HistoryTest < Minitest::Test
         }
       }
 
-      history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
+      history = TokenMaxx::Runtime::History.update(config, snapshot, local_usage, now: now)
       day = history.dig(:providers, "opencode", :daily).last
 
       assert_equal 4_155, day[:totalTokens]
@@ -91,7 +91,7 @@ class HistoryTest < Minitest::Test
   end
 
   def test_history_retains_gemini_model_quota_and_local_usage
-    Dir.mktmpdir("codexbar-state") do |dir|
+    Dir.mktmpdir("tokenmaxx-state") do |dir|
       now = Time.now.utc
       date = now.strftime("%Y-%m-%d")
       config = build_config
@@ -110,7 +110,7 @@ class HistoryTest < Minitest::Test
           )
         )
       }
-      snapshot = CodexBar::Runtime::State.build_snapshot(config, %w[gemini], results, now)
+      snapshot = TokenMaxx::Runtime::State.build_snapshot(config, %w[gemini], results, now)
       local_usage = {
         providers: {
           "gemini" => {
@@ -137,7 +137,7 @@ class HistoryTest < Minitest::Test
         }
       }
 
-      history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
+      history = TokenMaxx::Runtime::History.update(config, snapshot, local_usage, now: now)
       day = history.dig(:providers, "gemini", :daily).last
 
       assert_equal 0.0, day[:latestPrimaryUsedPercent]
@@ -151,12 +151,12 @@ class HistoryTest < Minitest::Test
   end
 
   def test_history_replaces_retained_local_usage_for_scanned_days
-    Dir.mktmpdir("codexbar-state") do |dir|
+    Dir.mktmpdir("tokenmaxx-state") do |dir|
       now = Time.now.utc
       past = (now - 86_400).strftime("%Y-%m-%d")
       config = build_config
       config[:runtime][:stateDir] = dir
-      CodexBar::Runtime::State.write_history(
+      TokenMaxx::Runtime::State.write_history(
         config,
         providers: {
           "opencode" => {
@@ -172,7 +172,7 @@ class HistoryTest < Minitest::Test
           }
         }
       )
-      snapshot = CodexBar::Runtime::State.build_snapshot(config, [], {}, now)
+      snapshot = TokenMaxx::Runtime::State.build_snapshot(config, [], {}, now)
       local_usage = {
         providers: {
           "opencode" => {
@@ -188,7 +188,7 @@ class HistoryTest < Minitest::Test
         }
       }
 
-      history = CodexBar::Runtime::History.update(config, snapshot, local_usage, now: now)
+      history = TokenMaxx::Runtime::History.update(config, snapshot, local_usage, now: now)
       day = history.dig(:providers, "opencode", :daily).find { |entry| entry[:date] == past }
 
       assert_equal 10, day[:totalTokens]
@@ -211,7 +211,7 @@ class HistoryTest < Minitest::Test
       ]
     }
 
-    days = CodexBar::Runtime::Presenter.provider_history_days(history)
+    days = TokenMaxx::Runtime::Presenter.provider_history_days(history)
 
     assert_equal %w[2026-09-11 2026-09-12], days.map { |entry| entry[:date] }
     assert_equal 34.0, days.first[:barPercent]
@@ -220,6 +220,6 @@ class HistoryTest < Minitest::Test
   end
 
   def test_presenter_history_summary_ignores_days_without_samples
-    assert_equal "No retained history", CodexBar::Runtime::Presenter.provider_history_summary(daily: [{ date: "2026-09-10" }])
+    assert_equal "No retained history", TokenMaxx::Runtime::Presenter.provider_history_summary(daily: [{ date: "2026-09-10" }])
   end
 end

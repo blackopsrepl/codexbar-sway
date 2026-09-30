@@ -1,0 +1,27 @@
+#!/bin/bash
+
+config_path="${TOKENMAXX_CONFIG:-$HOME/.config/tokenmaxx/config.json}"
+tokenmaxx_cmd="${TOKENMAXX_BIN:-$HOME/.local/bin/tokenmaxx}"
+
+if [[ ! -x "$tokenmaxx_cmd" ]] && command -v tokenmaxx &>/dev/null; then
+    tokenmaxx_cmd="$(command -v tokenmaxx)"
+fi
+
+if [[ ! -x "$tokenmaxx_cmd" ]]; then
+    exit 0
+fi
+
+case "${1:-render}" in
+    render)
+        exec "$tokenmaxx_cmd" waybar render --config "$config_path"
+        ;;
+    panel|details|open)
+        exec "$tokenmaxx_cmd" waybar panel --config "$config_path"
+        ;;
+    refresh)
+        exec "$tokenmaxx_cmd" refresh --config "$config_path"
+        ;;
+    *)
+        exec "$tokenmaxx_cmd" waybar render --config "$config_path"
+        ;;
+esac
