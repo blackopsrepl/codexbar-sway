@@ -17,6 +17,7 @@ module TokenMaxx
       NOTIFICATION_STATE_FILE = "notification_state.json"
       DAEMON_LOCK_FILE = "daemon.lock"
       REFRESH_LOCK_FILE = "refresh.lock"
+      LEGACY_IMPORT_MARKER = ".codexbar-state-imported"
 
       module_function
 
@@ -273,15 +274,24 @@ module TokenMaxx
 
       def ensure_state_dir(config)
         dir = state_dir(config)
-        return dir if File.directory?(dir)
+        marker = File.join(dir, LEGACY_IMPORT_MARKER)
+        if !File.exist?(marker) && dir != legacy_state_dir
+          import_legacy_state_files!(dir)
+        end
+        FileUtils.mkdir_p(dir) unless File.directory?(dir)
+        File.write(marker, "#{::Process.pid}\n") unless File.exist?(marker)
+        dir
+      end
 
-        # One-time import of pre-rebrand state (history, local usage, ui and
-        # notification state) when the state dir is first created. Locked to
-        # directory creation so a later delete never resurrects old files.
-        # *.json only: legacy daemon/refresh locks must never migrate. Old
-        # files are left in place, never deleted.
-        legacy_dir = File.join(Dir.home, ".local", "state", "codexbar")
-        legacy_files = dir == File.expand_path(legacy_dir) ? [] : Dir.glob(File.join(legacy_dir, "*.json"))
+      # One-time import of pre-rebrand state (history, local usage, ui and
+      # notification state). Guarded by a marker file, not directory
+      # existence: a pre-created empty state dir still migrates, and a later
+      # cache clear can never resurrect old files. *.json only, so legacy
+      # daemon/refresh locks never migrate. Old files are left in place,
+      # never deleted.
+      def import_legacy_state_files!(dir)
+        legacy_files = Dir.glob(File.join(legacy_state_dir, "*.json"))
+        return if legacy_files.empty?
 
         FileUtils.mkdir_p(dir)
         legacy_files.each do |source|
@@ -293,7 +303,10 @@ module TokenMaxx
           FileUtils.chmod(0o600, temp)
           File.rename(temp, target)
         end
-        dir
+      end
+
+      def legacy_state_dir
+        File.expand_path(File.join(Dir.home, ".local", "state", "codexbar"))
       end
 
       def ensure_ui_state(config)

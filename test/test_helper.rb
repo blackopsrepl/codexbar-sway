@@ -131,3 +131,12 @@ end
 class Minitest::Test
   include TokenMaxxTestHelpers
 end
+
+# Hermetic test home: config, state, and legacy-import paths derive from
+# Dir.home, so without this the suite writes into (and now also migrates
+# files out of) the real user state. Individual tests may re-scope
+# ENV["HOME"] further; this only guarantees the run never starts at the
+# real home.
+TEST_HOME = Dir.mktmpdir("tokenmaxx-test-home")
+ENV["HOME"] = TEST_HOME
+Minitest.after_run { FileUtils.remove_entry(TEST_HOME) }
