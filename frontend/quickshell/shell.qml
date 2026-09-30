@@ -369,7 +369,7 @@ ShellRoot {
     }
 
     function runTokenMaxx(args) {
-        var command = [root.config/tokenmaxxBin].concat(args).concat(["--config", root.configPath])
+        var command = [root.tokenmaxxBin].concat(args).concat(["--config", root.configPath])
         if (actionRunner.running) {
             if (actionRunner.queue.length < 8) {
                 actionRunner.queue.push(command)

@@ -64,6 +64,13 @@ class QuickShellTest < Minitest::Test
                  "the label before a peak marker must elide instead of pushing the marker off the row"
   end
 
+  def test_panel_actions_use_the_configured_executable
+    qml = File.read(File.expand_path("../frontend/quickshell/shell.qml", __dir__))
+
+    assert_includes qml, 'var command = [root.tokenmaxxBin].concat(args).concat(["--config", root.configPath])'
+    refute_includes qml, "root.config/tokenmaxxBin"
+  end
+
   def test_running_pid_rejects_a_shell_command_that_only_mentions_the_qml_path
     config = build_config
     result = {
