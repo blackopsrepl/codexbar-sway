@@ -16,6 +16,10 @@ module TokenMaxx
         options[:chdir] = cwd if cwd
 
         Open3.popen3(env || {}, command, *args, **options) do |input, output, error, wait_thread|
+          # Drain both pipes before waiting: large database results can fill
+          # the pipe buffer and prevent the child from exiting.
+          stdout_reader = Thread.new { output.read }
+          stderr_reader = Thread.new { error.read }
           input.write(stdin) if stdin
           input.close
 
@@ -29,9 +33,12 @@ module TokenMaxx
             end
           end
 
-          stdout = output.read
-          stderr = error.read
+          stdout = stdout_reader.value
+          stderr = stderr_reader.value
           exit_code = wait_thread.value.exitstatus || 1
+        ensure
+          stdout_reader&.join
+          stderr_reader&.join
         end
 
         { stdout: stdout, stderr: stderr, exitCode: exit_code }
